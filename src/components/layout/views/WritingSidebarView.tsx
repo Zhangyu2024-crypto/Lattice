@@ -1,9 +1,10 @@
 import { useMemo } from 'react'
-import { FileText, PanelLeftClose, Plus, Sparkles } from 'lucide-react'
+import { BookTemplate, FileText, PanelLeftClose, Plus, Sparkles } from 'lucide-react'
 import {
   selectActiveSession,
   useRuntimeStore,
 } from '../../../stores/runtime-store'
+import { LATEX_TEMPLATES } from '../../../stores/latex-templates'
 import { CollapsibleSidebarSpaceSection } from './CollapsibleSidebarBlocks'
 
 interface Props {
@@ -11,12 +12,15 @@ interface Props {
   onLoadLatexDemo: () => void
   /** Create an empty document and focus it. */
   onNewLatexDocument: () => void
+  /** Create a fresh document from a journal template by id. */
+  onLoadLatexTemplate: (templateId: string) => void
   onCollapseSidebar?: () => void
 }
 
 export default function WritingSidebarView({
   onLoadLatexDemo,
   onNewLatexDocument,
+  onLoadLatexTemplate,
   onCollapseSidebar,
 }: Props) {
   const session = useRuntimeStore(selectActiveSession)
@@ -76,6 +80,24 @@ export default function WritingSidebarView({
               </span>
             </span>
           </button>
+        </CollapsibleSidebarSpaceSection>
+
+        <CollapsibleSidebarSpaceSection title="Journal templates">
+          {LATEX_TEMPLATES.map((template) => (
+            <button
+              key={template.id}
+              type="button"
+              className="sidebar-space-row"
+              onClick={() => onLoadLatexTemplate(template.id)}
+              title={template.description}
+            >
+              <span className="sidebar-space-row-main">
+                <span className="sidebar-space-row-title">
+                  <BookTemplate size={12} aria-hidden /> {template.name}
+                </span>
+              </span>
+            </button>
+          ))}
         </CollapsibleSidebarSpaceSection>
 
         <CollapsibleSidebarSpaceSection

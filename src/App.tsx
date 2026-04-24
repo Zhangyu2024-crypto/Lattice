@@ -37,6 +37,7 @@ import type { ContextSnapshot } from './components/layout/StatusBar'
 import { DEMO_OPTIMIZATION } from './stores/demo-optimization'
 import { DEMO_HYPOTHESIS } from './stores/demo-hypothesis'
 import { DEMO_LATEX, EMPTY_LATEX } from './stores/demo-latex'
+import { findLatexTemplate } from './stores/latex-templates'
 import type { LatexDocumentPayload } from './types/latex'
 import ApprovalDialog from './components/agent/ApprovalDialog'
 import AskDialog from './components/agent/AskDialog'
@@ -363,6 +364,36 @@ export default function App() {
     const { sid, aid } = ensureLatexArtifact(EMPTY_LATEX)
     openCreatorInline(sid, aid)
   }, [ensureLatexArtifact, openCreatorInline])
+
+  // Unlike demo / empty (which reuse the session's existing latex artifact
+  // via ensureLatexArtifact), journal templates always create a fresh
+  // document so the user can keep a working draft and still try another
+  // template without overwriting it.
+  const loadLatexTemplate = useCallback(
+    (templateId: string) => {
+      const template = findLatexTemplate(templateId)
+      if (!template) {
+        toast.warn(`Unknown template: ${templateId}`)
+        return
+      }
+      const store = useRuntimeStore.getState()
+      const sid =
+        store.activeSessionId ?? store.createSession({ title: 'Writing' })
+      const aid = genArtifactId()
+      const artifact: LatexDocumentArtifact = {
+        id: aid,
+        kind: 'latex-document',
+        title: template.docTitle,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        payload: template.payload,
+      }
+      store.upsertArtifact(sid, artifact)
+      openCreatorInline(sid, aid)
+      toast.info(`Loaded template: ${template.name}`)
+    },
+    [openCreatorInline],
+  )
 
   // Mouse-invoked view switch (ActivityBar icon click): clicking a
   // different view switches + expands; clicking the active view's icon
@@ -977,6 +1008,7 @@ export default function App() {
                   onOpenLibraryWindow={handleOpenLibrary}
                   onLoadLatexDemo={loadLatexDemo}
                   onNewLatexDocument={newLatexDocument}
+                  onLoadLatexTemplate={loadLatexTemplate}
                   onToggleSidebar={toggleSidebar}
                 />
               </div>

@@ -23,6 +23,7 @@ interface Props {
   onOpenLibraryWindow?: () => void
   onLoadLatexDemo: () => void
   onNewLatexDocument: () => void
+  onLoadLatexTemplate: (templateId: string) => void
 }
 
 export default function Sidebar({
@@ -31,6 +32,7 @@ export default function Sidebar({
   onOpenLibraryWindow,
   onLoadLatexDemo,
   onNewLatexDocument,
+  onLoadLatexTemplate,
 }: Props) {
   const activeView = usePrefsStore((s) => s.layout.activeView)
 
@@ -56,6 +58,7 @@ export default function Sidebar({
         <WritingSidebarView
           onLoadLatexDemo={onLoadLatexDemo}
           onNewLatexDocument={onNewLatexDocument}
+          onLoadLatexTemplate={onLoadLatexTemplate}
           onCollapseSidebar={onToggleSidebar}
         />
       )
