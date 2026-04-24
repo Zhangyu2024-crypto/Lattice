@@ -16,7 +16,11 @@
 // session store is already the source of truth for run status. We check
 // ~10x/second and honour `ctx.signal` for cooperative cancellation.
 
-import type { ComputeArtifact, ComputeArtifactPayload } from '../../types/artifact'
+import type {
+  ComputeArtifact,
+  ComputeArtifactPayload,
+  ComputeStatus,
+} from '../../types/artifact'
 import type { LocalTool } from '../../types/agent-tool'
 import { isComputeArtifact } from '../../types/artifact'
 import { runCompute } from '../compute-run'
@@ -32,10 +36,30 @@ interface Input {
 
 interface Output {
   artifactId: string
+  /** First-class run status. The agent MUST check this before
+   *  synthesising any numeric / derived result; anything other than
+   *  'succeeded' means the run did not produce a trustworthy output. */
+  status: ComputeStatus
+  /** Convenience flag that mirrors `status === 'cancelled'`. Exposed
+   *  as its own field so models that glance at boolean flags but skim
+   *  string statuses catch the failure case. */
+  cancelled: boolean
   exitCode: number | null
+  /** Duration of the last run in milliseconds. 0 when the artifact
+   *  was never run in this session. */
+  durationMs: number
+  /** Absolute path to the archived workdir (see workspace/compute/...
+   *  per-run archive). Present when archival succeeded; absent on
+   *  programmatic callers that skipped the sessionId/artifactId
+   *  wiring. */
+  workdir?: string
   stdoutTail: string
   figureCount: number
   structureArtifactId?: string
+  /** Single-sentence human summary. When the run was cancelled or
+   *  failed, the summary starts with a capitalised status word and
+   *  includes the token-level anchor "Do NOT present derived
+   *  results" so prompt-side rules can trip on it. */
   summary: string
 }
 
@@ -105,10 +129,16 @@ export const computeRunTool: LocalTool<Input, Output> = {
     const figureCount = final.payload.figures.length
     const status = final.payload.status
     const exitCode = final.payload.exitCode
-    const durationMs = final.payload.durationMs
+    const durationMs = final.payload.durationMs ?? 0
+    // Latest archived run carries the workdir; prior runs still exist in
+    // history but only the newest matches this tool invocation.
+    const workdir = final.payload.runs?.[0]?.workdir
 
+    // Structure-from-CIF heuristic: only attempt when the run actually
+    // succeeded. Previously we checked exitCode === 0 which misses the
+    // subtlety that a cancelled run can have exitCode null; be strict.
     let structureArtifactId: string | undefined
-    if (exitCode === 0 && looksLikeCif(stdout)) {
+    if (status === 'succeeded' && looksLikeCif(stdout)) {
       try {
         const result = await createStructureFromCif({
           sessionId: ctx.sessionId,
@@ -127,7 +157,11 @@ export const computeRunTool: LocalTool<Input, Output> = {
 
     return {
       artifactId,
+      status,
+      cancelled: status === 'cancelled',
       exitCode,
+      durationMs,
+      ...(workdir ? { workdir } : {}),
       stdoutTail,
       figureCount,
       structureArtifactId,
@@ -189,7 +223,18 @@ function tail(text: string, maxChars: number): string {
   return `…[truncated]\n${text.slice(-maxChars)}`
 }
 
-function buildSummary(args: {
+/** Build the tool-result summary string. For non-succeeded runs the
+ *  summary starts with a capitalised status word and carries the exact
+ *  token "Do NOT present derived results" — L2 (orchestrator warning
+ *  envelope) and L3 (system prompt rule) both anchor on that phrase, so
+ *  any regression that drops it from the summary should fail tests.
+ *
+ *  Exported ONLY for the co-located unit test. No other module should
+ *  import it — it's an internal formatting helper.
+ */
+export const INTEGRITY_ANCHOR = 'Do NOT present derived results'
+
+export function buildSummary(args: {
   status: ComputeArtifactPayload['status']
   exitCode: number | null
   figureCount: number
@@ -202,6 +247,21 @@ function buildSummary(args: {
       ? `, ${args.figureCount} figure${args.figureCount === 1 ? '' : 's'}`
       : ''
   const exit = args.exitCode !== null ? ` (exit=${args.exitCode})` : ''
+
+  if (args.status === 'cancelled') {
+    return (
+      `CANCELLED${duration} — run did not complete${exit}. ${INTEGRITY_ANCHOR}.`
+    )
+  }
+  if (args.status === 'failed') {
+    return `FAILED${exit}${duration}. ${INTEGRITY_ANCHOR}.`
+  }
+  if (args.status === 'succeeded') {
+    return `Succeeded${exit}${duration}${figures}.`
+  }
+  // idle / running / unknown — should not normally reach here since
+  // waitForRunCompletion blocks until status !== 'running', but be
+  // defensive.
   return `Compute run ${args.status}${exit}${duration}${figures}.`
 }
 

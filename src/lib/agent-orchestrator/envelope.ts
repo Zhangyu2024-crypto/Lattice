@@ -118,13 +118,46 @@ export function assistantMessageFromResult(
 }
 
 export function toToolResultBlock(step: AgentToolStep): LlmToolResultBlockPayload {
+  const warning = detectIntegrityWarning(step)
+  const payload = step.isError ? { error: step.output } : step.output
+  const body = stringifyValue(payload)
   return {
     type: 'tool_result',
     tool_use_id: step.toolUseId,
-    // Error outputs are stringified too, but wrapped so the model can see
-    // they're an error rather than a normal result.
-    content: stringifyValue(
-      step.isError ? { error: step.output } : step.output,
-    ),
+    // When a tool result carries a known "don't trust this" signal —
+    // e.g. a compute run that was cancelled or failed — prefix the
+    // serialized payload with a human-readable warning block. The
+    // model sees the structured data immediately after, so it can
+    // still explain what happened, but the warning is first and
+    // unmissable. Normal successful results pass through unchanged.
+    content: warning ? `⚠️ ${warning}\n\n${body}` : body,
   }
+}
+
+/** Inspect a tool step's output for known integrity-violation signals
+ *  and return a human-readable warning string (or null when none). Kept
+ *  conservative: only fires when the output is an object with an
+ *  explicit `status` field flagged as cancelled/failed, so regular
+ *  string / number / array results pass through untouched.
+ *
+ *  The warning phrasing is intentional: it names the specific failure
+ *  mode, then includes an imperative the model can latch onto
+ *  ("Do NOT fabricate ... results"). Paired with the system-prompt
+ *  rule in `DEFAULT_AGENT_SYSTEM_PROMPT` so the model has seen the
+ *  same shape before. */
+function detectIntegrityWarning(step: AgentToolStep): string | null {
+  if (step.isError) return null
+  const out = step.output
+  if (!out || typeof out !== 'object') return null
+  const record = out as Record<string, unknown>
+  const status = record.status
+  if (typeof status !== 'string') return null
+  if (status !== 'cancelled' && status !== 'failed') return null
+  return (
+    `INTEGRITY WARNING — compute run did NOT complete (status=${status}). ` +
+    `You MUST tell the user the run failed. ` +
+    `Do NOT fabricate, interpolate, or restate numeric results derived from this run. ` +
+    `The stdoutTail below may contain partial output — treat it as evidence ` +
+    `of failure, not of a full result.`
+  )
 }
