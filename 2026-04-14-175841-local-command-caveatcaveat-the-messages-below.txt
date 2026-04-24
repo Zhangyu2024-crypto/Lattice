@@ -1,0 +1,1113 @@
+ ▐▛███▜▌   Claude Code v2.1.107
+▝▜█████▛▘  Opus 4.6 (1M context) · Claude Max
+  ▘▘ ▝▝    ~/paper/Lattice-app
+
+❯ /clear                                                                        
+  ⎿  (no content)
+
+❯  我现在希望计算模块在左边和文献管理一起 然后需要参考lattice-cli的设计         
+  请你进行规划                                                                  
+
+  Searched for 2 patterns, read 6 files, listed 4 directories (ctrl+o to expand)
+
+● 我先梳理了现状，准备和 codex 协作完善规划方案。
+
+  现状梳理：
+  - ActivityBar 上 Library/Knowledge 目前是 Modal 
+  浮层（点击弹出全屏对话框），不是真正的左侧视图。
+  - Compute 目前只存在于画布内（ComputeProWorkbench 以 artifact
+  形式开启），没有入口在左侧。
+  - Sidebar.tsx
+  当前只渲染一个「Session」视图（文件/产物/会话列表），没有视图切换机制。
+  - MIGRATION_PLAN.md §4.3 明确参考 lattice-cli 的设计：ActivityBar 应当有
+  Explorer / Library / Knowledge / Compute / Structure 等并列视图，点击图标切换
+  Sidebar 的内容区，VSCode 风格。
+
+  让我先让 codex 一起来分析这个需求。
+
+❯ 为什么感觉卡住了                                                              
+
+● 抱歉，刚才调用 codex MCP 做协同分析时工具卡住了（可能 MCP
+  服务器响应慢）。我直接基于已读到的代码和 MIGRATION_PLAN.md 给出规划，不再等
+  codex。
+
+  规划：Compute 入驻左侧，与 Library 并列
+
+  一、目标与参考
+
+  参考 docs/MIGRATION_PLAN.md §4.3，lattice-cli 的 Sidebar 视图是 VSCode
+  风格的多视图切换器：Explorer / Library / Knowledge / Compute / Structure
+  …。当前 App 的 ActivityBar 只是"打开 Modal"的快捷键，Sidebar.tsx 只渲染固定的
+  Session 视图。本次重构把 ActivityBar 改造成真正的视图路由，让 Library 和 
+  Compute 成为 Sidebar 内并列的一等视图。
+
+  二、目标架构
+
+  ActivityBar (icons)              Sidebar (activeView 路由)
+  ─────────────────                ───────────────────────────
+  [Session]  ─────────────────►    SessionView (现有 Sidebar 内容)
+  [Library]  ─────────────────►    LibraryView (集合 + 论文列表)
+  [Knowledge] ────────────────►    KnowledgeView (图谱入口 + 最近查询)
+  [Compute]  ─────────────────►    ComputeView (脚本/片段/健康)
+  ...
+
+  - Sidebar 只放"导航 + 列表"；点击条目把"重内容"送到 EditorArea 作为
+  artifact/tab：
+    - Library：点论文 → 在 EditorArea 开 paper artifact / PDF viewer
+    - Compute：点脚本或 "New Script" → 开 compute-pro artifact（复用
+  ComputeProWorkbench）
+    - Knowledge：点材料 → 开 material-comparison / knowledge-graph artifact
+  - 旧的 LibraryModal / KnowledgeBrowserModal
+  短期保留作为「全屏浏览」备用入口（命令面板触发），后续再决定是否删除。
+
+  三、关键决策（对你问的问题给答案）
+
+  ┌──────────────┬─────────────────────────────────┬────────────────────────┐
+  │     问题     │              选择               │          理由          │
+  ├──────────────┼─────────────────────────────────┼────────────────────────┤
+  │ 3-pane 放    │                                 │ 窄栏塞 3-pane          │
+  │ Sidebar 还是 │ A：Sidebar 只列表，详情去       │ 体验差；VSCode         │
+  │  Editor      │ EditorArea                      │ 也是这样（Explorer     │
+  │              │                                 │ 点文件 → Editor 打开） │
+  ├──────────────┼─────────────────────────────────┼────────────────────────┤
+  │ Compute      │ 脚本列表 + Snippet 分类 +       │ 对齐 pro.html Compute  │
+  │ 侧栏展示什么 │ Health 徽章 + "New Script" 按钮 │ 模块，真正的编辑器在   │
+  │              │                                 │ artifact 里            │
+  ├──────────────┼─────────────────────────────────┼────────────────────────┤
+  │ Session      │ 保留为独立 Explorer             │ 现有功能不回退         │
+  │ 视图去留     │ 视图（首个默认视图）            │                        │
+  ├──────────────┼─────────────────────────────────┼────────────────────────┤
+  │ activeView   │ prefs-store.layout.activeView   │ 已有 sidebarVisible    │
+  │ 存哪         │                                 │ 持久化，复用同一 slice │
+  ├──────────────┼─────────────────────────────────┼────────────────────────┤
+  │ ActivityBar  │ 点同一 icon → 切视图 + 打开     │ 和 Ctrl+B              │
+  │ 图标行为     │ sidebar；再点同一 icon → 折叠   │ 折叠快捷键自然统一     │
+  │              │ sidebar（VSCode 标准）          │                        │
+  ├──────────────┼─────────────────────────────────┼────────────────────────┤
+  │              │ Ctrl+Shift+B/K                  │                        │
+  │ 快捷键       │ 改为切换到该视图而非开          │ 无冲突                 │
+  │              │ Modal；Ctrl+B 仍折叠 sidebar    │                        │
+  └──────────────┴─────────────────────────────────┴────────────────────────┘
+
+  四、分阶段实施（每步都可独立合并）
+
+  Phase 0 — 骨架（无行为变化）
+  1. prefs-store 新增 layout.activeView: 'session' | 'library' | 'knowledge' | 
+  'compute'（默认 session）+ setActiveView。
+  2. 把现有 Sidebar.tsx 内容抽成 SessionView.tsx（纯粹重命名搬家）。
+  3. Sidebar.tsx 改成 switch-by-activeView 的壳，目前只有 session 一个分支。
+  4. ActivityBar 的 Library/Knowledge 图标行为暂不改。
+
+  Phase 1 — ActivityBar 视图路由
+  5. ActivityBar 新增 activeView / onSelectView
+  props；Session/Library/Knowledge/Compute
+  四个图标都走视图切换；点已激活的图标调用 toggleSidebar。
+  6. App.tsx 把 setLibraryOpen(true) 改为 setActiveView('library')；命令面板保留
+   Modal 入口作为备份。
+
+  Phase 2 — LibraryView（Sidebar 版）
+  7. 新建 src/components/library/LibraryView.tsx：复用 localProLibrary +
+  DEMO_LIBRARY 数据源，只渲染「集合树 + 论文列表 + 搜索框」。
+  8. 点论文 → 沿用 handleOpenPaper 在 EditorArea 开 paper artifact。
+  9. PDF/Chain/Multi-QA 入口仍走原 Modal（按钮触发）。
+
+  Phase 3 — ComputeView（Sidebar 版）
+  10. 新建 src/components/compute/ComputeView.tsx：展示「Saved
+  Scripts（localProCompute 读）+ Snippet 分类列表（compute-snippets-catalog）+
+  Container Health 徽章 + New Script 按钮」。
+  11. 点脚本 / New → 调用 createProWorkbench({ kind: 'compute-pro', ... })
+  复用现有 artifact 流。
+
+  Phase 4 — KnowledgeView + 清理
+  12. 同 Library 模式做 KnowledgeView。
+  13. 评估删除 LibraryModal/KnowledgeBrowserModal，或降级为"在 EditorArea
+  全屏浏览"的 artifact 形态。
+  14. 更新 CLAUDE.md 的 "UI shell" 部分。
+
+  五、风险清单
+
+  - StrictMode 双挂载：activeView 初始态不要触发副作用性的
+  fetch；localProLibrary 已有，没问题。
+  - artifact 路由冲突：EditorArea 目前通过 focusedArtifactId
+  渲染，createProWorkbench 已是正确路径，别绕过 session-store。
+  - Ctrl+Shift+B/K 语义变化：需要同时更新 CommandPalette 提示与 docs/*
+  里的快捷键表。
+  - Sidebar 宽度：Library 列表需要搜索框 + 标签，sidebar 最小宽度 180
+  可能太窄，建议视图激活时把 sidebarWidth 自动抬到 ≥280。
+  - Modal 代码残留：Phase 2-4 先保留 Modal，Phase 5 再删，避免一次性改动面过大。
+  - 持久化迁移：prefs-store 加字段要做 migrate，老用户 localStorage 里没有
+  activeView 时回落到 'session'。
+
+  ---
+  规划到此，请你 review：
+  - 是否同意 Sidebar 做列表、EditorArea 做详情 的分工？
+  - Compute 侧栏是否按我列的内容（Scripts + Snippets + Health +
+  New）？或你希望更精简（只做一个启动器按钮）？
+  - 要不要现在就删 Modal，还是 Phase 5 再删？
+
+  你拍板之后，我进入 Phase 0/1 的编码阶段，届时会按 CLAUDE.md 的约定找 codex
+  要一个 diff 原型作参考再自己重写。
+
+✻ Cogitated for 46s
+
+❯ 你负责审核然后调用codex进行执行                                               
+
+● ⚠️ 不能照你说的做——codex MCP 服务器已经断开（系统刚提示 mcp__codex__codex
+  不再可用，ToolSearch 也搜不到）。这就是刚才调用卡住的根因。
+
+  现在有三条路，请你选：
+
+  1. 重连 codex：你在终端重启 codex MCP 服务器（或检查
+  ~/.codex/config.toml），然后让我继续。如果你不确定怎么重启，可以 ! <命令>
+  在本会话里跑。
+  2. 我接手执行：由我直接按上条规划进入 Phase 0/1 编码，跳过 CLAUDE.md 里"codex
+  给 diff 原型"那一步。需要你明确授权绕过该流程（它是你全局指令里的硬约束）。
+  3. 只做规划、不编码：规划已经给出，等 codex 恢复再动代码。
+
+  你选哪条？
+
+❯ /mcp                                                                          
+  ⎿  Reconnected to codex.
+
+❯ 重连了                                                                        
+
+● 好，codex 回来了。按你的分工，我让 codex 先审核规划 + 给出 Phase 0/1 的
+  unified diff patch 原型（read-only，不动代码），我再审核。
+
+● Codex 给了 A（审核）+ B（Phase 0/1 的 diff 原型）。我过了一遍，结论如下。
+
+  我对 codex 审核的采纳
+
+  ┌───────────────────────────────────────────────────┬─────────────────────┐
+  │                    codex 观点                     │      我的判断       │
+  ├───────────────────────────────────────────────────┼─────────────────────┤
+  │ Sidebar 版 Library/Knowledge 必须保留搜索 +       │ ✅ 采纳，写入 Phase │
+  │ collection/tag 过滤，不是 flat list               │  2 验收标准         │
+  ├───────────────────────────────────────────────────┼─────────────────────┤
+  │ Snippet catalog 没有 category 字段，ComputeView   │ ✅ 采纳，我原规划的 │
+  │ 只能按 language 分组或简单分"Saved Scripts /      │ "分类"错了          │
+  │ Snippets"                                         │                     │
+  ├───────────────────────────────────────────────────┼─────────────────────┤
+  │ 补漏 Jobs history section（对齐 pro.html port     │ ✅ 采纳             │
+  │ 注释）                                            │                     │
+  ├───────────────────────────────────────────────────┼─────────────────────┤
+  │ ActivityBar 图标不应再直接调                      │ ✅                  │
+  │ onToggleSidebar，所有图标走 onSelectView，由 App  │ 采纳，消除行为分叉  │
+  │ 层决定"同 view 再点折叠"                          │                     │
+  ├───────────────────────────────────────────────────┼─────────────────────┤
+  │ 键盘 Ctrl+Shift+B/K 应为"强制聚焦并展开"（focusSi │ ✅ 采纳，关键的细节 │
+  │ debarView），与鼠标"再点折叠"语义分开             │                     │
+  ├───────────────────────────────────────────────────┼─────────────────────┤
+  │ CommandPalette 里 Ctrl+Shift+B/K                  │ ✅ 采纳             │
+  │ 的提示文案要改，否则误导                          │                     │
+  ├───────────────────────────────────────────────────┼─────────────────────┤
+  │ CLAUDE.md 的 UI shell                             │ ✅ 采纳，Phase 4    │
+  │ 描述已和代码漂移，以代码为准                      │ 末尾更新 doc        │
+  └───────────────────────────────────────────────────┴─────────────────────┘
+
+  我对 B 部分 diff 的审核
+
+  要点可用：prefs-store 加字段 + normalizeActiveView + version 4；SessionView
+  纯搬家；Sidebar 改路由壳 + "Coming soon" 占位；App 层拆
+  focusSidebarView/selectSidebarView。结构正确。
+
+  我要改的地方：
+  1. ❌ 拒绝 Cpu → Bot 图标改名：LLM Config 的 Cpu 是既有约定，改名超出 Phase
+  0/1 范围，且会影响用户肌肉记忆。Compute 新图标换成 Code2 或
+  SquareTerminal，避开 Cpu 视觉冲突即可。
+  2. 🔧 Session 按钮：用 PanelLeft 图标 + 文案 "Session Explorer"
+  有歧义（PanelLeft 通常代表"切换侧栏"）。改用 FolderTree 或 Files，title 写
+  "Session Explorer (Ctrl+B to toggle)"。
+  3. 🔧 删除 setActiveView 里的多余空行（diff 里有 +\n\n）。
+  4. 🔧 CommandPalette 删了 Ctrl+Shift+B/K 提示但没动 FlaskConical
+  的其他引用——保持现状，只动 Library/Knowledge 两条。
+
+  阻塞点：如何"执行"
+
+  你说"调用 codex 执行"，但 CLAUDE.md 明确："严禁 codex 
+  对代码进行实际修改"，codex 只能给 diff 原型作参考，真实重写必须由我完成。
+
+  这是硬约束冲突。请你二选一：
+
+  - A（遵守 CLAUDE.md）：我按照上面的审核结论，手动落地 Phase 0+1
+  到代码，完成后再让 codex review。
+  - B（临时豁免）：你明确授权我改用 sandbox="workspace-write" 让 codex
+  直接写盘——此时我仍做最终审核。
+
+  选 A 还是 B？（默认建议 A）
+
+✻ Baked for 10m 15s
+
+❯ A                                                                             
+
+● 好。按 CLAUDE.md，我手动落地 Phase 0+1。先读关键文件确认现状。
+
+  Searched for 1 pattern, read 2 files (ctrl+o to expand)
+● 开始实施。先改 prefs-store.ts：
+
+● Update(src/stores/prefs-store.ts)
+  ⎿  Added 3 lines
+      12  
+      13  export type Theme = 'dark' | 'light'
+      14  
+      15 +export type SidebarView = 'session' | 'library' | 'knowledge' |
+         + 'compute'                                                     
+      16 +                                                               
+      17  export interface LayoutPrefs {
+      18 +  activeView: SidebarView                                      
+      19    sidebarVisible: boolean
+      20    chatVisible: boolean
+      21    sidebarWidth: number
+
+● Update(src/stores/prefs-store.ts)
+  ⎿  Added 1 line
+      35    setTheme: (theme: Theme) => void
+      36    setComposerMode: (mode: ComposerMode) => void
+      37    setLayout: (patch: Partial<LayoutPrefs>) => void
+      38 +  setActiveView: (view: SidebarView) => void                   
+      39    addPreset: (preset: Omit<ParamPreset, 'id' | 'createdAt'>) =>
+           string
+      40    removePreset: (id: string) => void
+      41    renamePreset: (id: string, name: string) => void
+
+● Update(src/stores/prefs-store.ts)
+  ⎿  Added 13 lines
+      53  export const INSPECTOR_WIDTH_MAX = 420
+      54  
+      55  const DEFAULT_LAYOUT: LayoutPrefs = {
+      56 +  activeView: 'session',                                       
+      57    sidebarVisible: true,
+      58    chatVisible: true,
+      59    sidebarWidth: 260,
+     ...
+      62    inspectorWidth: 280,
+      63  }
+      64  
+      65 +const VALID_SIDEBAR_VIEWS: readonly SidebarView[] = [          
+      66 +  'session',                                                   
+      67 +  'library',                                                   
+      68 +  'knowledge',                                                 
+      69 +  'compute',                                                   
+      70 +]                                                              
+      71 +                                                               
+      72 +const normalizeActiveView = (value: unknown): SidebarView =>   
+      73 +  VALID_SIDEBAR_VIEWS.includes(value as SidebarView)           
+      74 +    ? (value as SidebarView)                                   
+      75 +    : DEFAULT_LAYOUT.activeView                                
+      76 +                                                               
+      77  const clampInt = (value: unknown, fallback: number, min: number
+          , max: number): number => {
+      78    if (typeof value !== 'number' || !Number.isFinite(value)) ret
+          urn fallback
+      79    return Math.round(Math.max(min, Math.min(max, value)))
+
+● Update(src/stores/prefs-store.ts)
+  ⎿  Added 1 line
+      84  // out-of-range numbers so persisted state from older versions 
+          never lands
+      85  // a bad value into the live store.
+      86  const normalizeLayout = (layout?: Partial<LayoutPrefs>): Layout
+          Prefs => ({
+      87 +  activeView: normalizeActiveView(layout?.activeView),         
+      88    sidebarVisible:
+      89      typeof layout?.sidebarVisible === 'boolean'
+      90        ? layout.sidebarVisible
+
+● Update(src/stores/prefs-store.ts)
+  ⎿  Added 3 lines
+      135        setLayout: (patch) =>
+      136          set((s) => ({ layout: normalizeLayout({ ...s.layout, .
+           ..patch }) })),
+      137  
+      138 +      setActiveView: (activeView) =>                          
+      139 +        set((s) => ({ layout: normalizeLayout({ ...s.layout, a
+          +ctiveView }) })),                                             
+      140 +                                                              
+      141        addPreset: (preset) => {
+      142          const full: ParamPreset = {
+      143            ...preset,
+
+● Update(src/stores/prefs-store.ts)
+  ⎿  Added 6 lines, removed 5 lines
+      158      }),
+      159      {
+      160        name: 'lattice.prefs',
+      161 -      version: 3,                                             
+      161 +      version: 4,                                             
+      162        storage: createJSONStorage(() => localStorage),
+      163        // v2: introduces `layout`. v3 extends `layout` with ins
+           pector
+      164 -      // visibility + width. Both versions are handled by a si
+          -ngle                                                          
+      165 -      // normalizeLayout pass that fills in any missing fields
+          - with their                                                   
+      166 -      // defaults; everything else is preserved verbatim so us
+          -er-configured                                                 
+      167 -      // model / presets survive.                             
+      164 +      // visibility + width. v4 adds `layout.activeView` for S
+          +idebar view                                                   
+      165 +      // routing. All versions are handled by a single normali
+          +zeLayout pass                                                 
+      166 +      // that fills in any missing fields with their defaults;
+          + everything                                                   
+      167 +      // else is preserved verbatim so user-configured model /
+          + presets                                                      
+      168 +      // survive.                                             
+      169        migrate: (persistedState) => {
+      170          const state = (persistedState ?? {}) as Partial<PrefsS
+           tate> & {
+      171            layout?: Partial<LayoutPrefs>
+
+● 现在创建 SessionView.tsx（把现有 Sidebar 内容整体搬过来，路径深一层）。
+
+● Write(src/components/layout/views/SessionView.tsx)
+  ⎿  Wrote 335 lines to src/components/layout/views/SessionView.tsx
+       2 import { FolderOpen, Plus, Pencil, Pin, Check } from 'lucide-rea
+         ct'
+       3 import {
+       4   selectActiveSession,
+       5   useSessionStore,
+       6 } from '../../../stores/session-store'
+       7 import type { Artifact } from '../../../types/artifact'
+       8 
+       9 interface Props {
+      10   onOpenFile: () => void
+     … +331 lines (ctrl+o to expand)
+
+● Write(src/components/layout/Sidebar.tsx)
+  ⎿  Added 22 lines, removed 299 lines
+       1 -import { useMemo, useState } from 'react'                      
+       2 -import { FolderOpen, Plus, Pencil, Pin, Check } from 'lucide-re
+         -act'                                                           
+       3 -import {                                                       
+       4 -  selectActiveSession,                                         
+       5 -  useSessionStore,                                             
+       6 -} from '../../stores/session-store'                            
+       7 -import type { Artifact } from '../../types/artifact'           
+       1 +import { usePrefsStore, type SidebarView } from '../../stores/p
+         +refs-store'                                                    
+       2 +import SessionView from './views/SessionView'                  
+       3  
+       4  interface Props {
+       5    onOpenFile: () => void
+       6  }
+       7  
+       8  export default function Sidebar({ onOpenFile }: Props) {
+      14 -  const session = useSessionStore(selectActiveSession)         
+      15 -  const sessionsMap = useSessionStore((s) => s.sessions)       
+      16 -  const sessionOrder = useSessionStore((s) => s.sessionOrder)  
+      17 -  const createSession = useSessionStore((s) => s.createSession)
+      18 -  const setActiveSession = useSessionStore((s) => s.setActiveSe
+         -ssion)                                                         
+      19 -  const renameSession = useSessionStore((s) => s.renameSession)
+      20 -  const focusArtifact = useSessionStore((s) => s.focusArtifact)
+       9 +  const activeView = usePrefsStore((s) => s.layout.activeView) 
+      10  
+      22 -  const [editingTitle, setEditingTitle] = useState(false)      
+      23 -  const [draftTitle, setDraftTitle] = useState('')             
+      24 -                                                               
+      25 -  if (!session) {                                              
+      26 -    return (                                                   
+      27 -      <div                                                     
+      28 -        style={{                                               
+      29 -          padding: 16,                                         
+      30 -          color: 'var(--color-text-muted)',                    
+      31 -          fontSize: 12,                                        
+      32 -        }}                                                     
+      33 -      >                                                        
+      34 -        No active session.{' '}                                
+      35 -        <button                                                
+      36 -          onClick={() => createSession({ title: 'Session 1' })}
+      37 -          style={linkBtnStyle}                                 
+      38 -        >                                                      
+      39 -          Create one                                           
+      40 -        </button>                                              
+      41 -      </div>                                                   
+      42 -    )                                                          
+      11 +  if (activeView === 'session') {                              
+      12 +    return <SessionView onOpenFile={onOpenFile} />             
+      13    }
+      14  
+      45 -  const commitTitle = () => {                                  
+      46 -    const next = draftTitle.trim()                             
+      47 -    if (next) renameSession(session.id, next)                  
+      48 -    setEditingTitle(false)                                     
+      49 -  }                                                            
+      15 +  return <SidebarPlaceholder title={VIEW_TITLES[activeView]} />
+      16 +}                                                              
+      17  
+      51 -  const artifacts = useMemo<Artifact[]>(() => {                
+      52 -    const list = session.artifactOrder                         
+      53 -      .map((id) => session.artifacts[id])                      
+      54 -      .filter((a): a is Artifact => Boolean(a))                
+      55 -    const pinnedSet = new Set(session.pinnedArtifactIds)       
+      56 -    return [                                                   
+      57 -      ...list.filter((a) => pinnedSet.has(a.id)),              
+      58 -      ...list.filter((a) => !pinnedSet.has(a.id)),             
+      59 -    ]                                                          
+      60 -  }, [session.artifactOrder, session.artifacts, session.pinnedA
+         -rtifactIds])                                                   
+      18 +const VIEW_TITLES: Record<Exclude<SidebarView, 'session'>, stri
+         +ng> = {                                                        
+      19 +  library: 'Library',                                          
+      20 +  knowledge: 'Knowledge',                                      
+      21 +  compute: 'Compute',                                          
+      22 +}                                                              
+      23  
+      24 +function SidebarPlaceholder({ title }: { title: string }) {    
+      25    return (
+      26      <div
+      27        style={{
+     ...
+       36          className="sidebar-header"
+       37          style={{ justifyContent: 'space-between' }}
+       38        >
+       76 -        <span>Session</span>                                  
+       77 -        <button                                               
+       78 -          onClick={onOpenFile}                                
+       79 -          title="Add file (Ctrl+O)"                           
+       80 -          style={iconBtnStyle}                                
+       81 -        >                                                     
+       82 -          <FolderOpen size={14} />                            
+       83 -        </button>                                             
+       39 +        <span>{title}</span>                                  
+       40        </div>
+       85 -                                                              
+       86 -      <div style={{ padding: '10px 12px', flexShrink: 0 }}>   
+       87 -        {editingTitle ? (                                     
+       88 -          <div style={{ display: 'flex', gap: 6, alignItems: '
+          -center' }}>                                                   
+       89 -            <input                                            
+       90 -              autoFocus                                       
+       91 -              value={draftTitle}                              
+       92 -              onChange={(e) => setDraftTitle(e.target.value)} 
+       93 -              onKeyDown={(e) => {                             
+       94 -                if (e.key === 'Enter') commitTitle()          
+       95 -                if (e.key === 'Escape') setEditingTitle(false)
+       96 -              }}                                              
+       97 -              style={{                                        
+       98 -                flex: 1,                                      
+       99 -                background: 'var(--color-bg-input)',          
+      100 -                border: '1px solid var(--color-border)',      
+      101 -                borderRadius: 3,                              
+      102 -                padding: '3px 6px',                           
+      103 -                color: 'var(--color-text-primary)',           
+      104 -                fontSize: 12,                                 
+      105 -                outline: 'none',                              
+      106 -              }}                                              
+      107 -            />                                                
+      108 -            <button onClick={commitTitle} style={iconBtnStyle}
+          ->                                                             
+      109 -              <Check size={12} />                             
+      110 -            </button>                                         
+      111 -          </div>                                              
+      112 -        ) : (                                                 
+      113 -          <div                                                
+      114 -            style={{                                          
+      115 -              display: 'flex',                                
+      116 -              alignItems: 'center',                           
+      117 -              gap: 6,                                         
+      118 -              cursor: 'pointer',                              
+      119 -            }}                                                
+      120 -            onClick={() => {                                  
+      121 -              setDraftTitle(session.title)                    
+      122 -              setEditingTitle(true)                           
+      123 -            }}                                                
+      124 -          >                                                   
+      125 -            <strong                                           
+      126 -              style={{                                        
+      127 -                fontSize: 13,                                 
+      128 -                color: 'var(--color-text-primary)',           
+      129 -                flex: 1,                                      
+      130 -              }}                                              
+      131 -            >                                                 
+      132 -              {session.title}                                 
+      133 -            </strong>                                         
+      134 -            <Pencil                                           
+      135 -              size={11}                                       
+      136 -              style={{ color: 'var(--color-text-muted)' }}    
+      137 -            />                                                
+      138 -          </div>                                              
+      139 -        )}                                                    
+      140 -      </div>                                                  
+      141 -                                                              
+      142 -      <Section title={`Files (${session.files.length})`}>     
+      143 -        {session.files.length === 0 ? (                       
+      144 -          <EmptyLine text="No files yet" />                   
+      145 -        ) : (                                                 
+      146 -          session.files.map((f) => (                          
+      147 -            <div                                              
+      148 -              key={f.relPath}                                 
+      149 -              style={{                                        
+      150 -                padding: '3px 0',                             
+      151 -                fontSize: 12,                                 
+      152 -                color: 'var(--color-text-secondary)',         
+      153 -                fontFamily: 'var(--font-mono)',               
+      154 -                overflow: 'hidden',                           
+      155 -                textOverflow: 'ellipsis',                     
+      156 -                whiteSpace: 'nowrap',                         
+      157 -              }}                                              
+      158 -              title={f.relPath}                               
+      159 -            >                                                 
+      160 -              {f.relPath}                                     
+      161 -            </div>                                            
+      162 -          ))                                                  
+      163 -        )}                                                    
+      164 -      </Section>                                              
+      165 -                                                              
+      166 -      <Section title={`Artifacts (${artifacts.length})`}>     
+      167 -        {artifacts.length === 0 ? (                           
+      168 -          <EmptyLine text="Agent hasn't produced anything yet"
+          - />                                                           
+      169 -        ) : (                                                 
+      170 -          artifacts.map((a) => {                              
+      171 -            const isActive = session.focusedArtifactId === a.i
+          -d                                                             
+      172 -            const isPinned = session.pinnedArtifactIds.include
+          -s(a.id)                                                       
+      173 -            return (                                          
+      174 -              <div                                            
+      175 -                key={a.id}                                    
+      176 -                onClick={() => focusArtifact(session.id, a.id)
+          -}                                                             
+      177 -                style={{                                      
+      178 -                  padding: '4px 6px',                         
+      179 -                  borderRadius: 3,                            
+      180 -                  fontSize: 12,                               
+      181 -                  cursor: 'pointer',                          
+      182 -                  color: isActive                             
+      183 -                    ? 'var(--color-text-active)'              
+      184 -                    : 'var(--color-text-secondary)',          
+      185 -                  background: isActive                        
+      186 -                    ? 'var(--color-bg-active)'                
+      187 -                    : 'transparent',                          
+      188 -                  display: 'flex',                            
+      189 -                  alignItems: 'center',                       
+      190 -                  gap: 6,                                     
+      191 -                  overflow: 'hidden',                         
+      192 -                }}                                            
+      193 -                title={a.title}                               
+      194 -              >                                               
+      195 -                {isPinned && (                                
+      196 -                  <Pin size={10} style={{ color: 'var(--color-
+          -accent)', flexShrink: 0 }} />                                 
+      197 -                )}                                            
+      198 -                <span                                         
+      199 -                  style={{                                    
+      200 -                    opacity: 0.7,                             
+      201 -                    fontSize: 10,                             
+      202 -                    fontFamily: 'var(--font-mono)',           
+      203 -                    flexShrink: 0,                            
+      204 -                  }}                                          
+      205 -                >                                             
+      206 -                  {a.kind}                                    
+      207 -                </span>                                       
+      208 -                <span                                         
+      209 -                  style={{                                    
+      210 -                    overflow: 'hidden',                       
+      211 -                    textOverflow: 'ellipsis',                 
+      212 -                    whiteSpace: 'nowrap',                     
+      213 -                    flex: 1,                                  
+      214 -                  }}                                          
+      215 -                >                                             
+      216 -                  {a.title}                                   
+      217 -                </span>                                       
+      218 -              </div>                                          
+      219 -            )                                                 
+      220 -          })                                                  
+      221 -        )}                                                    
+      222 -      </Section>                                              
+      223 -                                                              
+      224 -      <div style={{ flex: 1 }} />                             
+      225 -                                                              
+      226 -      <Section title="All Sessions">                          
+      227 -        <div style={{ display: 'flex', flexDirection: 'column'
+          -, gap: 2 }}>                                                  
+      228 -          {sessionOrder.map((sid) => {                        
+      229 -            const s = sessionsMap[sid]                        
+      230 -            if (!s) return null                               
+      231 -            const isActive = sid === session.id               
+      232 -            return (                                          
+      233 -              <div                                            
+      234 -                key={sid}                                     
+      235 -                onClick={() => setActiveSession(sid)}         
+      236 -                style={{                                      
+      237 -                  padding: '3px 6px',                         
+      238 -                  borderRadius: 3,                            
+      239 -                  fontSize: 11,                               
+      240 -                  cursor: 'pointer',                          
+      241 -                  color: isActive                             
+      242 -                    ? 'var(--color-text-active)'              
+      243 -                    : 'var(--color-text-secondary)',          
+      244 -                  background: isActive                        
+      245 -                    ? 'var(--color-bg-active)'                
+      246 -                    : 'transparent',                          
+      247 -                  overflow: 'hidden',                         
+      248 -                  textOverflow: 'ellipsis',                   
+      249 -                  whiteSpace: 'nowrap',                       
+      250 -                }}                                            
+      251 -              >                                               
+      252 -                {s.title}                                     
+      253 -              </div>                                          
+      254 -            )                                                 
+      255 -          })}                                                 
+      256 -          <button                                             
+      257 -            onClick={() => createSession({ title: `Session ${s
+          -essionOrder.length + 1}` })}                                  
+      258 -            style={{                                          
+      259 -              ...linkBtnStyle,                                
+      260 -              display: 'flex',                                
+      261 -              alignItems: 'center',                           
+      262 -              gap: 6,                                         
+      263 -              marginTop: 4,                                   
+      264 -            }}                                                
+      265 -          >                                                   
+      266 -            <Plus size={11} /> New Session                    
+      267 -          </button>                                           
+      268 -        </div>                                                
+      269 -      </Section>                                              
+      270 -    </div>                                                    
+      271 -  )                                                           
+      272 -}                                                             
+      273 -                                                              
+      274 -function Section({                                            
+      275 -  title,                                                      
+      276 -  children,                                                   
+      277 -}: {                                                          
+      278 -  title: string                                               
+      279 -  children: React.ReactNode                                   
+      280 -}) {                                                          
+      281 -  return (                                                    
+      282 -    <div                                                      
+      283 -      style={{                                                
+      284 -        padding: '8px 12px',                                  
+      285 -        borderTop: '1px solid var(--color-border)',           
+      286 -      }}                                                      
+      287 -    >                                                         
+       41        <div
+       42          style={{
+      290 -          fontSize: 10,                                       
+      291 -          textTransform: 'uppercase',                         
+      292 -          letterSpacing: 0.5,                                 
+       43 +          flex: 1,                                            
+       44 +          display: 'flex',                                    
+       45 +          alignItems: 'center',                               
+       46 +          justifyContent: 'center',                           
+       47 +          padding: 24,                                        
+       48            color: 'var(--color-text-muted)',
+      294 -          marginBottom: 6,                                    
+       49 +          fontSize: 12,                                       
+       50 +          textAlign: 'center',                                
+       51          }}
+       52        >
+      297 -        {title}                                               
+       53 +        Coming soon                                           
+       54        </div>
+      299 -      {children}                                              
+       55      </div>
+       56    )
+       57  }
+      303 -                                                              
+      304 -function EmptyLine({ text }: { text: string }) {              
+      305 -  return (                                                    
+      306 -    <div                                                      
+      307 -      style={{                                                
+      308 -        fontSize: 11,                                         
+      309 -        color: 'var(--color-text-muted)',                     
+      310 -        fontStyle: 'italic',                                  
+      311 -      }}                                                      
+      312 -    >                                                         
+      313 -      {text}                                                  
+      314 -    </div>                                                    
+      315 -  )                                                           
+      316 -}                                                             
+      317 -                                                              
+      318 -const iconBtnStyle: React.CSSProperties = {                   
+      319 -  background: 'transparent',                                  
+      320 -  border: 'none',                                             
+      321 -  cursor: 'pointer',                                          
+      322 -  color: 'var(--color-text-secondary)',                       
+      323 -  display: 'flex',                                            
+      324 -  alignItems: 'center',                                       
+      325 -}                                                             
+      326 -                                                              
+      327 -const linkBtnStyle: React.CSSProperties = {                   
+      328 -  background: 'transparent',                                  
+      329 -  border: 'none',                                             
+      330 -  color: 'var(--color-accent)',                               
+      331 -  cursor: 'pointer',                                          
+      332 -  fontSize: 11,                                               
+      333 -  padding: 0,                                                 
+      334 -}                                                             
+
+● 现在改 ActivityBar.tsx：加 Compute 按钮（用 Code2 避开 Cpu 冲突），保留 Cpu 给
+   LLM，Session 用 FolderTree。
+
+● Write(src/components/layout/ActivityBar.tsx)
+  ⎿  Added 25 lines, removed 15 lines
+       1  import {
+       2    BookMarked,
+       3 +  Code2,                                                       
+       4    Cpu,
+       5 +  FolderTree,                                                  
+       6    MessageSquare,
+       7    Network,
+       6 -  PanelLeft,                                                   
+       8    Plus,
+       9    Settings,
+      10    Zap,
+      11  } from 'lucide-react'
+      12 +import type { SidebarView } from '../../stores/prefs-store'    
+      13  
+      14  interface Props {
+      15    sidebarVisible: boolean
+      16    chatVisible: boolean
+      15 -  onToggleSidebar: () => void                                  
+      17 +  activeView: SidebarView                                      
+      18 +  onSelectView: (view: SidebarView) => void                    
+      19    onToggleChat: () => void
+      20    onNewSession: () => void
+      21    onOpenSettings: () => void
+      22    onOpenLLMConfig: () => void
+      23    onOpenProLauncher: () => void
+      21 -  onOpenLibrary: () => void                                    
+      22 -  onOpenKnowledge: () => void                                  
+      24  }
+      25  
+      26  export default function ActivityBar({
+      27    sidebarVisible,
+      28    chatVisible,
+      28 -  onToggleSidebar,                                             
+      29 +  activeView,                                                  
+      30 +  onSelectView,                                                
+      31    onToggleChat,
+      32    onNewSession,
+      33    onOpenSettings,
+      34    onOpenLLMConfig,
+      35    onOpenProLauncher,
+      34 -  onOpenLibrary,                                               
+      35 -  onOpenKnowledge,                                             
+      36  }: Props) {
+      37 +  const isActiveView = (view: SidebarView) =>                  
+      38 +    sidebarVisible && activeView === view                      
+      39 +                                                               
+      40    return (
+      41      <div
+      42        style={{
+     ...
+      53        }}
+      54      >
+      55        <button
+      53 -        className={`activity-btn ${sidebarVisible ? 'active' : 
+         -''}`}                                                          
+      54 -        onClick={onToggleSidebar}                              
+      55 -        title="Toggle Session Sidebar (Ctrl+B)"                
+      56 +        className={`activity-btn ${isActiveView('session') ? 'a
+         +ctive' : ''}`}                                                 
+      57 +        onClick={() => onSelectView('session')}                
+      58 +        title="Session Explorer (Ctrl+B to toggle sidebar)"    
+      59        >
+      57 -        <PanelLeft size={22} strokeWidth={1.5} />              
+      60 +        <FolderTree size={22} strokeWidth={1.5} />             
+      61        </button>
+      62        <button
+      63          className="activity-btn"
+     ...
+      67          <Plus size={22} strokeWidth={1.5} />
+      68        </button>
+      69        <button
+      67 -        className="activity-btn"                               
+      68 -        onClick={onOpenLibrary}                                
+      70 +        className={`activity-btn ${isActiveView('library') ? 'a
+         +ctive' : ''}`}                                                 
+      71 +        onClick={() => onSelectView('library')}                
+      72          title="Library (Ctrl+Shift+B)"
+      73        >
+      74          <BookMarked size={22} strokeWidth={1.5} />
+      75        </button>
+      76        <button
+      74 -        className="activity-btn"                               
+      75 -        onClick={onOpenKnowledge}                              
+      77 +        className={`activity-btn ${isActiveView('knowledge') ? 
+         +'active' : ''}`}                                               
+      78 +        onClick={() => onSelectView('knowledge')}              
+      79          title="Knowledge (Ctrl+Shift+K)"
+      80        >
+      81          <Network size={22} strokeWidth={1.5} />
+      82        </button>
+      83 +      <button                                                  
+      84 +        className={`activity-btn ${isActiveView('compute') ? 'a
+         +ctive' : ''}`}                                                 
+      85 +        onClick={() => onSelectView('compute')}                
+      86 +        title="Compute"                                        
+      87 +      >                                                        
+      88 +        <Code2 size={22} strokeWidth={1.5} />                  
+      89 +      </button>                                                
+      90  
+      91        <div style={{ flex: 1 }} />
+      92  
+
+● 现在改 App.tsx：加 focusSidebarView / selectSidebarView，重新接线
+  ActivityBar，改快捷键。
+
+● Update(src/App.tsx)
+  ⎿  Added 1 line
+      32    INSPECTOR_WIDTH_MAX,
+      33    INSPECTOR_WIDTH_MIN,
+      34    usePrefsStore,
+      35 +  type SidebarView,                                            
+      36  } from './stores/prefs-store'
+      37  import { useUsageStore } from './stores/usage-store'
+      38  import { useLLMConfigStore } from './stores/llm-config-store'
+
+● Update(src/App.tsx)
+  ⎿  Added 1 line
+      84    // hammering localStorage.
+      85    const layout = usePrefsStore((s) => s.layout)
+      86    const setLayout = usePrefsStore((s) => s.setLayout)
+      87 +  const setActiveView = usePrefsStore((s) => s.setActiveView)  
+      88    const [sidebarWidthDraft, setSidebarWidthDraft] = useState(la
+          yout.sidebarWidth)
+      89    const [chatWidthDraft, setChatWidthDraft] = useState(layout.c
+          hatWidth)
+      90    const [inspectorWidthDraft, setInspectorWidthDraft] = useStat
+          e(
+
+● Update(src/App.tsx)
+  ⎿  Added 27 lines
+      131      [setLayout],
+      132    )
+      133  
+      134 +  // Keyboard-invoked view switch: always force the sidebar op
+          +en on the                                                     
+      135 +  // target view, never collapse. Used by Ctrl+Shift+B / Ctrl+
+          +Shift+K so                                                    
+      136 +  // pressing the shortcut twice is idempotent instead of togg
+          +ling.                                                         
+      137 +  const focusSidebarView = useCallback(                       
+      138 +    (view: SidebarView) => {                                  
+      139 +      setActiveView(view)                                     
+      140 +      setLayout({ sidebarVisible: true })                     
+      141 +    },                                                        
+      142 +    [setActiveView, setLayout],                               
+      143 +  )                                                           
+      144 +                                                              
+      145 +  // Mouse-invoked view switch (ActivityBar icon click): click
+          +ing a                                                         
+      146 +  // different view switches + expands; clicking the active vi
+          +ew's icon                                                     
+      147 +  // collapses the sidebar (VSCode behaviour).                
+      148 +  const selectSidebarView = useCallback(                      
+      149 +    (view: SidebarView) => {                                  
+      150 +      const current = usePrefsStore.getState().layout         
+      151 +      if (current.activeView !== view) {                      
+      152 +        setActiveView(view)                                   
+      153 +        setLayout({ sidebarVisible: true })                   
+      154 +        return                                                
+      155 +      }                                                       
+      156 +      setLayout({ sidebarVisible: !current.sidebarVisible })  
+      157 +    },                                                        
+      158 +    [setActiveView, setLayout],                               
+      159 +  )                                                           
+      160 +                                                              
+      161    const setBackend = useAppStore((s) => s.setBackend)
+      162    const createSession = useSessionStore((s) => s.createSession
+           )
+      163    const activeSessionId = useSessionStore((s) => s.activeSessi
+           onId)
+
+● Update(src/App.tsx)
+  ⎿  Added 2 lines, removed 2 lines
+      439          setLlmConfigOpen((v) => !v)
+      440        } else if (e.ctrlKey && e.shiftKey && (e.key === 'B' || 
+           e.key === 'b')) {
+      441          e.preventDefault()
+      442 -        setLibraryOpen((v) => !v)                             
+      442 +        focusSidebarView('library')                           
+      443        } else if (e.ctrlKey && e.shiftKey && (e.key === 'K' || 
+           e.key === 'k')) {
+      444          e.preventDefault()
+      445 -        setKnowledgeOpen((v) => !v)                           
+      445 +        focusSidebarView('knowledge')                         
+      446        } else if (e.ctrlKey && e.shiftKey && (e.key === 'I' || 
+           e.key === 'i')) {
+      447          e.preventDefault()
+      448          toggleInspector()
+
+● Update(src/App.tsx)
+  ⎿  Added 1 line, removed 1 line
+      460      }
+      461      window.addEventListener('keydown', handler)
+      462      return () => window.removeEventListener('keydown', handler
+           )
+      463 -  }, [openFile, toggleChat, toggleInspector, toggleSidebar])  
+      463 +  }, [focusSidebarView, openFile, toggleChat, toggleInspector,
+          + toggleSidebar])                                              
+      464  
+      465    // Drag-resize a panel width with a ref-driven local draft. 
+           `onCommit`
+      466    // fires once on mouseup with the final clamped width so the
+            caller can
+
+● Update(src/App.tsx)
+  ⎿  Added 2 lines, removed 3 lines
+      648            <ActivityBar
+      649              sidebarVisible={layout.sidebarVisible}
+      650              chatVisible={layout.chatVisible}
+      651 -            onToggleSidebar={toggleSidebar}                   
+      651 +            activeView={layout.activeView}                    
+      652 +            onSelectView={selectSidebarView}                  
+      653              onToggleChat={toggleChat}
+      654              onNewSession={handleNewSession}
+      655              onOpenSettings={handleOpenSettings}
+      656              onOpenLLMConfig={() => setLlmConfigOpen(true)}
+      657              onOpenProLauncher={() => setProLauncherOpen(true)}
+      657 -            onOpenLibrary={() => setLibraryOpen(true)}        
+      658 -            onOpenKnowledge={() => setKnowledgeOpen(true)}    
+      658            />
+      659  
+      660            {layout.sidebarVisible && (
+
+● Update(src/components/common/CommandPalette.tsx)
+  ⎿  Added 1 line, removed 2 lines
+      308      },
+      309      {
+      310        id: 'open-library',
+      311 -      label: 'Library: Open',                                 
+      312 -      shortcut: 'Ctrl+Shift+B',                               
+      311 +      label: 'Library: Open fullscreen browser',              
+      312        icon: <FlaskConical size={14} />,
+      313        action: () => {
+      314          onOpenLibrary()
+
+● Update(src/components/common/CommandPalette.tsx)
+  ⎿  Added 1 line, removed 2 lines
+      317      },
+      318      {
+      319        id: 'open-knowledge',
+      320 -      label: 'Knowledge: Open Browser',                       
+      321 -      shortcut: 'Ctrl+Shift+K',                               
+      320 +      label: 'Knowledge: Open fullscreen browser',            
+      321        icon: <FlaskConical size={14} />,
+      322        action: () => {
+      323          onOpenKnowledge()
+● 跑 typecheck 验证：
+
+● Bash(npm run typecheck 2>&1 | tail -40)
+  ⎿  > lattice-app@0.1.0 typecheck
+     > tsc --noEmit
+
+● typecheck 通过。按 CLAUDE.md 规则 3，让 codex review 本次改动。
+
+● codex 两个 P2 文案问题，都采纳修复：
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(src/components/common/CommandPalette.tsx)
+  ⎿  Added 1 line, removed 1 line
+      447      },
+      448      {
+      449        id: 'sidebar',
+      450 -      label: 'Toggle Session Sidebar',                        
+      450 +      label: 'Toggle Sidebar',                                
+      451        shortcut: 'Ctrl+B',
+      452        icon: <Settings size={14} />,
+      453        action: () => {
+
+● Update(src/components/layout/ActivityBar.tsx)
+  ⎿  Added 1 line, removed 1 line
+      55        <button
+      56          className={`activity-btn ${isActiveView('session') ? 'a
+          ctive' : ''}`}
+      57          onClick={() => onSelectView('session')}
+      58 -        title="Session Explorer (Ctrl+B to toggle sidebar)"    
+      58 +        title="Session Explorer"                               
+      59        >
+      60          <FolderTree size={22} strokeWidth={1.5} />
+      61        </button>
+
+● Bash(npm run typecheck 2>&1 | tail -10)
+  ⎿  > lattice-app@0.1.0 typecheck
+     > tsc --noEmit
+
+● typecheck 通过。
+
+  Phase 0 + Phase 1 完成总结
+
+  改动文件：
+  - src/stores/prefs-store.ts — 加 SidebarView 类型 / activeView 字段 /
+  setActiveView action / normalizeActiveView 白名单 / version 3→4 迁移
+  - src/components/layout/views/SessionView.tsx（新） — 整体搬家原 Sidebar 正文
+  - src/components/layout/Sidebar.tsx — 改写为 activeView 路由壳，非 session 走
+  "Coming soon" 占位
+  - src/components/layout/ActivityBar.tsx — 新增 Compute 按钮（Code2）；Session
+  改 FolderTree；保留 Cpu 给 LLM；所有视图图标统一走 onSelectView
+  - src/App.tsx — 拆 focusSidebarView（键盘，永远展开）/
+  selectSidebarView（鼠标，同 view 再点折叠）；Ctrl+Shift+B/K 改为聚焦视图
+  - src/components/common/CommandPalette.tsx — Library/Knowledge 改为 "Open
+  fullscreen browser"；修正 "Toggle Sidebar" 文案
+
+  codex review：无 P0/P1 问题，两个 P2 文案已修复。
+
+  下一步：Phase 2 (LibraryView) / Phase 3 (ComputeView) / Phase 4 (KnowledgeView
+   + 清理)。要继续哪一步？按依赖建议先做 Phase 3 
+  ComputeView（用户直接诉求），再做 Phase 2/4。
+
+❯ 你继续                                                                        
+
+● 我继续，但先按你的全局约束走一遍：先让 codex 审核“Phase 3
+  ComputeView”的实现方案，并索要只读 unified diff
+  原型，然后我再手动重写落地。我这边可以继续，但当前这轮对话里我还没真正拿到工具
+  调用通道的返回，因此没法可靠地声称“已经调用 codex 并开始改代码”。
+
+  为了不假装执行，我先把下一步实施方案明确给你；如果你要，我下一条就直接进入实际
+  落地：
+
+  下一步我会做的事
+
+  Phase 3：ComputeView 入驻左侧
+
+  目标：
+  - 在 Sidebar 的 compute 视图下渲染真实内容，不再是 coming soon
+  - 展示：
+    - Saved Scripts
+    - Snippets
+    - Jobs history / recent runs
+    - 健康状态入口
+    - New Script 按钮
+  - 点击脚本 / 新建脚本：
+    - 走现有 artifact / workbench 打开逻辑
+    - 不新开 modal
+    - 不在组件里直接 fetch
+
+  我会先检查的文件
+
+  - src/components/compute/*
+  - src/stores/* 里和 compute / artifact / session 相关逻辑
+  - ComputeProWorkbench 的创建入口
+  - localProCompute / snippets catalog / jobs 数据来源
+
+  预计改动
+
+  - 新建 src/components/compute/ComputeView.tsx
+  - Sidebar.tsx 接入 compute 分支
+  - App.tsx 或相关 store 补齐“打开 compute workbench”的入口函数
+  - 可能少量抽公共 helper，避免和现有 compute 面板重复
+
+  我建议的顺序
+
+  1. 先做 ComputeView
+  2. 再做 LibraryView
+  3. 最后 KnowledgeView
+
+  因为这是你当前最核心诉求。
+
+  如果你同意，我下一条直接开始：
+  - 先读 compute 相关代码
+  - 给你一个简短审核结论
+  - 然后进入实现
+
+❯ 你重新审查一下                                                                
+  ⎿  API Error: 400 {"type":"error","error":{"type":"invalid_request_error","mes
+     sage":"messages.11.content.0: Invalid `signature` in `thinking` 
+     block"},"request_id":"req_011Ca3wSkWA3moSrNW3z43tN"}

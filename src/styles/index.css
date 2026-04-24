@@ -1,0 +1,46 @@
+/* Lattice — global styles entry.
+   Partitioned from a single 2821-line file into layered sheets:
+     tokens         → webfonts + CSS custom properties + base element rules
+     primitives     → .ui-*  (Button / Badge / Card / IconButton / EmptyState
+                      / Separator / Tooltip)
+     panels         → .panel-*  (PanelHeader, SegmentedControl, IconButton,
+                      chip primitives used in composer / timeline / rail)
+     shell          → .app-shell*, .activity-bar*, .sidebar-header,
+                      .status-bar, .status-chip  (VSCode-style chrome)
+     workspace      → .workspace-*  (main-area topbar + rail + body)
+     chat           → .chat-*, .composer-*, .mention-*, .context-menu*
+     views          → .session-*, .timeline-*, .inspector-*,
+                      .welcome-*, .tool-card*, .file-tree*, .artifact-tab*
+     canvas         → .artifact-canvas-*, .artifact-params-*,
+                      .artifact-action-menu-*, .structure-*, .pro-*,
+                      .ai-build-*, .surface-dialog-*  (canvas chrome)
+     artifact-cards → .card-<type>-*, .workbench-<tech>-*  (per-artifact
+                      body + pro-workbench body styles)
+     llm-config     → .llm-*  (Settings→LLM modal: ModelsTab, BudgetTab,
+                      LLMConfigModal shell)
+     modals         → .library-*, .pdf-*, .multipaper-qa-*, .chain-extract-*,
+                      .knowledge-browser-*, .knowledge-charts-*
+                      (library + knowledge modal families)
+
+   Tailwind must be imported first so the preflight and utility layers sit
+   underneath our tokens / primitives cascade. Files below it are plain CSS
+   and merge in declaration order. */
+
+@import "tailwindcss";
+
+@import "./tokens.css";
+@import "./primitives.css";
+@import "./panels.css";
+@import "./shell.css";
+@import "./workspace.css";
+@import "./chat.css";
+@import "./views.css";
+@import "./canvas.css";
+@import "./artifact-cards.css";
+@import "./chain-card.css";
+@import "./latex-creator.css";
+@import "./llm-config.css";
+@import "./modals.css";
+@import "./modules.css";
+@import "./compute-notebook.css";
+@import "./log-console.css";

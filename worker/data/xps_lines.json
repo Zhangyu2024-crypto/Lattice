@@ -1,0 +1,626 @@
+[
+  {"element": "Li", "orbital": "1s", "binding_eV": 54.7, "compound": "Li metal", "chemical_state": "Li⁰", "formula": "Li", "reference": "NIST SRD 20"},
+  {"element": "Li", "orbital": "1s", "binding_eV": 55.6, "compound": "Li₂O", "chemical_state": "Li⁺", "formula": "Li2O", "reference": "NIST SRD 20"},
+  {"element": "Li", "orbital": "1s", "binding_eV": 55.2, "compound": "LiOH", "chemical_state": "Li⁺", "formula": "LiOH", "reference": "NIST SRD 20"},
+  {"element": "Li", "orbital": "1s", "binding_eV": 55.8, "compound": "Li₂CO₃", "chemical_state": "Li⁺", "formula": "Li2CO3", "reference": "NIST SRD 20"},
+  {"element": "Li", "orbital": "1s", "binding_eV": 56.0, "compound": "LiF", "chemical_state": "Li⁺", "formula": "LiF", "reference": "NIST SRD 20"},
+  {"element": "Li", "orbital": "1s", "binding_eV": 55.5, "compound": "LiCl", "chemical_state": "Li⁺", "formula": "LiCl", "reference": "NIST SRD 20"},
+  {"element": "Li", "orbital": "1s", "binding_eV": 56.4, "compound": "LiPF₆", "chemical_state": "Li⁺", "formula": "LiPF6", "reference": "NIST SRD 20"},
+
+  {"element": "Be", "orbital": "1s", "binding_eV": 111.8, "compound": "Be metal", "chemical_state": "Be⁰", "formula": "Be", "reference": "NIST SRD 20"},
+  {"element": "Be", "orbital": "1s", "binding_eV": 113.8, "compound": "BeO", "chemical_state": "Be²⁺", "formula": "BeO", "reference": "NIST SRD 20"},
+  {"element": "Be", "orbital": "1s", "binding_eV": 114.5, "compound": "Be(OH)₂", "chemical_state": "Be²⁺", "formula": "Be(OH)2", "reference": "NIST SRD 20"},
+
+  {"element": "B", "orbital": "1s", "binding_eV": 187.5, "compound": "B elemental", "chemical_state": "B⁰", "formula": "B", "reference": "NIST SRD 20"},
+  {"element": "B", "orbital": "1s", "binding_eV": 189.6, "compound": "B suboxide", "chemical_state": "B-O", "formula": "BxOy", "reference": "NIST SRD 20"},
+  {"element": "B", "orbital": "1s", "binding_eV": 192.0, "compound": "B₂O₃", "chemical_state": "B³⁺", "formula": "B2O3", "reference": "NIST SRD 20"},
+  {"element": "B", "orbital": "1s", "binding_eV": 190.5, "compound": "BN (hexagonal)", "chemical_state": "B³⁺", "formula": "BN", "reference": "NIST SRD 20"},
+  {"element": "B", "orbital": "1s", "binding_eV": 193.0, "compound": "H₃BO₃ (boric acid)", "chemical_state": "B³⁺", "formula": "H3BO3", "reference": "NIST SRD 20"},
+  {"element": "B", "orbital": "1s", "binding_eV": 188.2, "compound": "B₄C", "chemical_state": "B-C", "formula": "B4C", "reference": "NIST SRD 20"},
+
+  {"element": "C", "orbital": "1s", "binding_eV": 284.8, "compound": "Adventitious carbon", "chemical_state": "C-C/C-H", "formula": "C", "reference": "NIST SRD 20"},
+  {"element": "C", "orbital": "1s", "binding_eV": 284.5, "compound": "Graphite", "chemical_state": "C⁰ sp²", "formula": "C", "reference": "NIST SRD 20"},
+  {"element": "C", "orbital": "1s", "binding_eV": 285.0, "compound": "Hydrocarbon", "chemical_state": "C-H", "formula": "CxHy", "reference": "NIST SRD 20"},
+  {"element": "C", "orbital": "1s", "binding_eV": 286.5, "compound": "C-O (alcohol/ether)", "chemical_state": "C-O", "formula": "C-OH", "reference": "NIST SRD 20"},
+  {"element": "C", "orbital": "1s", "binding_eV": 287.8, "compound": "C=O (carbonyl)", "chemical_state": "C=O", "formula": "C=O", "reference": "NIST SRD 20"},
+  {"element": "C", "orbital": "1s", "binding_eV": 289.0, "compound": "O-C=O (carboxyl)", "chemical_state": "O-C=O", "formula": "COOH", "reference": "NIST SRD 20"},
+  {"element": "C", "orbital": "1s", "binding_eV": 290.5, "compound": "Carbonate CO₃²⁻", "chemical_state": "CO₃²⁻", "formula": "CO3", "reference": "NIST SRD 20"},
+  {"element": "C", "orbital": "1s", "binding_eV": 283.5, "compound": "Metal carbide (TiC)", "chemical_state": "C⁴⁻", "formula": "TiC", "reference": "NIST SRD 20"},
+  {"element": "C", "orbital": "1s", "binding_eV": 291.8, "compound": "CF₂ (PVDF)", "chemical_state": "C-F₂", "formula": "CF2", "reference": "NIST SRD 20"},
+  {"element": "C", "orbital": "1s", "binding_eV": 292.8, "compound": "CF₃ (PTFE/Teflon)", "chemical_state": "C-F₃", "formula": "CF3", "reference": "NIST SRD 20"},
+  {"element": "C", "orbital": "1s", "binding_eV": 284.3, "compound": "Diamond", "chemical_state": "C⁰ sp³", "formula": "C", "reference": "NIST SRD 20"},
+  {"element": "C", "orbital": "1s", "binding_eV": 286.0, "compound": "C-N (amine)", "chemical_state": "C-N", "formula": "C-NH2", "reference": "NIST SRD 20"},
+  {"element": "C", "orbital": "1s", "binding_eV": 288.2, "compound": "Amide N-C=O", "chemical_state": "N-C=O", "formula": "CONH", "reference": "NIST SRD 20"},
+
+  {"element": "N", "orbital": "1s", "binding_eV": 398.8, "compound": "Metal nitride", "chemical_state": "N³⁻", "formula": "MN", "reference": "NIST SRD 20"},
+  {"element": "N", "orbital": "1s", "binding_eV": 399.5, "compound": "Amine -NH₂", "chemical_state": "-NH₂", "formula": "R-NH2", "reference": "NIST SRD 20"},
+  {"element": "N", "orbital": "1s", "binding_eV": 400.0, "compound": "Amide -NH-C=O", "chemical_state": "N-C=O", "formula": "CONH", "reference": "NIST SRD 20"},
+  {"element": "N", "orbital": "1s", "binding_eV": 400.5, "compound": "Pyrrolic N", "chemical_state": "N-pyrrolic", "formula": "C4H4NH", "reference": "NIST SRD 20"},
+  {"element": "N", "orbital": "1s", "binding_eV": 398.5, "compound": "Pyridinic N", "chemical_state": "N-pyridinic", "formula": "C5H5N", "reference": "NIST SRD 20"},
+  {"element": "N", "orbital": "1s", "binding_eV": 401.2, "compound": "Graphitic N", "chemical_state": "N-graphitic", "formula": "N-C3", "reference": "NIST SRD 20"},
+  {"element": "N", "orbital": "1s", "binding_eV": 403.5, "compound": "Nitrate NO₃⁻", "chemical_state": "NO₃⁻", "formula": "NO3", "reference": "NIST SRD 20"},
+  {"element": "N", "orbital": "1s", "binding_eV": 405.5, "compound": "Nitrite NO₂⁻", "chemical_state": "NO₂", "formula": "NO2", "reference": "NIST SRD 20"},
+  {"element": "N", "orbital": "1s", "binding_eV": 397.5, "compound": "TiN", "chemical_state": "N³⁻", "formula": "TiN", "reference": "NIST SRD 20"},
+  {"element": "N", "orbital": "1s", "binding_eV": 396.8, "compound": "Si₃N₄", "chemical_state": "N³⁻", "formula": "Si3N4", "reference": "NIST SRD 20"},
+  {"element": "N", "orbital": "1s", "binding_eV": 402.0, "compound": "N-oxide pyridine", "chemical_state": "N⁺-O⁻", "formula": "C5H5NO", "reference": "NIST SRD 20"},
+  {"element": "N", "orbital": "1s", "binding_eV": 407.5, "compound": "NO₃ (surface adsorbed)", "chemical_state": "NO₃", "formula": "NO3", "reference": "NIST SRD 20"},
+
+  {"element": "O", "orbital": "1s", "binding_eV": 529.8, "compound": "Metal oxide O²⁻", "chemical_state": "O²⁻", "formula": "MO", "reference": "NIST SRD 20"},
+  {"element": "O", "orbital": "1s", "binding_eV": 531.2, "compound": "Surface hydroxide OH⁻", "chemical_state": "OH⁻", "formula": "MOH", "reference": "NIST SRD 20"},
+  {"element": "O", "orbital": "1s", "binding_eV": 532.0, "compound": "C-O / H₂O", "chemical_state": "C-O/H₂O", "formula": "H2O", "reference": "NIST SRD 20"},
+  {"element": "O", "orbital": "1s", "binding_eV": 533.2, "compound": "C=O (carbonyl)", "chemical_state": "C=O", "formula": "C=O", "reference": "NIST SRD 20"},
+  {"element": "O", "orbital": "1s", "binding_eV": 530.0, "compound": "Fe₂O₃", "chemical_state": "O²⁻", "formula": "Fe2O3", "reference": "NIST SRD 20"},
+  {"element": "O", "orbital": "1s", "binding_eV": 530.2, "compound": "TiO₂", "chemical_state": "O²⁻", "formula": "TiO2", "reference": "NIST SRD 20"},
+  {"element": "O", "orbital": "1s", "binding_eV": 530.4, "compound": "Al₂O₃", "chemical_state": "O²⁻", "formula": "Al2O3", "reference": "NIST SRD 20"},
+  {"element": "O", "orbital": "1s", "binding_eV": 531.6, "compound": "SiO₂", "chemical_state": "O²⁻", "formula": "SiO2", "reference": "NIST SRD 20"},
+  {"element": "O", "orbital": "1s", "binding_eV": 532.5, "compound": "Organic C-O-C", "chemical_state": "C-O-C", "formula": "C-O-C", "reference": "NIST SRD 20"},
+  {"element": "O", "orbital": "1s", "binding_eV": 534.0, "compound": "Adsorbed H₂O", "chemical_state": "H₂O", "formula": "H2O", "reference": "NIST SRD 20"},
+  {"element": "O", "orbital": "1s", "binding_eV": 529.5, "compound": "ZnO", "chemical_state": "O²⁻", "formula": "ZnO", "reference": "NIST SRD 20"},
+  {"element": "O", "orbital": "1s", "binding_eV": 530.7, "compound": "Peroxide O₂²⁻", "chemical_state": "O₂²⁻", "formula": "O2(2-)", "reference": "NIST SRD 20"},
+  {"element": "O", "orbital": "1s", "binding_eV": 531.0, "compound": "Carbonate CO₃²⁻", "chemical_state": "CO₃²⁻", "formula": "CO3", "reference": "NIST SRD 20"},
+
+  {"element": "F", "orbital": "1s", "binding_eV": 684.5, "compound": "Metal fluoride (NaF)", "chemical_state": "F⁻", "formula": "NaF", "reference": "NIST SRD 20"},
+  {"element": "F", "orbital": "1s", "binding_eV": 685.0, "compound": "LiF", "chemical_state": "F⁻", "formula": "LiF", "reference": "NIST SRD 20"},
+  {"element": "F", "orbital": "1s", "binding_eV": 684.8, "compound": "CaF₂", "chemical_state": "F⁻", "formula": "CaF2", "reference": "NIST SRD 20"},
+  {"element": "F", "orbital": "1s", "binding_eV": 688.0, "compound": "PVDF (C-F₂)", "chemical_state": "C-F", "formula": "PVDF", "reference": "NIST SRD 20"},
+  {"element": "F", "orbital": "1s", "binding_eV": 689.2, "compound": "PTFE (CF₃)", "chemical_state": "C-F", "formula": "PTFE", "reference": "NIST SRD 20"},
+  {"element": "F", "orbital": "1s", "binding_eV": 686.5, "compound": "AlF₃", "chemical_state": "F⁻", "formula": "AlF3", "reference": "NIST SRD 20"},
+  {"element": "F", "orbital": "1s", "binding_eV": 685.3, "compound": "FeF₃", "chemical_state": "F⁻", "formula": "FeF3", "reference": "NIST SRD 20"},
+  {"element": "F", "orbital": "1s", "binding_eV": 687.0, "compound": "LiPF₆", "chemical_state": "F⁻", "formula": "LiPF6", "reference": "NIST SRD 20"},
+
+  {"element": "Na", "orbital": "1s", "binding_eV": 1071.8, "compound": "Na metal", "chemical_state": "Na⁰", "formula": "Na", "reference": "NIST SRD 20"},
+  {"element": "Na", "orbital": "1s", "binding_eV": 1071.5, "compound": "NaCl", "chemical_state": "Na⁺", "formula": "NaCl", "reference": "NIST SRD 20"},
+  {"element": "Na", "orbital": "1s", "binding_eV": 1071.3, "compound": "Na₂O", "chemical_state": "Na⁺", "formula": "Na2O", "reference": "NIST SRD 20"},
+  {"element": "Na", "orbital": "1s", "binding_eV": 1071.6, "compound": "NaOH", "chemical_state": "Na⁺", "formula": "NaOH", "reference": "NIST SRD 20"},
+  {"element": "Na", "orbital": "1s", "binding_eV": 1071.4, "compound": "Na₂CO₃", "chemical_state": "Na⁺", "formula": "Na2CO3", "reference": "NIST SRD 20"},
+  {"element": "Na", "orbital": "1s", "binding_eV": 1072.0, "compound": "Na₂SO₄", "chemical_state": "Na⁺", "formula": "Na2SO4", "reference": "NIST SRD 20"},
+  {"element": "Na", "orbital": "KLL Auger", "binding_eV": 497.0, "compound": "Na (Auger)", "chemical_state": "Na⁺", "formula": "Na", "reference": "NIST SRD 20"},
+
+  {"element": "Mg", "orbital": "1s", "binding_eV": 1303.5, "compound": "Mg metal", "chemical_state": "Mg⁰", "formula": "Mg", "reference": "NIST SRD 20"},
+  {"element": "Mg", "orbital": "1s", "binding_eV": 1304.5, "compound": "MgO", "chemical_state": "Mg²⁺", "formula": "MgO", "reference": "NIST SRD 20"},
+  {"element": "Mg", "orbital": "1s", "binding_eV": 1304.8, "compound": "Mg(OH)₂", "chemical_state": "Mg²⁺", "formula": "Mg(OH)2", "reference": "NIST SRD 20"},
+  {"element": "Mg", "orbital": "1s", "binding_eV": 1305.0, "compound": "MgCO₃", "chemical_state": "Mg²⁺", "formula": "MgCO3", "reference": "NIST SRD 20"},
+  {"element": "Mg", "orbital": "2p", "binding_eV": 49.6, "compound": "Mg metal", "chemical_state": "Mg⁰", "formula": "Mg", "reference": "NIST SRD 20"},
+  {"element": "Mg", "orbital": "2p", "binding_eV": 50.8, "compound": "MgO", "chemical_state": "Mg²⁺", "formula": "MgO", "reference": "NIST SRD 20"},
+  {"element": "Mg", "orbital": "2p", "binding_eV": 51.5, "compound": "MgCO₃", "chemical_state": "Mg²⁺", "formula": "MgCO3", "reference": "NIST SRD 20"},
+  {"element": "Mg", "orbital": "KLL Auger", "binding_eV": 1186.0, "compound": "Mg (Auger)", "chemical_state": "Mg²⁺", "formula": "Mg", "reference": "NIST SRD 20"},
+
+  {"element": "Al", "orbital": "2p", "binding_eV": 72.9, "compound": "Al metal", "chemical_state": "Al⁰", "formula": "Al", "reference": "NIST SRD 20"},
+  {"element": "Al", "orbital": "2p", "binding_eV": 74.5, "compound": "Al₂O₃", "chemical_state": "Al³⁺", "formula": "Al2O3", "reference": "NIST SRD 20"},
+  {"element": "Al", "orbital": "2p", "binding_eV": 74.0, "compound": "Al(OH)₃", "chemical_state": "Al³⁺", "formula": "Al(OH)3", "reference": "NIST SRD 20"},
+  {"element": "Al", "orbital": "2p", "binding_eV": 75.5, "compound": "AlF₃", "chemical_state": "Al³⁺", "formula": "AlF3", "reference": "NIST SRD 20"},
+  {"element": "Al", "orbital": "2p", "binding_eV": 74.2, "compound": "AlN", "chemical_state": "Al³⁺", "formula": "AlN", "reference": "NIST SRD 20"},
+  {"element": "Al", "orbital": "2p", "binding_eV": 74.7, "compound": "AlOOH (boehmite)", "chemical_state": "Al³⁺", "formula": "AlOOH", "reference": "NIST SRD 20"},
+  {"element": "Al", "orbital": "2p", "binding_eV": 73.5, "compound": "AlAs", "chemical_state": "Al³⁺", "formula": "AlAs", "reference": "NIST SRD 20"},
+  {"element": "Al", "orbital": "KLL Auger", "binding_eV": 1393.0, "compound": "Al (Auger)", "chemical_state": "Al", "formula": "Al", "reference": "NIST SRD 20"},
+
+  {"element": "Si", "orbital": "2p", "binding_eV": 99.3, "compound": "Si elemental", "chemical_state": "Si⁰", "formula": "Si", "reference": "NIST SRD 20"},
+  {"element": "Si", "orbital": "2p", "binding_eV": 103.4, "compound": "SiO₂", "chemical_state": "Si⁴⁺", "formula": "SiO2", "reference": "NIST SRD 20"},
+  {"element": "Si", "orbital": "2p", "binding_eV": 101.8, "compound": "SiO (suboxides)", "chemical_state": "Si²⁺", "formula": "SiOx", "reference": "NIST SRD 20"},
+  {"element": "Si", "orbital": "2p", "binding_eV": 101.5, "compound": "Si₃N₄", "chemical_state": "Si-N", "formula": "Si3N4", "reference": "NIST SRD 20"},
+  {"element": "Si", "orbital": "2p", "binding_eV": 100.4, "compound": "SiC", "chemical_state": "Si-C", "formula": "SiC", "reference": "NIST SRD 20"},
+  {"element": "Si", "orbital": "2p", "binding_eV": 102.5, "compound": "Silicone (PDMS)", "chemical_state": "Si-O-Si", "formula": "SiO(CH3)2", "reference": "NIST SRD 20"},
+  {"element": "Si", "orbital": "2p", "binding_eV": 104.0, "compound": "Silicate glass", "chemical_state": "Si⁴⁺", "formula": "SiO2", "reference": "NIST SRD 20"},
+  {"element": "Si", "orbital": "KLL Auger", "binding_eV": 1383.0, "compound": "Si (Auger)", "chemical_state": "Si", "formula": "Si", "reference": "NIST SRD 20"},
+
+  {"element": "P", "orbital": "2p", "binding_eV": 130.0, "compound": "P elemental", "chemical_state": "P⁰", "formula": "P", "reference": "NIST SRD 20"},
+  {"element": "P", "orbital": "2p", "binding_eV": 133.5, "compound": "PO₄³⁻ (phosphate)", "chemical_state": "P⁵⁺", "formula": "PO4", "reference": "NIST SRD 20"},
+  {"element": "P", "orbital": "2p", "binding_eV": 131.5, "compound": "P₂O₅", "chemical_state": "P⁵⁺", "formula": "P2O5", "reference": "NIST SRD 20"},
+  {"element": "P", "orbital": "2p", "binding_eV": 129.5, "compound": "InP", "chemical_state": "P³⁻", "formula": "InP", "reference": "NIST SRD 20"},
+  {"element": "P", "orbital": "2p", "binding_eV": 128.8, "compound": "GaP", "chemical_state": "P³⁻", "formula": "GaP", "reference": "NIST SRD 20"},
+  {"element": "P", "orbital": "2p", "binding_eV": 136.5, "compound": "LiPF₆", "chemical_state": "P⁵⁺", "formula": "LiPF6", "reference": "NIST SRD 20"},
+  {"element": "P", "orbital": "2p", "binding_eV": 134.0, "compound": "Na₃PO₄", "chemical_state": "P⁵⁺", "formula": "Na3PO4", "reference": "NIST SRD 20"},
+
+  {"element": "S", "orbital": "2p3/2", "binding_eV": 161.3, "compound": "Metal sulfide (FeS₂)", "chemical_state": "S²⁻", "formula": "FeS2", "reference": "NIST SRD 20"},
+  {"element": "S", "orbital": "2p3/2", "binding_eV": 162.0, "compound": "Thiol -SH", "chemical_state": "-SH", "formula": "R-SH", "reference": "NIST SRD 20"},
+  {"element": "S", "orbital": "2p3/2", "binding_eV": 163.5, "compound": "Disulfide S-S", "chemical_state": "S-S", "formula": "R-S-S-R", "reference": "NIST SRD 20"},
+  {"element": "S", "orbital": "2p3/2", "binding_eV": 164.0, "compound": "S elemental", "chemical_state": "S⁰", "formula": "S", "reference": "NIST SRD 20"},
+  {"element": "S", "orbital": "2p3/2", "binding_eV": 166.0, "compound": "Sulfoxide SO", "chemical_state": "S²⁺", "formula": "R-SO-R", "reference": "NIST SRD 20"},
+  {"element": "S", "orbital": "2p3/2", "binding_eV": 168.0, "compound": "Sulfone SO₂", "chemical_state": "S⁴⁺", "formula": "R-SO2-R", "reference": "NIST SRD 20"},
+  {"element": "S", "orbital": "2p3/2", "binding_eV": 168.8, "compound": "Sulfate SO₄²⁻", "chemical_state": "S⁶⁺", "formula": "SO4", "reference": "NIST SRD 20"},
+  {"element": "S", "orbital": "2p3/2", "binding_eV": 170.0, "compound": "Persulfate S₂O₈²⁻", "chemical_state": "S⁷⁺", "formula": "S2O8", "reference": "NIST SRD 20"},
+  {"element": "S", "orbital": "2p3/2", "binding_eV": 161.8, "compound": "ZnS", "chemical_state": "S²⁻", "formula": "ZnS", "reference": "NIST SRD 20"},
+  {"element": "S", "orbital": "2p3/2", "binding_eV": 162.5, "compound": "MoS₂", "chemical_state": "S²⁻", "formula": "MoS2", "reference": "NIST SRD 20"},
+  {"element": "S", "orbital": "2p3/2", "binding_eV": 160.5, "compound": "CdS", "chemical_state": "S²⁻", "formula": "CdS", "reference": "NIST SRD 20"},
+  {"element": "S", "orbital": "2p3/2", "binding_eV": 169.5, "compound": "BaSO₄", "chemical_state": "S⁶⁺", "formula": "BaSO4", "reference": "NIST SRD 20"},
+
+  {"element": "Cl", "orbital": "2p3/2", "binding_eV": 198.5, "compound": "Metal chloride (NaCl)", "chemical_state": "Cl⁻", "formula": "NaCl", "reference": "NIST SRD 20"},
+  {"element": "Cl", "orbital": "2p3/2", "binding_eV": 199.0, "compound": "KCl", "chemical_state": "Cl⁻", "formula": "KCl", "reference": "NIST SRD 20"},
+  {"element": "Cl", "orbital": "2p3/2", "binding_eV": 200.5, "compound": "Organic C-Cl", "chemical_state": "C-Cl", "formula": "R-Cl", "reference": "NIST SRD 20"},
+  {"element": "Cl", "orbital": "2p3/2", "binding_eV": 198.0, "compound": "FeCl₃", "chemical_state": "Cl⁻", "formula": "FeCl3", "reference": "NIST SRD 20"},
+  {"element": "Cl", "orbital": "2p3/2", "binding_eV": 207.0, "compound": "Perchlorate ClO₄⁻", "chemical_state": "Cl⁷⁺", "formula": "ClO4", "reference": "NIST SRD 20"},
+  {"element": "Cl", "orbital": "2p3/2", "binding_eV": 198.8, "compound": "CaCl₂", "chemical_state": "Cl⁻", "formula": "CaCl2", "reference": "NIST SRD 20"},
+
+  {"element": "K", "orbital": "2p3/2", "binding_eV": 292.8, "compound": "K metal", "chemical_state": "K⁰", "formula": "K", "reference": "NIST SRD 20"},
+  {"element": "K", "orbital": "2p3/2", "binding_eV": 293.0, "compound": "KCl", "chemical_state": "K⁺", "formula": "KCl", "reference": "NIST SRD 20"},
+  {"element": "K", "orbital": "2p3/2", "binding_eV": 292.5, "compound": "K₂O", "chemical_state": "K⁺", "formula": "K2O", "reference": "NIST SRD 20"},
+  {"element": "K", "orbital": "2p3/2", "binding_eV": 293.3, "compound": "K₂CO₃", "chemical_state": "K⁺", "formula": "K2CO3", "reference": "NIST SRD 20"},
+  {"element": "K", "orbital": "2p3/2", "binding_eV": 293.5, "compound": "KOH", "chemical_state": "K⁺", "formula": "KOH", "reference": "NIST SRD 20"},
+
+  {"element": "Ca", "orbital": "2p3/2", "binding_eV": 346.0, "compound": "Ca metal", "chemical_state": "Ca⁰", "formula": "Ca", "reference": "NIST SRD 20"},
+  {"element": "Ca", "orbital": "2p3/2", "binding_eV": 347.0, "compound": "CaO", "chemical_state": "Ca²⁺", "formula": "CaO", "reference": "NIST SRD 20"},
+  {"element": "Ca", "orbital": "2p3/2", "binding_eV": 347.2, "compound": "Ca(OH)₂", "chemical_state": "Ca²⁺", "formula": "Ca(OH)2", "reference": "NIST SRD 20"},
+  {"element": "Ca", "orbital": "2p3/2", "binding_eV": 347.5, "compound": "CaCO₃", "chemical_state": "Ca²⁺", "formula": "CaCO3", "reference": "NIST SRD 20"},
+  {"element": "Ca", "orbital": "2p3/2", "binding_eV": 348.0, "compound": "CaSO₄", "chemical_state": "Ca²⁺", "formula": "CaSO4", "reference": "NIST SRD 20"},
+  {"element": "Ca", "orbital": "2p3/2", "binding_eV": 348.2, "compound": "CaF₂", "chemical_state": "Ca²⁺", "formula": "CaF2", "reference": "NIST SRD 20"},
+
+  {"element": "Sc", "orbital": "2p3/2", "binding_eV": 398.4, "compound": "Sc metal", "chemical_state": "Sc⁰", "formula": "Sc", "reference": "NIST SRD 20"},
+  {"element": "Sc", "orbital": "2p3/2", "binding_eV": 401.8, "compound": "Sc₂O₃", "chemical_state": "Sc³⁺", "formula": "Sc2O3", "reference": "NIST SRD 20"},
+
+  {"element": "Ti", "orbital": "2p3/2", "binding_eV": 453.9, "compound": "Ti metal", "chemical_state": "Ti⁰", "formula": "Ti", "reference": "NIST SRD 20"},
+  {"element": "Ti", "orbital": "2p3/2", "binding_eV": 458.6, "compound": "TiO₂ (rutile/anatase)", "chemical_state": "Ti⁴⁺", "formula": "TiO2", "reference": "NIST SRD 20"},
+  {"element": "Ti", "orbital": "2p3/2", "binding_eV": 456.0, "compound": "Ti₂O₃", "chemical_state": "Ti³⁺", "formula": "Ti2O3", "reference": "NIST SRD 20"},
+  {"element": "Ti", "orbital": "2p3/2", "binding_eV": 455.0, "compound": "TiN", "chemical_state": "Ti³⁺", "formula": "TiN", "reference": "NIST SRD 20"},
+  {"element": "Ti", "orbital": "2p3/2", "binding_eV": 454.8, "compound": "TiC", "chemical_state": "Ti²⁺", "formula": "TiC", "reference": "NIST SRD 20"},
+  {"element": "Ti", "orbital": "2p3/2", "binding_eV": 457.5, "compound": "TiO₂ (reduced)", "chemical_state": "Ti³⁺/Ti⁴⁺", "formula": "TiO2-x", "reference": "NIST SRD 20"},
+  {"element": "Ti", "orbital": "2p3/2", "binding_eV": 459.0, "compound": "BaTiO₃", "chemical_state": "Ti⁴⁺", "formula": "BaTiO3", "reference": "NIST SRD 20"},
+  {"element": "Ti", "orbital": "2p3/2", "binding_eV": 460.0, "compound": "TiF₄", "chemical_state": "Ti⁴⁺", "formula": "TiF4", "reference": "NIST SRD 20"},
+  {"element": "Ti", "orbital": "LMM Auger", "binding_eV": 1070.0, "compound": "Ti (Auger)", "chemical_state": "Ti", "formula": "Ti", "reference": "NIST SRD 20"},
+
+  {"element": "V", "orbital": "2p3/2", "binding_eV": 512.3, "compound": "V metal", "chemical_state": "V⁰", "formula": "V", "reference": "NIST SRD 20"},
+  {"element": "V", "orbital": "2p3/2", "binding_eV": 517.2, "compound": "V₂O₅", "chemical_state": "V⁵⁺", "formula": "V2O5", "reference": "NIST SRD 20"},
+  {"element": "V", "orbital": "2p3/2", "binding_eV": 515.8, "compound": "VO₂", "chemical_state": "V⁴⁺", "formula": "VO2", "reference": "NIST SRD 20"},
+  {"element": "V", "orbital": "2p3/2", "binding_eV": 513.8, "compound": "V₂O₃", "chemical_state": "V³⁺", "formula": "V2O3", "reference": "NIST SRD 20"},
+  {"element": "V", "orbital": "2p3/2", "binding_eV": 516.5, "compound": "NaVO₃ (vanadate)", "chemical_state": "V⁵⁺", "formula": "NaVO3", "reference": "NIST SRD 20"},
+  {"element": "V", "orbital": "2p3/2", "binding_eV": 513.2, "compound": "VN", "chemical_state": "V³⁺", "formula": "VN", "reference": "NIST SRD 20"},
+
+  {"element": "Cr", "orbital": "2p3/2", "binding_eV": 574.2, "compound": "Cr metal", "chemical_state": "Cr⁰", "formula": "Cr", "reference": "NIST SRD 20"},
+  {"element": "Cr", "orbital": "2p3/2", "binding_eV": 576.5, "compound": "Cr₂O₃", "chemical_state": "Cr³⁺", "formula": "Cr2O3", "reference": "NIST SRD 20"},
+  {"element": "Cr", "orbital": "2p3/2", "binding_eV": 579.5, "compound": "CrO₃", "chemical_state": "Cr⁶⁺", "formula": "CrO3", "reference": "NIST SRD 20"},
+  {"element": "Cr", "orbital": "2p3/2", "binding_eV": 577.0, "compound": "Cr(OH)₃", "chemical_state": "Cr³⁺", "formula": "Cr(OH)3", "reference": "NIST SRD 20"},
+  {"element": "Cr", "orbital": "2p3/2", "binding_eV": 580.0, "compound": "K₂CrO₄ (chromate)", "chemical_state": "Cr⁶⁺", "formula": "K2CrO4", "reference": "NIST SRD 20"},
+  {"element": "Cr", "orbital": "2p3/2", "binding_eV": 575.5, "compound": "CrN", "chemical_state": "Cr³⁺", "formula": "CrN", "reference": "NIST SRD 20"},
+
+  {"element": "Mn", "orbital": "2p3/2", "binding_eV": 638.8, "compound": "Mn metal", "chemical_state": "Mn⁰", "formula": "Mn", "reference": "NIST SRD 20"},
+  {"element": "Mn", "orbital": "2p3/2", "binding_eV": 641.0, "compound": "MnO", "chemical_state": "Mn²⁺", "formula": "MnO", "reference": "NIST SRD 20"},
+  {"element": "Mn", "orbital": "2p3/2", "binding_eV": 641.8, "compound": "Mn₂O₃", "chemical_state": "Mn³⁺", "formula": "Mn2O3", "reference": "NIST SRD 20"},
+  {"element": "Mn", "orbital": "2p3/2", "binding_eV": 642.2, "compound": "MnO₂", "chemical_state": "Mn⁴⁺", "formula": "MnO2", "reference": "NIST SRD 20"},
+  {"element": "Mn", "orbital": "2p3/2", "binding_eV": 640.5, "compound": "MnS", "chemical_state": "Mn²⁺", "formula": "MnS", "reference": "NIST SRD 20"},
+  {"element": "Mn", "orbital": "2p3/2", "binding_eV": 641.4, "compound": "Mn(OH)₂", "chemical_state": "Mn²⁺", "formula": "Mn(OH)2", "reference": "NIST SRD 20"},
+  {"element": "Mn", "orbital": "2p3/2", "binding_eV": 643.0, "compound": "KMnO₄ (permanganate)", "chemical_state": "Mn⁷⁺", "formula": "KMnO4", "reference": "NIST SRD 20"},
+  {"element": "Mn", "orbital": "2p3/2", "binding_eV": 642.5, "compound": "MnOOH", "chemical_state": "Mn³⁺", "formula": "MnOOH", "reference": "NIST SRD 20"},
+
+  {"element": "Fe", "orbital": "2p3/2", "binding_eV": 706.8, "compound": "Fe metal", "chemical_state": "Fe⁰", "formula": "Fe", "reference": "NIST SRD 20"},
+  {"element": "Fe", "orbital": "2p3/2", "binding_eV": 709.5, "compound": "FeO (wustite)", "chemical_state": "Fe²⁺", "formula": "FeO", "reference": "NIST SRD 20"},
+  {"element": "Fe", "orbital": "2p3/2", "binding_eV": 710.8, "compound": "Fe₂O₃ (hematite)", "chemical_state": "Fe³⁺", "formula": "Fe2O3", "reference": "NIST SRD 20"},
+  {"element": "Fe", "orbital": "2p3/2", "binding_eV": 710.5, "compound": "Fe₃O₄ (magnetite)", "chemical_state": "Fe²⁺/Fe³⁺", "formula": "Fe3O4", "reference": "NIST SRD 20"},
+  {"element": "Fe", "orbital": "2p3/2", "binding_eV": 711.3, "compound": "FeOOH (goethite)", "chemical_state": "Fe³⁺", "formula": "FeOOH", "reference": "NIST SRD 20"},
+  {"element": "Fe", "orbital": "2p3/2", "binding_eV": 710.3, "compound": "FeSO₄", "chemical_state": "Fe²⁺", "formula": "FeSO4", "reference": "NIST SRD 20"},
+  {"element": "Fe", "orbital": "2p3/2", "binding_eV": 711.5, "compound": "Fe₂(SO₄)₃", "chemical_state": "Fe³⁺", "formula": "Fe2(SO4)3", "reference": "NIST SRD 20"},
+  {"element": "Fe", "orbital": "2p3/2", "binding_eV": 707.5, "compound": "FeS", "chemical_state": "Fe²⁺", "formula": "FeS", "reference": "NIST SRD 20"},
+  {"element": "Fe", "orbital": "2p3/2", "binding_eV": 707.2, "compound": "FeS₂ (pyrite)", "chemical_state": "Fe²⁺", "formula": "FeS2", "reference": "NIST SRD 20"},
+  {"element": "Fe", "orbital": "2p3/2", "binding_eV": 712.0, "compound": "FeCl₃", "chemical_state": "Fe³⁺", "formula": "FeCl3", "reference": "NIST SRD 20"},
+  {"element": "Fe", "orbital": "2p3/2", "binding_eV": 710.0, "compound": "FeCl₂", "chemical_state": "Fe²⁺", "formula": "FeCl2", "reference": "NIST SRD 20"},
+  {"element": "Fe", "orbital": "2p3/2", "binding_eV": 711.0, "compound": "FePO₄", "chemical_state": "Fe³⁺", "formula": "FePO4", "reference": "NIST SRD 20"},
+  {"element": "Fe", "orbital": "2p3/2", "binding_eV": 709.8, "compound": "LiFePO₄", "chemical_state": "Fe²⁺", "formula": "LiFePO4", "reference": "NIST SRD 20"},
+  {"element": "Fe", "orbital": "LMM Auger", "binding_eV": 783.0, "compound": "Fe (Auger)", "chemical_state": "Fe", "formula": "Fe", "reference": "NIST SRD 20"},
+
+  {"element": "Co", "orbital": "2p3/2", "binding_eV": 778.3, "compound": "Co metal", "chemical_state": "Co⁰", "formula": "Co", "reference": "NIST SRD 20"},
+  {"element": "Co", "orbital": "2p3/2", "binding_eV": 780.2, "compound": "CoO", "chemical_state": "Co²⁺", "formula": "CoO", "reference": "NIST SRD 20"},
+  {"element": "Co", "orbital": "2p3/2", "binding_eV": 779.8, "compound": "Co₃O₄", "chemical_state": "Co²⁺/Co³⁺", "formula": "Co3O4", "reference": "NIST SRD 20"},
+  {"element": "Co", "orbital": "2p3/2", "binding_eV": 780.5, "compound": "Co(OH)₂", "chemical_state": "Co²⁺", "formula": "Co(OH)2", "reference": "NIST SRD 20"},
+  {"element": "Co", "orbital": "2p3/2", "binding_eV": 781.0, "compound": "CoOOH", "chemical_state": "Co³⁺", "formula": "CoOOH", "reference": "NIST SRD 20"},
+  {"element": "Co", "orbital": "2p3/2", "binding_eV": 781.5, "compound": "CoSO₄", "chemical_state": "Co²⁺", "formula": "CoSO4", "reference": "NIST SRD 20"},
+  {"element": "Co", "orbital": "2p3/2", "binding_eV": 778.8, "compound": "CoS", "chemical_state": "Co²⁺", "formula": "CoS", "reference": "NIST SRD 20"},
+  {"element": "Co", "orbital": "2p3/2", "binding_eV": 782.0, "compound": "Co(NO₃)₂", "chemical_state": "Co²⁺", "formula": "Co(NO3)2", "reference": "NIST SRD 20"},
+  {"element": "Co", "orbital": "LMM Auger", "binding_eV": 716.0, "compound": "Co (Auger)", "chemical_state": "Co", "formula": "Co", "reference": "NIST SRD 20"},
+
+  {"element": "Ni", "orbital": "2p3/2", "binding_eV": 852.7, "compound": "Ni metal", "chemical_state": "Ni⁰", "formula": "Ni", "reference": "NIST SRD 20"},
+  {"element": "Ni", "orbital": "2p3/2", "binding_eV": 853.8, "compound": "NiO", "chemical_state": "Ni²⁺", "formula": "NiO", "reference": "NIST SRD 20"},
+  {"element": "Ni", "orbital": "2p3/2", "binding_eV": 854.6, "compound": "Ni₂O₃", "chemical_state": "Ni³⁺", "formula": "Ni2O3", "reference": "NIST SRD 20"},
+  {"element": "Ni", "orbital": "2p3/2", "binding_eV": 855.6, "compound": "Ni(OH)₂", "chemical_state": "Ni²⁺", "formula": "Ni(OH)2", "reference": "NIST SRD 20"},
+  {"element": "Ni", "orbital": "2p3/2", "binding_eV": 856.0, "compound": "NiOOH", "chemical_state": "Ni³⁺", "formula": "NiOOH", "reference": "NIST SRD 20"},
+  {"element": "Ni", "orbital": "2p3/2", "binding_eV": 854.0, "compound": "NiS", "chemical_state": "Ni²⁺", "formula": "NiS", "reference": "NIST SRD 20"},
+  {"element": "Ni", "orbital": "2p3/2", "binding_eV": 856.5, "compound": "NiSO₄", "chemical_state": "Ni²⁺", "formula": "NiSO4", "reference": "NIST SRD 20"},
+  {"element": "Ni", "orbital": "2p3/2", "binding_eV": 857.0, "compound": "NiCl₂", "chemical_state": "Ni²⁺", "formula": "NiCl2", "reference": "NIST SRD 20"},
+  {"element": "Ni", "orbital": "LMM Auger", "binding_eV": 645.0, "compound": "Ni (Auger)", "chemical_state": "Ni", "formula": "Ni", "reference": "NIST SRD 20"},
+
+  {"element": "Cu", "orbital": "2p3/2", "binding_eV": 932.7, "compound": "Cu metal", "chemical_state": "Cu⁰", "formula": "Cu", "reference": "NIST SRD 20"},
+  {"element": "Cu", "orbital": "2p3/2", "binding_eV": 932.5, "compound": "Cu₂O", "chemical_state": "Cu⁺", "formula": "Cu2O", "reference": "NIST SRD 20"},
+  {"element": "Cu", "orbital": "2p3/2", "binding_eV": 933.6, "compound": "CuO", "chemical_state": "Cu²⁺", "formula": "CuO", "reference": "NIST SRD 20"},
+  {"element": "Cu", "orbital": "2p3/2", "binding_eV": 934.6, "compound": "Cu(OH)₂", "chemical_state": "Cu²⁺", "formula": "Cu(OH)2", "reference": "NIST SRD 20"},
+  {"element": "Cu", "orbital": "2p3/2", "binding_eV": 935.0, "compound": "CuSO₄", "chemical_state": "Cu²⁺", "formula": "CuSO4", "reference": "NIST SRD 20"},
+  {"element": "Cu", "orbital": "2p3/2", "binding_eV": 932.2, "compound": "CuS", "chemical_state": "Cu²⁺", "formula": "CuS", "reference": "NIST SRD 20"},
+  {"element": "Cu", "orbital": "2p3/2", "binding_eV": 935.5, "compound": "CuCl₂", "chemical_state": "Cu²⁺", "formula": "CuCl2", "reference": "NIST SRD 20"},
+  {"element": "Cu", "orbital": "2p3/2", "binding_eV": 932.4, "compound": "CuCl", "chemical_state": "Cu⁺", "formula": "CuCl", "reference": "NIST SRD 20"},
+  {"element": "Cu", "orbital": "2p3/2", "binding_eV": 934.0, "compound": "CuCO₃ (malachite)", "chemical_state": "Cu²⁺", "formula": "CuCO3", "reference": "NIST SRD 20"},
+  {"element": "Cu", "orbital": "LMM Auger", "binding_eV": 568.0, "compound": "Cu metal (Auger)", "chemical_state": "Cu⁰", "formula": "Cu", "reference": "NIST SRD 20"},
+  {"element": "Cu", "orbital": "LMM Auger", "binding_eV": 570.0, "compound": "CuO (Auger)", "chemical_state": "Cu²⁺", "formula": "CuO", "reference": "NIST SRD 20"},
+
+  {"element": "Zn", "orbital": "2p3/2", "binding_eV": 1021.8, "compound": "Zn metal", "chemical_state": "Zn⁰", "formula": "Zn", "reference": "NIST SRD 20"},
+  {"element": "Zn", "orbital": "2p3/2", "binding_eV": 1021.5, "compound": "ZnO", "chemical_state": "Zn²⁺", "formula": "ZnO", "reference": "NIST SRD 20"},
+  {"element": "Zn", "orbital": "2p3/2", "binding_eV": 1022.0, "compound": "Zn(OH)₂", "chemical_state": "Zn²⁺", "formula": "Zn(OH)2", "reference": "NIST SRD 20"},
+  {"element": "Zn", "orbital": "2p3/2", "binding_eV": 1022.5, "compound": "ZnSO₄", "chemical_state": "Zn²⁺", "formula": "ZnSO4", "reference": "NIST SRD 20"},
+  {"element": "Zn", "orbital": "2p3/2", "binding_eV": 1022.2, "compound": "ZnCl₂", "chemical_state": "Zn²⁺", "formula": "ZnCl2", "reference": "NIST SRD 20"},
+  {"element": "Zn", "orbital": "2p3/2", "binding_eV": 1021.2, "compound": "ZnS", "chemical_state": "Zn²⁺", "formula": "ZnS", "reference": "NIST SRD 20"},
+  {"element": "Zn", "orbital": "2p3/2", "binding_eV": 1023.0, "compound": "ZnCO₃ (smithsonite)", "chemical_state": "Zn²⁺", "formula": "ZnCO3", "reference": "NIST SRD 20"},
+  {"element": "Zn", "orbital": "LMM Auger", "binding_eV": 498.0, "compound": "Zn (Auger)", "chemical_state": "Zn", "formula": "Zn", "reference": "NIST SRD 20"},
+
+  {"element": "Ga", "orbital": "2p3/2", "binding_eV": 1117.0, "compound": "Ga metal", "chemical_state": "Ga⁰", "formula": "Ga", "reference": "NIST SRD 20"},
+  {"element": "Ga", "orbital": "2p3/2", "binding_eV": 1118.0, "compound": "Ga₂O₃", "chemical_state": "Ga³⁺", "formula": "Ga2O3", "reference": "NIST SRD 20"},
+  {"element": "Ga", "orbital": "2p3/2", "binding_eV": 1117.5, "compound": "GaAs", "chemical_state": "Ga³⁺", "formula": "GaAs", "reference": "NIST SRD 20"},
+  {"element": "Ga", "orbital": "2p3/2", "binding_eV": 1117.3, "compound": "GaN", "chemical_state": "Ga³⁺", "formula": "GaN", "reference": "NIST SRD 20"},
+  {"element": "Ga", "orbital": "2p3/2", "binding_eV": 1117.8, "compound": "GaP", "chemical_state": "Ga³⁺", "formula": "GaP", "reference": "NIST SRD 20"},
+  {"element": "Ga", "orbital": "3d5/2", "binding_eV": 18.7, "compound": "Ga metal", "chemical_state": "Ga⁰", "formula": "Ga", "reference": "NIST SRD 20"},
+  {"element": "Ga", "orbital": "3d5/2", "binding_eV": 20.5, "compound": "Ga₂O₃", "chemical_state": "Ga³⁺", "formula": "Ga2O3", "reference": "NIST SRD 20"},
+
+  {"element": "Ge", "orbital": "3d5/2", "binding_eV": 29.2, "compound": "Ge elemental", "chemical_state": "Ge⁰", "formula": "Ge", "reference": "NIST SRD 20"},
+  {"element": "Ge", "orbital": "3d5/2", "binding_eV": 32.5, "compound": "GeO₂", "chemical_state": "Ge⁴⁺", "formula": "GeO2", "reference": "NIST SRD 20"},
+  {"element": "Ge", "orbital": "3d5/2", "binding_eV": 30.8, "compound": "GeO", "chemical_state": "Ge²⁺", "formula": "GeO", "reference": "NIST SRD 20"},
+  {"element": "Ge", "orbital": "2p3/2", "binding_eV": 1217.4, "compound": "Ge elemental", "chemical_state": "Ge⁰", "formula": "Ge", "reference": "NIST SRD 20"},
+  {"element": "Ge", "orbital": "2p3/2", "binding_eV": 1220.8, "compound": "GeO₂", "chemical_state": "Ge⁴⁺", "formula": "GeO2", "reference": "NIST SRD 20"},
+
+  {"element": "As", "orbital": "3d5/2", "binding_eV": 41.0, "compound": "As elemental", "chemical_state": "As⁰", "formula": "As", "reference": "NIST SRD 20"},
+  {"element": "As", "orbital": "3d5/2", "binding_eV": 44.5, "compound": "As₂O₃", "chemical_state": "As³⁺", "formula": "As2O3", "reference": "NIST SRD 20"},
+  {"element": "As", "orbital": "3d5/2", "binding_eV": 45.5, "compound": "As₂O₅", "chemical_state": "As⁵⁺", "formula": "As2O5", "reference": "NIST SRD 20"},
+  {"element": "As", "orbital": "3d5/2", "binding_eV": 41.5, "compound": "GaAs", "chemical_state": "As³⁻", "formula": "GaAs", "reference": "NIST SRD 20"},
+
+  {"element": "Se", "orbital": "3d5/2", "binding_eV": 55.5, "compound": "Se elemental", "chemical_state": "Se⁰", "formula": "Se", "reference": "NIST SRD 20"},
+  {"element": "Se", "orbital": "3d5/2", "binding_eV": 54.0, "compound": "Metal selenide", "chemical_state": "Se²⁻", "formula": "MSe", "reference": "NIST SRD 20"},
+  {"element": "Se", "orbital": "3d5/2", "binding_eV": 59.0, "compound": "SeO₂", "chemical_state": "Se⁴⁺", "formula": "SeO2", "reference": "NIST SRD 20"},
+  {"element": "Se", "orbital": "3d5/2", "binding_eV": 61.0, "compound": "SeO₃²⁻ (selenate)", "chemical_state": "Se⁶⁺", "formula": "SeO3", "reference": "NIST SRD 20"},
+
+  {"element": "Br", "orbital": "3d5/2", "binding_eV": 68.8, "compound": "KBr", "chemical_state": "Br⁻", "formula": "KBr", "reference": "NIST SRD 20"},
+  {"element": "Br", "orbital": "3d5/2", "binding_eV": 69.0, "compound": "NaBr", "chemical_state": "Br⁻", "formula": "NaBr", "reference": "NIST SRD 20"},
+  {"element": "Br", "orbital": "3d5/2", "binding_eV": 70.5, "compound": "Organic C-Br", "chemical_state": "C-Br", "formula": "R-Br", "reference": "NIST SRD 20"},
+
+  {"element": "Sr", "orbital": "3d5/2", "binding_eV": 133.5, "compound": "Sr metal", "chemical_state": "Sr⁰", "formula": "Sr", "reference": "NIST SRD 20"},
+  {"element": "Sr", "orbital": "3d5/2", "binding_eV": 134.0, "compound": "SrO", "chemical_state": "Sr²⁺", "formula": "SrO", "reference": "NIST SRD 20"},
+  {"element": "Sr", "orbital": "3d5/2", "binding_eV": 134.5, "compound": "SrCO₃", "chemical_state": "Sr²⁺", "formula": "SrCO3", "reference": "NIST SRD 20"},
+  {"element": "Sr", "orbital": "3d5/2", "binding_eV": 133.8, "compound": "SrTiO₃", "chemical_state": "Sr²⁺", "formula": "SrTiO3", "reference": "NIST SRD 20"},
+  {"element": "Sr", "orbital": "3d5/2", "binding_eV": 135.0, "compound": "SrSO₄", "chemical_state": "Sr²⁺", "formula": "SrSO4", "reference": "NIST SRD 20"},
+
+  {"element": "Y", "orbital": "3d5/2", "binding_eV": 156.0, "compound": "Y metal", "chemical_state": "Y⁰", "formula": "Y", "reference": "NIST SRD 20"},
+  {"element": "Y", "orbital": "3d5/2", "binding_eV": 157.0, "compound": "Y₂O₃", "chemical_state": "Y³⁺", "formula": "Y2O3", "reference": "NIST SRD 20"},
+  {"element": "Y", "orbital": "3d5/2", "binding_eV": 156.5, "compound": "YF₃", "chemical_state": "Y³⁺", "formula": "YF3", "reference": "NIST SRD 20"},
+  {"element": "Y", "orbital": "3d5/2", "binding_eV": 157.5, "compound": "Y(OH)₃", "chemical_state": "Y³⁺", "formula": "Y(OH)3", "reference": "NIST SRD 20"},
+
+  {"element": "Zr", "orbital": "3d5/2", "binding_eV": 178.8, "compound": "Zr metal", "chemical_state": "Zr⁰", "formula": "Zr", "reference": "NIST SRD 20"},
+  {"element": "Zr", "orbital": "3d5/2", "binding_eV": 182.0, "compound": "ZrO₂", "chemical_state": "Zr⁴⁺", "formula": "ZrO2", "reference": "NIST SRD 20"},
+  {"element": "Zr", "orbital": "3d5/2", "binding_eV": 180.5, "compound": "ZrN", "chemical_state": "Zr³⁺", "formula": "ZrN", "reference": "NIST SRD 20"},
+  {"element": "Zr", "orbital": "3d5/2", "binding_eV": 179.5, "compound": "ZrC", "chemical_state": "Zr⁴⁺", "formula": "ZrC", "reference": "NIST SRD 20"},
+  {"element": "Zr", "orbital": "3d5/2", "binding_eV": 183.0, "compound": "ZrSiO₄ (zircon)", "chemical_state": "Zr⁴⁺", "formula": "ZrSiO4", "reference": "NIST SRD 20"},
+
+  {"element": "Nb", "orbital": "3d5/2", "binding_eV": 202.3, "compound": "Nb metal", "chemical_state": "Nb⁰", "formula": "Nb", "reference": "NIST SRD 20"},
+  {"element": "Nb", "orbital": "3d5/2", "binding_eV": 207.2, "compound": "Nb₂O₅", "chemical_state": "Nb⁵⁺", "formula": "Nb2O5", "reference": "NIST SRD 20"},
+  {"element": "Nb", "orbital": "3d5/2", "binding_eV": 204.5, "compound": "NbO₂", "chemical_state": "Nb⁴⁺", "formula": "NbO2", "reference": "NIST SRD 20"},
+  {"element": "Nb", "orbital": "3d5/2", "binding_eV": 203.5, "compound": "NbC", "chemical_state": "Nb²⁺", "formula": "NbC", "reference": "NIST SRD 20"},
+  {"element": "Nb", "orbital": "3d5/2", "binding_eV": 204.0, "compound": "NbN", "chemical_state": "Nb³⁺", "formula": "NbN", "reference": "NIST SRD 20"},
+
+  {"element": "Mo", "orbital": "3d5/2", "binding_eV": 227.6, "compound": "Mo metal", "chemical_state": "Mo⁰", "formula": "Mo", "reference": "NIST SRD 20"},
+  {"element": "Mo", "orbital": "3d5/2", "binding_eV": 232.5, "compound": "MoO₃", "chemical_state": "Mo⁶⁺", "formula": "MoO3", "reference": "NIST SRD 20"},
+  {"element": "Mo", "orbital": "3d5/2", "binding_eV": 229.5, "compound": "MoO₂", "chemical_state": "Mo⁴⁺", "formula": "MoO2", "reference": "NIST SRD 20"},
+  {"element": "Mo", "orbital": "3d5/2", "binding_eV": 229.0, "compound": "MoS₂", "chemical_state": "Mo⁴⁺", "formula": "MoS2", "reference": "NIST SRD 20"},
+  {"element": "Mo", "orbital": "3d5/2", "binding_eV": 228.5, "compound": "Mo₂C", "chemical_state": "Mo²⁺", "formula": "Mo2C", "reference": "NIST SRD 20"},
+  {"element": "Mo", "orbital": "3d5/2", "binding_eV": 231.0, "compound": "Na₂MoO₄ (molybdate)", "chemical_state": "Mo⁶⁺", "formula": "Na2MoO4", "reference": "NIST SRD 20"},
+  {"element": "Mo", "orbital": "3d5/2", "binding_eV": 230.0, "compound": "MoSe₂", "chemical_state": "Mo⁴⁺", "formula": "MoSe2", "reference": "NIST SRD 20"},
+
+  {"element": "Ru", "orbital": "3d5/2", "binding_eV": 280.0, "compound": "Ru metal", "chemical_state": "Ru⁰", "formula": "Ru", "reference": "NIST SRD 20"},
+  {"element": "Ru", "orbital": "3d5/2", "binding_eV": 280.7, "compound": "RuO₂", "chemical_state": "Ru⁴⁺", "formula": "RuO2", "reference": "NIST SRD 20"},
+  {"element": "Ru", "orbital": "3d5/2", "binding_eV": 281.5, "compound": "RuCl₃", "chemical_state": "Ru³⁺", "formula": "RuCl3", "reference": "NIST SRD 20"},
+  {"element": "Ru", "orbital": "3d5/2", "binding_eV": 282.5, "compound": "Ru(OH)₃", "chemical_state": "Ru³⁺", "formula": "Ru(OH)3", "reference": "NIST SRD 20"},
+
+  {"element": "Rh", "orbital": "3d5/2", "binding_eV": 307.2, "compound": "Rh metal", "chemical_state": "Rh⁰", "formula": "Rh", "reference": "NIST SRD 20"},
+  {"element": "Rh", "orbital": "3d5/2", "binding_eV": 308.5, "compound": "Rh₂O₃", "chemical_state": "Rh³⁺", "formula": "Rh2O3", "reference": "NIST SRD 20"},
+  {"element": "Rh", "orbital": "3d5/2", "binding_eV": 309.5, "compound": "RhCl₃", "chemical_state": "Rh³⁺", "formula": "RhCl3", "reference": "NIST SRD 20"},
+
+  {"element": "Pd", "orbital": "3d5/2", "binding_eV": 335.2, "compound": "Pd metal", "chemical_state": "Pd⁰", "formula": "Pd", "reference": "NIST SRD 20"},
+  {"element": "Pd", "orbital": "3d5/2", "binding_eV": 336.5, "compound": "PdO", "chemical_state": "Pd²⁺", "formula": "PdO", "reference": "NIST SRD 20"},
+  {"element": "Pd", "orbital": "3d5/2", "binding_eV": 337.5, "compound": "PdCl₂", "chemical_state": "Pd²⁺", "formula": "PdCl2", "reference": "NIST SRD 20"},
+  {"element": "Pd", "orbital": "3d5/2", "binding_eV": 338.0, "compound": "Pd(OH)₂", "chemical_state": "Pd²⁺", "formula": "Pd(OH)2", "reference": "NIST SRD 20"},
+  {"element": "Pd", "orbital": "3d5/2", "binding_eV": 337.0, "compound": "PdS", "chemical_state": "Pd²⁺", "formula": "PdS", "reference": "NIST SRD 20"},
+
+  {"element": "Ag", "orbital": "3d5/2", "binding_eV": 368.2, "compound": "Ag metal", "chemical_state": "Ag⁰", "formula": "Ag", "reference": "NIST SRD 20"},
+  {"element": "Ag", "orbital": "3d5/2", "binding_eV": 367.4, "compound": "Ag₂O", "chemical_state": "Ag⁺", "formula": "Ag2O", "reference": "NIST SRD 20"},
+  {"element": "Ag", "orbital": "3d5/2", "binding_eV": 367.8, "compound": "AgCl", "chemical_state": "Ag⁺", "formula": "AgCl", "reference": "NIST SRD 20"},
+  {"element": "Ag", "orbital": "3d5/2", "binding_eV": 368.5, "compound": "AgNO₃", "chemical_state": "Ag⁺", "formula": "AgNO3", "reference": "NIST SRD 20"},
+  {"element": "Ag", "orbital": "3d5/2", "binding_eV": 367.0, "compound": "Ag₂S", "chemical_state": "Ag⁺", "formula": "Ag2S", "reference": "NIST SRD 20"},
+  {"element": "Ag", "orbital": "MNN Auger", "binding_eV": 1128.0, "compound": "Ag (Auger)", "chemical_state": "Ag", "formula": "Ag", "reference": "NIST SRD 20"},
+
+  {"element": "Cd", "orbital": "3d5/2", "binding_eV": 405.0, "compound": "Cd metal", "chemical_state": "Cd⁰", "formula": "Cd", "reference": "NIST SRD 20"},
+  {"element": "Cd", "orbital": "3d5/2", "binding_eV": 404.5, "compound": "CdO", "chemical_state": "Cd²⁺", "formula": "CdO", "reference": "NIST SRD 20"},
+  {"element": "Cd", "orbital": "3d5/2", "binding_eV": 405.5, "compound": "CdS", "chemical_state": "Cd²⁺", "formula": "CdS", "reference": "NIST SRD 20"},
+  {"element": "Cd", "orbital": "3d5/2", "binding_eV": 405.8, "compound": "CdSe", "chemical_state": "Cd²⁺", "formula": "CdSe", "reference": "NIST SRD 20"},
+  {"element": "Cd", "orbital": "3d5/2", "binding_eV": 406.0, "compound": "CdSO₄", "chemical_state": "Cd²⁺", "formula": "CdSO4", "reference": "NIST SRD 20"},
+
+  {"element": "In", "orbital": "3d5/2", "binding_eV": 443.8, "compound": "In metal", "chemical_state": "In⁰", "formula": "In", "reference": "NIST SRD 20"},
+  {"element": "In", "orbital": "3d5/2", "binding_eV": 444.5, "compound": "In₂O₃", "chemical_state": "In³⁺", "formula": "In2O3", "reference": "NIST SRD 20"},
+  {"element": "In", "orbital": "3d5/2", "binding_eV": 444.8, "compound": "ITO (In₂O₃:Sn)", "chemical_state": "In³⁺", "formula": "In2O3:Sn", "reference": "NIST SRD 20"},
+  {"element": "In", "orbital": "3d5/2", "binding_eV": 444.2, "compound": "InP", "chemical_state": "In³⁺", "formula": "InP", "reference": "NIST SRD 20"},
+  {"element": "In", "orbital": "3d5/2", "binding_eV": 444.0, "compound": "InAs", "chemical_state": "In³⁺", "formula": "InAs", "reference": "NIST SRD 20"},
+  {"element": "In", "orbital": "3d5/2", "binding_eV": 445.0, "compound": "InN", "chemical_state": "In³⁺", "formula": "InN", "reference": "NIST SRD 20"},
+
+  {"element": "Sn", "orbital": "3d5/2", "binding_eV": 484.9, "compound": "Sn metal", "chemical_state": "Sn⁰", "formula": "Sn", "reference": "NIST SRD 20"},
+  {"element": "Sn", "orbital": "3d5/2", "binding_eV": 486.5, "compound": "SnO", "chemical_state": "Sn²⁺", "formula": "SnO", "reference": "NIST SRD 20"},
+  {"element": "Sn", "orbital": "3d5/2", "binding_eV": 486.8, "compound": "SnO₂", "chemical_state": "Sn⁴⁺", "formula": "SnO2", "reference": "NIST SRD 20"},
+  {"element": "Sn", "orbital": "3d5/2", "binding_eV": 487.5, "compound": "SnCl₄", "chemical_state": "Sn⁴⁺", "formula": "SnCl4", "reference": "NIST SRD 20"},
+  {"element": "Sn", "orbital": "3d5/2", "binding_eV": 485.5, "compound": "SnS", "chemical_state": "Sn²⁺", "formula": "SnS", "reference": "NIST SRD 20"},
+  {"element": "Sn", "orbital": "3d5/2", "binding_eV": 487.0, "compound": "SnF₂", "chemical_state": "Sn²⁺", "formula": "SnF2", "reference": "NIST SRD 20"},
+  {"element": "Sn", "orbital": "MNN Auger", "binding_eV": 1062.0, "compound": "Sn (Auger)", "chemical_state": "Sn", "formula": "Sn", "reference": "NIST SRD 20"},
+
+  {"element": "Sb", "orbital": "3d5/2", "binding_eV": 528.0, "compound": "Sb metal", "chemical_state": "Sb⁰", "formula": "Sb", "reference": "NIST SRD 20"},
+  {"element": "Sb", "orbital": "3d5/2", "binding_eV": 530.5, "compound": "Sb₂O₃", "chemical_state": "Sb³⁺", "formula": "Sb2O3", "reference": "NIST SRD 20"},
+  {"element": "Sb", "orbital": "3d5/2", "binding_eV": 531.0, "compound": "Sb₂O₅", "chemical_state": "Sb⁵⁺", "formula": "Sb2O5", "reference": "NIST SRD 20"},
+  {"element": "Sb", "orbital": "3d5/2", "binding_eV": 529.5, "compound": "Sb₂S₃", "chemical_state": "Sb³⁺", "formula": "Sb2S3", "reference": "NIST SRD 20"},
+
+  {"element": "Te", "orbital": "3d5/2", "binding_eV": 573.0, "compound": "Te elemental", "chemical_state": "Te⁰", "formula": "Te", "reference": "NIST SRD 20"},
+  {"element": "Te", "orbital": "3d5/2", "binding_eV": 576.0, "compound": "TeO₂", "chemical_state": "Te⁴⁺", "formula": "TeO2", "reference": "NIST SRD 20"},
+  {"element": "Te", "orbital": "3d5/2", "binding_eV": 572.0, "compound": "Metal telluride", "chemical_state": "Te²⁻", "formula": "MTe", "reference": "NIST SRD 20"},
+  {"element": "Te", "orbital": "3d5/2", "binding_eV": 573.5, "compound": "Bi₂Te₃", "chemical_state": "Te²⁻", "formula": "Bi2Te3", "reference": "NIST SRD 20"},
+
+  {"element": "I", "orbital": "3d5/2", "binding_eV": 619.3, "compound": "KI", "chemical_state": "I⁻", "formula": "KI", "reference": "NIST SRD 20"},
+  {"element": "I", "orbital": "3d5/2", "binding_eV": 619.5, "compound": "NaI", "chemical_state": "I⁻", "formula": "NaI", "reference": "NIST SRD 20"},
+  {"element": "I", "orbital": "3d5/2", "binding_eV": 621.0, "compound": "Organic C-I", "chemical_state": "C-I", "formula": "R-I", "reference": "NIST SRD 20"},
+  {"element": "I", "orbital": "3d5/2", "binding_eV": 624.0, "compound": "IO₃⁻ (iodate)", "chemical_state": "I⁵⁺", "formula": "IO3", "reference": "NIST SRD 20"},
+
+  {"element": "Ba", "orbital": "3d5/2", "binding_eV": 780.7, "compound": "Ba metal", "chemical_state": "Ba⁰", "formula": "Ba", "reference": "NIST SRD 20"},
+  {"element": "Ba", "orbital": "3d5/2", "binding_eV": 779.5, "compound": "BaO", "chemical_state": "Ba²⁺", "formula": "BaO", "reference": "NIST SRD 20"},
+  {"element": "Ba", "orbital": "3d5/2", "binding_eV": 780.0, "compound": "BaCO₃", "chemical_state": "Ba²⁺", "formula": "BaCO3", "reference": "NIST SRD 20"},
+  {"element": "Ba", "orbital": "3d5/2", "binding_eV": 780.5, "compound": "BaSO₄", "chemical_state": "Ba²⁺", "formula": "BaSO4", "reference": "NIST SRD 20"},
+  {"element": "Ba", "orbital": "3d5/2", "binding_eV": 779.8, "compound": "BaTiO₃", "chemical_state": "Ba²⁺", "formula": "BaTiO3", "reference": "NIST SRD 20"},
+  {"element": "Ba", "orbital": "3d5/2", "binding_eV": 780.2, "compound": "BaF₂", "chemical_state": "Ba²⁺", "formula": "BaF2", "reference": "NIST SRD 20"},
+
+  {"element": "La", "orbital": "3d5/2", "binding_eV": 835.5, "compound": "La metal", "chemical_state": "La⁰", "formula": "La", "reference": "NIST SRD 20"},
+  {"element": "La", "orbital": "3d5/2", "binding_eV": 834.7, "compound": "La₂O₃", "chemical_state": "La³⁺", "formula": "La2O3", "reference": "NIST SRD 20"},
+  {"element": "La", "orbital": "3d5/2", "binding_eV": 835.0, "compound": "La(OH)₃", "chemical_state": "La³⁺", "formula": "La(OH)3", "reference": "NIST SRD 20"},
+  {"element": "La", "orbital": "3d5/2", "binding_eV": 836.0, "compound": "LaF₃", "chemical_state": "La³⁺", "formula": "LaF3", "reference": "NIST SRD 20"},
+  {"element": "La", "orbital": "3d5/2", "binding_eV": 835.3, "compound": "LaMnO₃ (perovskite)", "chemical_state": "La³⁺", "formula": "LaMnO3", "reference": "NIST SRD 20"},
+  {"element": "La", "orbital": "3d5/2", "binding_eV": 836.5, "compound": "LaCl₃", "chemical_state": "La³⁺", "formula": "LaCl3", "reference": "NIST SRD 20"},
+
+  {"element": "Ce", "orbital": "3d5/2", "binding_eV": 882.5, "compound": "CeO₂", "chemical_state": "Ce⁴⁺", "formula": "CeO2", "reference": "NIST SRD 20"},
+  {"element": "Ce", "orbital": "3d5/2", "binding_eV": 885.0, "compound": "Ce₂O₃", "chemical_state": "Ce³⁺", "formula": "Ce2O3", "reference": "NIST SRD 20"},
+  {"element": "Ce", "orbital": "3d5/2", "binding_eV": 881.8, "compound": "Ce metal", "chemical_state": "Ce⁰", "formula": "Ce", "reference": "NIST SRD 20"},
+  {"element": "Ce", "orbital": "3d5/2", "binding_eV": 883.5, "compound": "Ce(OH)₃", "chemical_state": "Ce³⁺", "formula": "Ce(OH)3", "reference": "NIST SRD 20"},
+  {"element": "Ce", "orbital": "3d5/2", "binding_eV": 886.0, "compound": "CeCl₃", "chemical_state": "Ce³⁺", "formula": "CeCl3", "reference": "NIST SRD 20"},
+  {"element": "Ce", "orbital": "3d5/2", "binding_eV": 884.0, "compound": "CeF₃", "chemical_state": "Ce³⁺", "formula": "CeF3", "reference": "NIST SRD 20"},
+
+  {"element": "Pr", "orbital": "3d5/2", "binding_eV": 933.0, "compound": "Pr metal", "chemical_state": "Pr⁰", "formula": "Pr", "reference": "NIST SRD 20"},
+  {"element": "Pr", "orbital": "3d5/2", "binding_eV": 933.5, "compound": "Pr₂O₃", "chemical_state": "Pr³⁺", "formula": "Pr2O3", "reference": "NIST SRD 20"},
+  {"element": "Pr", "orbital": "3d5/2", "binding_eV": 935.0, "compound": "Pr₆O₁₁", "chemical_state": "Pr³⁺/Pr⁴⁺", "formula": "Pr6O11", "reference": "NIST SRD 20"},
+  {"element": "Pr", "orbital": "3d5/2", "binding_eV": 934.0, "compound": "PrF₃", "chemical_state": "Pr³⁺", "formula": "PrF3", "reference": "NIST SRD 20"},
+
+  {"element": "Nd", "orbital": "3d5/2", "binding_eV": 982.0, "compound": "Nd metal", "chemical_state": "Nd⁰", "formula": "Nd", "reference": "NIST SRD 20"},
+  {"element": "Nd", "orbital": "3d5/2", "binding_eV": 982.5, "compound": "Nd₂O₃", "chemical_state": "Nd³⁺", "formula": "Nd2O3", "reference": "NIST SRD 20"},
+  {"element": "Nd", "orbital": "3d5/2", "binding_eV": 983.0, "compound": "NdF₃", "chemical_state": "Nd³⁺", "formula": "NdF3", "reference": "NIST SRD 20"},
+  {"element": "Nd", "orbital": "3d5/2", "binding_eV": 982.8, "compound": "Nd(OH)₃", "chemical_state": "Nd³⁺", "formula": "Nd(OH)3", "reference": "NIST SRD 20"},
+
+  {"element": "Sm", "orbital": "3d5/2", "binding_eV": 1083.0, "compound": "Sm metal", "chemical_state": "Sm⁰", "formula": "Sm", "reference": "NIST SRD 20"},
+  {"element": "Sm", "orbital": "3d5/2", "binding_eV": 1083.5, "compound": "Sm₂O₃", "chemical_state": "Sm³⁺", "formula": "Sm2O3", "reference": "NIST SRD 20"},
+
+  {"element": "Eu", "orbital": "3d5/2", "binding_eV": 1126.0, "compound": "Eu metal", "chemical_state": "Eu⁰", "formula": "Eu", "reference": "NIST SRD 20"},
+  {"element": "Eu", "orbital": "3d5/2", "binding_eV": 1126.5, "compound": "Eu₂O₃", "chemical_state": "Eu³⁺", "formula": "Eu2O3", "reference": "NIST SRD 20"},
+  {"element": "Eu", "orbital": "3d5/2", "binding_eV": 1125.5, "compound": "EuO", "chemical_state": "Eu²⁺", "formula": "EuO", "reference": "NIST SRD 20"},
+
+  {"element": "Gd", "orbital": "3d5/2", "binding_eV": 1186.0, "compound": "Gd metal", "chemical_state": "Gd⁰", "formula": "Gd", "reference": "NIST SRD 20"},
+  {"element": "Gd", "orbital": "3d5/2", "binding_eV": 1186.5, "compound": "Gd₂O₃", "chemical_state": "Gd³⁺", "formula": "Gd2O3", "reference": "NIST SRD 20"},
+  {"element": "Gd", "orbital": "4d", "binding_eV": 142.0, "compound": "Gd metal", "chemical_state": "Gd⁰", "formula": "Gd", "reference": "NIST SRD 20"},
+  {"element": "Gd", "orbital": "4d", "binding_eV": 143.0, "compound": "Gd₂O₃", "chemical_state": "Gd³⁺", "formula": "Gd2O3", "reference": "NIST SRD 20"},
+
+  {"element": "Hf", "orbital": "4f7/2", "binding_eV": 14.3, "compound": "Hf metal", "chemical_state": "Hf⁰", "formula": "Hf", "reference": "NIST SRD 20"},
+  {"element": "Hf", "orbital": "4f7/2", "binding_eV": 17.0, "compound": "HfO₂", "chemical_state": "Hf⁴⁺", "formula": "HfO2", "reference": "NIST SRD 20"},
+  {"element": "Hf", "orbital": "4f7/2", "binding_eV": 15.5, "compound": "HfN", "chemical_state": "Hf³⁺", "formula": "HfN", "reference": "NIST SRD 20"},
+  {"element": "Hf", "orbital": "4f7/2", "binding_eV": 14.8, "compound": "HfC", "chemical_state": "Hf⁴⁺", "formula": "HfC", "reference": "NIST SRD 20"},
+
+  {"element": "Ta", "orbital": "4f7/2", "binding_eV": 21.6, "compound": "Ta metal", "chemical_state": "Ta⁰", "formula": "Ta", "reference": "NIST SRD 20"},
+  {"element": "Ta", "orbital": "4f7/2", "binding_eV": 26.0, "compound": "Ta₂O₅", "chemical_state": "Ta⁵⁺", "formula": "Ta2O5", "reference": "NIST SRD 20"},
+  {"element": "Ta", "orbital": "4f7/2", "binding_eV": 23.0, "compound": "TaN", "chemical_state": "Ta³⁺", "formula": "TaN", "reference": "NIST SRD 20"},
+  {"element": "Ta", "orbital": "4f7/2", "binding_eV": 22.5, "compound": "TaC", "chemical_state": "Ta²⁺", "formula": "TaC", "reference": "NIST SRD 20"},
+  {"element": "Ta", "orbital": "4f7/2", "binding_eV": 24.5, "compound": "TaON", "chemical_state": "Ta⁵⁺", "formula": "TaON", "reference": "NIST SRD 20"},
+
+  {"element": "W", "orbital": "4f7/2", "binding_eV": 31.4, "compound": "W metal", "chemical_state": "W⁰", "formula": "W", "reference": "NIST SRD 20"},
+  {"element": "W", "orbital": "4f7/2", "binding_eV": 35.5, "compound": "WO₃", "chemical_state": "W⁶⁺", "formula": "WO3", "reference": "NIST SRD 20"},
+  {"element": "W", "orbital": "4f7/2", "binding_eV": 33.0, "compound": "WO₂", "chemical_state": "W⁴⁺", "formula": "WO2", "reference": "NIST SRD 20"},
+  {"element": "W", "orbital": "4f7/2", "binding_eV": 32.5, "compound": "WS₂", "chemical_state": "W⁴⁺", "formula": "WS2", "reference": "NIST SRD 20"},
+  {"element": "W", "orbital": "4f7/2", "binding_eV": 31.8, "compound": "WC", "chemical_state": "W²⁺", "formula": "WC", "reference": "NIST SRD 20"},
+  {"element": "W", "orbital": "4f7/2", "binding_eV": 36.0, "compound": "Na₂WO₄ (tungstate)", "chemical_state": "W⁶⁺", "formula": "Na2WO4", "reference": "NIST SRD 20"},
+  {"element": "W", "orbital": "4f7/2", "binding_eV": 34.5, "compound": "WO₃₋ₓ (reduced)", "chemical_state": "W⁵⁺", "formula": "WO3-x", "reference": "NIST SRD 20"},
+
+  {"element": "Re", "orbital": "4f7/2", "binding_eV": 40.3, "compound": "Re metal", "chemical_state": "Re⁰", "formula": "Re", "reference": "NIST SRD 20"},
+  {"element": "Re", "orbital": "4f7/2", "binding_eV": 45.0, "compound": "ReO₃", "chemical_state": "Re⁶⁺", "formula": "ReO3", "reference": "NIST SRD 20"},
+  {"element": "Re", "orbital": "4f7/2", "binding_eV": 46.5, "compound": "Re₂O₇", "chemical_state": "Re⁷⁺", "formula": "Re2O7", "reference": "NIST SRD 20"},
+
+  {"element": "Ir", "orbital": "4f7/2", "binding_eV": 60.8, "compound": "Ir metal", "chemical_state": "Ir⁰", "formula": "Ir", "reference": "NIST SRD 20"},
+  {"element": "Ir", "orbital": "4f7/2", "binding_eV": 61.7, "compound": "IrO₂", "chemical_state": "Ir⁴⁺", "formula": "IrO2", "reference": "NIST SRD 20"},
+  {"element": "Ir", "orbital": "4f7/2", "binding_eV": 62.5, "compound": "IrCl₃", "chemical_state": "Ir³⁺", "formula": "IrCl3", "reference": "NIST SRD 20"},
+  {"element": "Ir", "orbital": "4f7/2", "binding_eV": 62.0, "compound": "Ir₂O₃", "chemical_state": "Ir³⁺", "formula": "Ir2O3", "reference": "NIST SRD 20"},
+
+  {"element": "Pt", "orbital": "4f7/2", "binding_eV": 71.2, "compound": "Pt metal", "chemical_state": "Pt⁰", "formula": "Pt", "reference": "NIST SRD 20"},
+  {"element": "Pt", "orbital": "4f7/2", "binding_eV": 72.4, "compound": "PtO", "chemical_state": "Pt²⁺", "formula": "PtO", "reference": "NIST SRD 20"},
+  {"element": "Pt", "orbital": "4f7/2", "binding_eV": 74.0, "compound": "PtO₂", "chemical_state": "Pt⁴⁺", "formula": "PtO2", "reference": "NIST SRD 20"},
+  {"element": "Pt", "orbital": "4f7/2", "binding_eV": 73.0, "compound": "Pt(OH)₂", "chemical_state": "Pt²⁺", "formula": "Pt(OH)2", "reference": "NIST SRD 20"},
+  {"element": "Pt", "orbital": "4f7/2", "binding_eV": 72.8, "compound": "PtCl₂", "chemical_state": "Pt²⁺", "formula": "PtCl2", "reference": "NIST SRD 20"},
+  {"element": "Pt", "orbital": "4f7/2", "binding_eV": 74.5, "compound": "PtCl₄", "chemical_state": "Pt⁴⁺", "formula": "PtCl4", "reference": "NIST SRD 20"},
+  {"element": "Pt", "orbital": "4f7/2", "binding_eV": 71.8, "compound": "Pt-C (catalyst)", "chemical_state": "Pt⁰/Pt²⁺", "formula": "Pt/C", "reference": "NIST SRD 20"},
+
+  {"element": "Au", "orbital": "4f7/2", "binding_eV": 84.0, "compound": "Au metal", "chemical_state": "Au⁰", "formula": "Au", "reference": "NIST SRD 20"},
+  {"element": "Au", "orbital": "4f7/2", "binding_eV": 85.8, "compound": "Au₂O₃", "chemical_state": "Au³⁺", "formula": "Au2O3", "reference": "NIST SRD 20"},
+  {"element": "Au", "orbital": "4f7/2", "binding_eV": 84.9, "compound": "AuCl", "chemical_state": "Au⁺", "formula": "AuCl", "reference": "NIST SRD 20"},
+  {"element": "Au", "orbital": "4f7/2", "binding_eV": 86.5, "compound": "AuCl₃", "chemical_state": "Au³⁺", "formula": "AuCl3", "reference": "NIST SRD 20"},
+  {"element": "Au", "orbital": "4f7/2", "binding_eV": 84.2, "compound": "Au nanoparticle", "chemical_state": "Au⁰", "formula": "Au NP", "reference": "NIST SRD 20"},
+  {"element": "Au", "orbital": "4f7/2", "binding_eV": 85.0, "compound": "Au-thiolate SAM", "chemical_state": "Au⁺", "formula": "Au-SR", "reference": "NIST SRD 20"},
+
+  {"element": "Pb", "orbital": "4f7/2", "binding_eV": 136.9, "compound": "Pb metal", "chemical_state": "Pb⁰", "formula": "Pb", "reference": "NIST SRD 20"},
+  {"element": "Pb", "orbital": "4f7/2", "binding_eV": 138.5, "compound": "PbO", "chemical_state": "Pb²⁺", "formula": "PbO", "reference": "NIST SRD 20"},
+  {"element": "Pb", "orbital": "4f7/2", "binding_eV": 138.8, "compound": "PbO₂", "chemical_state": "Pb⁴⁺", "formula": "PbO2", "reference": "NIST SRD 20"},
+  {"element": "Pb", "orbital": "4f7/2", "binding_eV": 139.0, "compound": "PbSO₄", "chemical_state": "Pb²⁺", "formula": "PbSO4", "reference": "NIST SRD 20"},
+  {"element": "Pb", "orbital": "4f7/2", "binding_eV": 137.5, "compound": "PbS (galena)", "chemical_state": "Pb²⁺", "formula": "PbS", "reference": "NIST SRD 20"},
+  {"element": "Pb", "orbital": "4f7/2", "binding_eV": 138.0, "compound": "PbCO₃ (cerussite)", "chemical_state": "Pb²⁺", "formula": "PbCO3", "reference": "NIST SRD 20"},
+  {"element": "Pb", "orbital": "4f7/2", "binding_eV": 138.3, "compound": "PbCl₂", "chemical_state": "Pb²⁺", "formula": "PbCl2", "reference": "NIST SRD 20"},
+  {"element": "Pb", "orbital": "4f7/2", "binding_eV": 138.6, "compound": "PbI₂ (perovskite precursor)", "chemical_state": "Pb²⁺", "formula": "PbI2", "reference": "NIST SRD 20"},
+  {"element": "Pb", "orbital": "4f7/2", "binding_eV": 138.4, "compound": "CH₃NH₃PbI₃ (perovskite)", "chemical_state": "Pb²⁺", "formula": "MAPbI3", "reference": "NIST SRD 20"},
+
+  {"element": "Bi", "orbital": "4f7/2", "binding_eV": 156.9, "compound": "Bi metal", "chemical_state": "Bi⁰", "formula": "Bi", "reference": "NIST SRD 20"},
+  {"element": "Bi", "orbital": "4f7/2", "binding_eV": 159.0, "compound": "Bi₂O₃", "chemical_state": "Bi³⁺", "formula": "Bi2O3", "reference": "NIST SRD 20"},
+  {"element": "Bi", "orbital": "4f7/2", "binding_eV": 157.5, "compound": "Bi₂S₃", "chemical_state": "Bi³⁺", "formula": "Bi2S3", "reference": "NIST SRD 20"},
+  {"element": "Bi", "orbital": "4f7/2", "binding_eV": 158.0, "compound": "Bi₂Te₃", "chemical_state": "Bi³⁺", "formula": "Bi2Te3", "reference": "NIST SRD 20"},
+  {"element": "Bi", "orbital": "4f7/2", "binding_eV": 159.5, "compound": "BiOCl", "chemical_state": "Bi³⁺", "formula": "BiOCl", "reference": "NIST SRD 20"},
+  {"element": "Bi", "orbital": "4f7/2", "binding_eV": 160.0, "compound": "BiF₃", "chemical_state": "Bi³⁺", "formula": "BiF3", "reference": "NIST SRD 20"},
+
+  {"element": "Th", "orbital": "4f7/2", "binding_eV": 333.0, "compound": "Th metal", "chemical_state": "Th⁰", "formula": "Th", "reference": "NIST SRD 20"},
+  {"element": "Th", "orbital": "4f7/2", "binding_eV": 333.3, "compound": "ThO₂", "chemical_state": "Th⁴⁺", "formula": "ThO2", "reference": "NIST SRD 20"},
+  {"element": "Th", "orbital": "4f7/2", "binding_eV": 335.0, "compound": "ThF₄", "chemical_state": "Th⁴⁺", "formula": "ThF4", "reference": "NIST SRD 20"},
+
+  {"element": "U", "orbital": "4f7/2", "binding_eV": 377.3, "compound": "U metal", "chemical_state": "U⁰", "formula": "U", "reference": "NIST SRD 20"},
+  {"element": "U", "orbital": "4f7/2", "binding_eV": 380.0, "compound": "UO₂", "chemical_state": "U⁴⁺", "formula": "UO2", "reference": "NIST SRD 20"},
+  {"element": "U", "orbital": "4f7/2", "binding_eV": 381.5, "compound": "U₃O₈", "chemical_state": "U⁵⁺/U⁶⁺", "formula": "U3O8", "reference": "NIST SRD 20"},
+  {"element": "U", "orbital": "4f7/2", "binding_eV": 382.5, "compound": "UO₃", "chemical_state": "U⁶⁺", "formula": "UO3", "reference": "NIST SRD 20"},
+  {"element": "U", "orbital": "4f7/2", "binding_eV": 383.0, "compound": "UF₆", "chemical_state": "U⁶⁺", "formula": "UF6", "reference": "NIST SRD 20"},
+
+  {"element": "Rb", "orbital": "3d5/2", "binding_eV": 110.0, "compound": "Rb metal", "chemical_state": "Rb⁰", "formula": "Rb", "reference": "NIST SRD 20"},
+  {"element": "Rb", "orbital": "3d5/2", "binding_eV": 110.5, "compound": "RbCl", "chemical_state": "Rb⁺", "formula": "RbCl", "reference": "NIST SRD 20"},
+  {"element": "Rb", "orbital": "3d5/2", "binding_eV": 110.3, "compound": "Rb₂O", "chemical_state": "Rb⁺", "formula": "Rb2O", "reference": "NIST SRD 20"},
+
+  {"element": "Cs", "orbital": "3d5/2", "binding_eV": 724.0, "compound": "Cs metal", "chemical_state": "Cs⁰", "formula": "Cs", "reference": "NIST SRD 20"},
+  {"element": "Cs", "orbital": "3d5/2", "binding_eV": 724.5, "compound": "CsCl", "chemical_state": "Cs⁺", "formula": "CsCl", "reference": "NIST SRD 20"},
+  {"element": "Cs", "orbital": "3d5/2", "binding_eV": 724.8, "compound": "Cs₂O", "chemical_state": "Cs⁺", "formula": "Cs2O", "reference": "NIST SRD 20"},
+  {"element": "Cs", "orbital": "3d5/2", "binding_eV": 725.0, "compound": "CsPbI₃ (perovskite)", "chemical_state": "Cs⁺", "formula": "CsPbI3", "reference": "NIST SRD 20"},
+
+  {"element": "Tb", "orbital": "3d5/2", "binding_eV": 1242.0, "compound": "Tb metal", "chemical_state": "Tb⁰", "formula": "Tb", "reference": "NIST SRD 20"},
+  {"element": "Tb", "orbital": "3d5/2", "binding_eV": 1242.5, "compound": "Tb₂O₃", "chemical_state": "Tb³⁺", "formula": "Tb2O3", "reference": "NIST SRD 20"},
+  {"element": "Tb", "orbital": "4d", "binding_eV": 151.0, "compound": "Tb metal", "chemical_state": "Tb⁰", "formula": "Tb", "reference": "NIST SRD 20"},
+
+  {"element": "Dy", "orbital": "4d", "binding_eV": 155.0, "compound": "Dy metal", "chemical_state": "Dy⁰", "formula": "Dy", "reference": "NIST SRD 20"},
+  {"element": "Dy", "orbital": "4d", "binding_eV": 156.0, "compound": "Dy₂O₃", "chemical_state": "Dy³⁺", "formula": "Dy2O3", "reference": "NIST SRD 20"},
+
+  {"element": "Er", "orbital": "4d", "binding_eV": 168.0, "compound": "Er metal", "chemical_state": "Er⁰", "formula": "Er", "reference": "NIST SRD 20"},
+  {"element": "Er", "orbital": "4d", "binding_eV": 169.0, "compound": "Er₂O₃", "chemical_state": "Er³⁺", "formula": "Er2O3", "reference": "NIST SRD 20"},
+
+  {"element": "Yb", "orbital": "4d", "binding_eV": 185.0, "compound": "Yb metal", "chemical_state": "Yb⁰", "formula": "Yb", "reference": "NIST SRD 20"},
+  {"element": "Yb", "orbital": "4d", "binding_eV": 186.0, "compound": "Yb₂O₃", "chemical_state": "Yb³⁺", "formula": "Yb2O3", "reference": "NIST SRD 20"},
+
+  {"element": "Lu", "orbital": "4f7/2", "binding_eV": 7.5, "compound": "Lu metal", "chemical_state": "Lu⁰", "formula": "Lu", "reference": "NIST SRD 20"},
+  {"element": "Lu", "orbital": "4f7/2", "binding_eV": 8.0, "compound": "Lu₂O₃", "chemical_state": "Lu³⁺", "formula": "Lu2O3", "reference": "NIST SRD 20"},
+
+  {"element": "Ti", "orbital": "2p1/2", "binding_eV": 464.3, "compound": "TiO₂", "chemical_state": "Ti⁴⁺", "formula": "TiO2", "reference": "NIST SRD 20"},
+  {"element": "Ti", "orbital": "2p1/2", "binding_eV": 459.5, "compound": "Ti metal", "chemical_state": "Ti⁰", "formula": "Ti", "reference": "NIST SRD 20"},
+
+  {"element": "V", "orbital": "2p1/2", "binding_eV": 524.5, "compound": "V₂O₅", "chemical_state": "V⁵⁺", "formula": "V2O5", "reference": "NIST SRD 20"},
+
+  {"element": "Cr", "orbital": "2p1/2", "binding_eV": 586.0, "compound": "Cr₂O₃", "chemical_state": "Cr³⁺", "formula": "Cr2O3", "reference": "NIST SRD 20"},
+
+  {"element": "Mn", "orbital": "2p1/2", "binding_eV": 653.0, "compound": "MnO₂", "chemical_state": "Mn⁴⁺", "formula": "MnO2", "reference": "NIST SRD 20"},
+
+  {"element": "Fe", "orbital": "2p1/2", "binding_eV": 723.5, "compound": "Fe₂O₃", "chemical_state": "Fe³⁺", "formula": "Fe2O3", "reference": "NIST SRD 20"},
+  {"element": "Fe", "orbital": "2p1/2", "binding_eV": 720.0, "compound": "Fe metal", "chemical_state": "Fe⁰", "formula": "Fe", "reference": "NIST SRD 20"},
+
+  {"element": "Co", "orbital": "2p1/2", "binding_eV": 793.5, "compound": "CoO", "chemical_state": "Co²⁺", "formula": "CoO", "reference": "NIST SRD 20"},
+
+  {"element": "Ni", "orbital": "2p1/2", "binding_eV": 870.0, "compound": "NiO", "chemical_state": "Ni²⁺", "formula": "NiO", "reference": "NIST SRD 20"},
+
+  {"element": "Cu", "orbital": "2p1/2", "binding_eV": 952.5, "compound": "CuO", "chemical_state": "Cu²⁺", "formula": "CuO", "reference": "NIST SRD 20"},
+  {"element": "Cu", "orbital": "2p1/2", "binding_eV": 952.3, "compound": "Cu metal", "chemical_state": "Cu⁰", "formula": "Cu", "reference": "NIST SRD 20"},
+
+  {"element": "Zn", "orbital": "2p1/2", "binding_eV": 1044.8, "compound": "ZnO", "chemical_state": "Zn²⁺", "formula": "ZnO", "reference": "NIST SRD 20"},
+
+  {"element": "Fe", "orbital": "3p", "binding_eV": 52.7, "compound": "Fe metal", "chemical_state": "Fe⁰", "formula": "Fe", "reference": "NIST SRD 20"},
+  {"element": "Fe", "orbital": "3p", "binding_eV": 55.5, "compound": "Fe₂O₃", "chemical_state": "Fe³⁺", "formula": "Fe2O3", "reference": "NIST SRD 20"},
+
+  {"element": "Co", "orbital": "3p", "binding_eV": 59.0, "compound": "Co metal", "chemical_state": "Co⁰", "formula": "Co", "reference": "NIST SRD 20"},
+
+  {"element": "Ni", "orbital": "3p", "binding_eV": 66.2, "compound": "Ni metal", "chemical_state": "Ni⁰", "formula": "Ni", "reference": "NIST SRD 20"},
+
+  {"element": "Cu", "orbital": "3p", "binding_eV": 75.1, "compound": "Cu metal", "chemical_state": "Cu⁰", "formula": "Cu", "reference": "NIST SRD 20"},
+
+  {"element": "Zn", "orbital": "3p", "binding_eV": 88.7, "compound": "Zn metal", "chemical_state": "Zn⁰", "formula": "Zn", "reference": "NIST SRD 20"},
+
+  {"element": "Mn", "orbital": "3s", "binding_eV": 83.0, "compound": "Mn metal", "chemical_state": "Mn⁰", "formula": "Mn", "reference": "NIST SRD 20"},
+
+  {"element": "Fe", "orbital": "2s", "binding_eV": 844.6, "compound": "Fe metal", "chemical_state": "Fe⁰", "formula": "Fe", "reference": "NIST SRD 20"},
+  {"element": "Fe", "orbital": "2s", "binding_eV": 846.0, "compound": "Fe₂O₃", "chemical_state": "Fe³⁺", "formula": "Fe2O3", "reference": "NIST SRD 20"},
+
+  {"element": "Ni", "orbital": "3s", "binding_eV": 110.0, "compound": "Ni metal", "chemical_state": "Ni⁰", "formula": "Ni", "reference": "NIST SRD 20"},
+
+  {"element": "Cu", "orbital": "3s", "binding_eV": 122.5, "compound": "Cu metal", "chemical_state": "Cu⁰", "formula": "Cu", "reference": "NIST SRD 20"},
+
+  {"element": "Zn", "orbital": "3s", "binding_eV": 139.8, "compound": "Zn metal", "chemical_state": "Zn⁰", "formula": "Zn", "reference": "NIST SRD 20"},
+
+  {"element": "Ti", "orbital": "3p", "binding_eV": 37.5, "compound": "Ti metal", "chemical_state": "Ti⁰", "formula": "Ti", "reference": "NIST SRD 20"},
+  {"element": "Ti", "orbital": "3s", "binding_eV": 58.7, "compound": "Ti metal", "chemical_state": "Ti⁰", "formula": "Ti", "reference": "NIST SRD 20"},
+
+  {"element": "V", "orbital": "3p", "binding_eV": 37.2, "compound": "V metal", "chemical_state": "V⁰", "formula": "V", "reference": "NIST SRD 20"},
+
+  {"element": "Cr", "orbital": "3p", "binding_eV": 42.2, "compound": "Cr metal", "chemical_state": "Cr⁰", "formula": "Cr", "reference": "NIST SRD 20"},
+
+  {"element": "Mn", "orbital": "3p", "binding_eV": 47.2, "compound": "Mn metal", "chemical_state": "Mn⁰", "formula": "Mn", "reference": "NIST SRD 20"},
+
+  {"element": "Ag", "orbital": "3d3/2", "binding_eV": 374.2, "compound": "Ag metal", "chemical_state": "Ag⁰", "formula": "Ag", "reference": "NIST SRD 20"},
+  {"element": "Pd", "orbital": "3d3/2", "binding_eV": 340.7, "compound": "Pd metal", "chemical_state": "Pd⁰", "formula": "Pd", "reference": "NIST SRD 20"},
+  {"element": "Au", "orbital": "4f5/2", "binding_eV": 87.7, "compound": "Au metal", "chemical_state": "Au⁰", "formula": "Au", "reference": "NIST SRD 20"},
+  {"element": "Pt", "orbital": "4f5/2", "binding_eV": 74.5, "compound": "Pt metal", "chemical_state": "Pt⁰", "formula": "Pt", "reference": "NIST SRD 20"},
+
+  {"element": "Sn", "orbital": "3d3/2", "binding_eV": 493.3, "compound": "Sn metal", "chemical_state": "Sn⁰", "formula": "Sn", "reference": "NIST SRD 20"},
+  {"element": "Sn", "orbital": "3d3/2", "binding_eV": 495.2, "compound": "SnO₂", "chemical_state": "Sn⁴⁺", "formula": "SnO2", "reference": "NIST SRD 20"},
+
+  {"element": "In", "orbital": "3d3/2", "binding_eV": 451.4, "compound": "In metal", "chemical_state": "In⁰", "formula": "In", "reference": "NIST SRD 20"},
+  {"element": "In", "orbital": "3d3/2", "binding_eV": 452.2, "compound": "In₂O₃", "chemical_state": "In³⁺", "formula": "In2O3", "reference": "NIST SRD 20"},
+
+  {"element": "Cd", "orbital": "3d3/2", "binding_eV": 411.6, "compound": "Cd metal", "chemical_state": "Cd⁰", "formula": "Cd", "reference": "NIST SRD 20"},
+
+  {"element": "Mo", "orbital": "3d3/2", "binding_eV": 231.0, "compound": "Mo metal", "chemical_state": "Mo⁰", "formula": "Mo", "reference": "NIST SRD 20"},
+  {"element": "Mo", "orbital": "3d3/2", "binding_eV": 235.8, "compound": "MoO₃", "chemical_state": "Mo⁶⁺", "formula": "MoO3", "reference": "NIST SRD 20"},
+
+  {"element": "Zr", "orbital": "3d3/2", "binding_eV": 181.5, "compound": "Zr metal", "chemical_state": "Zr⁰", "formula": "Zr", "reference": "NIST SRD 20"},
+  {"element": "Zr", "orbital": "3d3/2", "binding_eV": 184.5, "compound": "ZrO₂", "chemical_state": "Zr⁴⁺", "formula": "ZrO2", "reference": "NIST SRD 20"},
+
+  {"element": "Nb", "orbital": "3d3/2", "binding_eV": 205.0, "compound": "Nb metal", "chemical_state": "Nb⁰", "formula": "Nb", "reference": "NIST SRD 20"},
+  {"element": "Nb", "orbital": "3d3/2", "binding_eV": 210.0, "compound": "Nb₂O₅", "chemical_state": "Nb⁵⁺", "formula": "Nb2O5", "reference": "NIST SRD 20"},
+
+  {"element": "W", "orbital": "4f5/2", "binding_eV": 33.6, "compound": "W metal", "chemical_state": "W⁰", "formula": "W", "reference": "NIST SRD 20"},
+  {"element": "W", "orbital": "4f5/2", "binding_eV": 37.7, "compound": "WO₃", "chemical_state": "W⁶⁺", "formula": "WO3", "reference": "NIST SRD 20"},
+
+  {"element": "Ta", "orbital": "4f5/2", "binding_eV": 23.5, "compound": "Ta metal", "chemical_state": "Ta⁰", "formula": "Ta", "reference": "NIST SRD 20"},
+  {"element": "Ta", "orbital": "4f5/2", "binding_eV": 28.0, "compound": "Ta₂O₅", "chemical_state": "Ta⁵⁺", "formula": "Ta2O5", "reference": "NIST SRD 20"},
+
+  {"element": "Hf", "orbital": "4f5/2", "binding_eV": 16.2, "compound": "Hf metal", "chemical_state": "Hf⁰", "formula": "Hf", "reference": "NIST SRD 20"},
+  {"element": "Hf", "orbital": "4f5/2", "binding_eV": 18.8, "compound": "HfO₂", "chemical_state": "Hf⁴⁺", "formula": "HfO2", "reference": "NIST SRD 20"},
+
+  {"element": "Pb", "orbital": "4f5/2", "binding_eV": 141.7, "compound": "Pb metal", "chemical_state": "Pb⁰", "formula": "Pb", "reference": "NIST SRD 20"},
+  {"element": "Pb", "orbital": "4f5/2", "binding_eV": 143.5, "compound": "PbO", "chemical_state": "Pb²⁺", "formula": "PbO", "reference": "NIST SRD 20"},
+
+  {"element": "Bi", "orbital": "4f5/2", "binding_eV": 162.2, "compound": "Bi metal", "chemical_state": "Bi⁰", "formula": "Bi", "reference": "NIST SRD 20"},
+  {"element": "Bi", "orbital": "4f5/2", "binding_eV": 164.5, "compound": "Bi₂O₃", "chemical_state": "Bi³⁺", "formula": "Bi2O3", "reference": "NIST SRD 20"},
+
+  {"element": "La", "orbital": "3d3/2", "binding_eV": 852.0, "compound": "La₂O₃", "chemical_state": "La³⁺", "formula": "La2O3", "reference": "NIST SRD 20"},
+  {"element": "Ce", "orbital": "3d3/2", "binding_eV": 901.0, "compound": "CeO₂", "chemical_state": "Ce⁴⁺", "formula": "CeO2", "reference": "NIST SRD 20"},
+
+  {"element": "Li", "orbital": "KVV Auger", "binding_eV": 1428.0, "compound": "Li (Auger)", "chemical_state": "Li", "formula": "Li", "reference": "NIST SRD 20"},
+  {"element": "Be", "orbital": "KLL Auger", "binding_eV": 1380.0, "compound": "Be (Auger)", "chemical_state": "Be", "formula": "Be", "reference": "NIST SRD 20"},
+  {"element": "B", "orbital": "KLL Auger", "binding_eV": 1305.0, "compound": "B (Auger)", "chemical_state": "B", "formula": "B", "reference": "NIST SRD 20"},
+  {"element": "C", "orbital": "KLL Auger", "binding_eV": 1223.0, "compound": "C (Auger)", "chemical_state": "C", "formula": "C", "reference": "NIST SRD 20"},
+  {"element": "N", "orbital": "KLL Auger", "binding_eV": 1117.0, "compound": "N (Auger)", "chemical_state": "N", "formula": "N", "reference": "NIST SRD 20"},
+  {"element": "O", "orbital": "KLL Auger", "binding_eV": 978.0, "compound": "O (Auger)", "chemical_state": "O", "formula": "O", "reference": "NIST SRD 20"},
+  {"element": "F", "orbital": "KLL Auger", "binding_eV": 832.0, "compound": "F (Auger)", "chemical_state": "F", "formula": "F", "reference": "NIST SRD 20"},
+
+  {"element": "Cr", "orbital": "LMM Auger", "binding_eV": 529.0, "compound": "Cr (Auger)", "chemical_state": "Cr", "formula": "Cr", "reference": "NIST SRD 20"},
+  {"element": "Mn", "orbital": "LMM Auger", "binding_eV": 542.0, "compound": "Mn (Auger)", "chemical_state": "Mn", "formula": "Mn", "reference": "NIST SRD 20"},
+
+  {"element": "Zn", "orbital": "LMM Auger", "binding_eV": 989.0, "compound": "Zn metal (Auger KE)", "chemical_state": "Zn⁰", "formula": "Zn", "reference": "NIST SRD 20"},
+
+  {"element": "Ti", "orbital": "2s", "binding_eV": 564.0, "compound": "Ti metal", "chemical_state": "Ti⁰", "formula": "Ti", "reference": "NIST SRD 20"},
+  {"element": "V", "orbital": "2s", "binding_eV": 628.0, "compound": "V metal", "chemical_state": "V⁰", "formula": "V", "reference": "NIST SRD 20"},
+
+  {"element": "Si", "orbital": "2s", "binding_eV": 150.4, "compound": "Si elemental", "chemical_state": "Si⁰", "formula": "Si", "reference": "NIST SRD 20"},
+  {"element": "Si", "orbital": "2s", "binding_eV": 154.0, "compound": "SiO₂", "chemical_state": "Si⁴⁺", "formula": "SiO2", "reference": "NIST SRD 20"},
+
+  {"element": "P", "orbital": "2s", "binding_eV": 189.0, "compound": "P elemental", "chemical_state": "P⁰", "formula": "P", "reference": "NIST SRD 20"},
+
+  {"element": "S", "orbital": "2s", "binding_eV": 228.0, "compound": "S elemental", "chemical_state": "S⁰", "formula": "S", "reference": "NIST SRD 20"},
+
+  {"element": "Cl", "orbital": "2s", "binding_eV": 270.0, "compound": "NaCl", "chemical_state": "Cl⁻", "formula": "NaCl", "reference": "NIST SRD 20"},
+
+  {"element": "Ar", "orbital": "2p3/2", "binding_eV": 241.0, "compound": "Ar implanted", "chemical_state": "Ar⁰", "formula": "Ar", "reference": "NIST SRD 20"},
+
+  {"element": "Ru", "orbital": "3p3/2", "binding_eV": 461.0, "compound": "Ru metal", "chemical_state": "Ru⁰", "formula": "Ru", "reference": "NIST SRD 20"},
+  {"element": "Ru", "orbital": "3p3/2", "binding_eV": 463.0, "compound": "RuO₂", "chemical_state": "Ru⁴⁺", "formula": "RuO2", "reference": "NIST SRD 20"},
+
+  {"element": "Rh", "orbital": "3p3/2", "binding_eV": 496.0, "compound": "Rh metal", "chemical_state": "Rh⁰", "formula": "Rh", "reference": "NIST SRD 20"},
+
+  {"element": "Pd", "orbital": "3p3/2", "binding_eV": 531.8, "compound": "Pd metal", "chemical_state": "Pd⁰", "formula": "Pd", "reference": "NIST SRD 20"},
+
+  {"element": "Ag", "orbital": "3p3/2", "binding_eV": 573.0, "compound": "Ag metal", "chemical_state": "Ag⁰", "formula": "Ag", "reference": "NIST SRD 20"},
+
+  {"element": "Cd", "orbital": "3p3/2", "binding_eV": 618.0, "compound": "Cd metal", "chemical_state": "Cd⁰", "formula": "Cd", "reference": "NIST SRD 20"},
+
+  {"element": "H", "orbital": "1s", "binding_eV": 0.0, "compound": "Not detectable by XPS", "chemical_state": "H", "formula": "H", "reference": "NIST SRD 20"},
+  {"element": "He", "orbital": "1s", "binding_eV": 24.6, "compound": "He implanted", "chemical_state": "He⁰", "formula": "He", "reference": "NIST SRD 20"}
+]
