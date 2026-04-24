@@ -454,9 +454,15 @@ function TabButton({
   )
 }
 
+const FIGURE_SENTINEL_RE = /__LATTICE_FIGURES__[\s\S]*$/
+
 function OutputPane({ stdout }: { stdout: string }) {
-  if (!stdout) return <EmptyState compact title="No stdout captured" />
-  return <pre className="card-compute-pre">{stdout}</pre>
+  const visible = useMemo(
+    () => stdout.replace(FIGURE_SENTINEL_RE, '').trimEnd(),
+    [stdout],
+  )
+  if (!visible) return <EmptyState compact title="No stdout captured" />
+  return <pre className="card-compute-pre">{visible}</pre>
 }
 
 function FiguresPane({ figures }: { figures: ComputeFigure[] }) {
