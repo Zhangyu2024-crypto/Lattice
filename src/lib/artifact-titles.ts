@@ -12,7 +12,6 @@ const KIND_DISPLAY_LABEL: Readonly<Partial<Record<ArtifactKind, string>>> = {
   job: 'Job',
   'research-report': 'Report',
   batch: 'Batch',
-  'knowledge-graph': 'Knowledge',
   'material-comparison': 'Compare',
   paper: 'Paper',
   'similarity-matrix': 'Similarity',

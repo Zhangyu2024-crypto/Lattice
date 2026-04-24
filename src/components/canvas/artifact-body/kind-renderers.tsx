@@ -11,7 +11,6 @@ import type {
   StructureArtifact,
   ResearchReportArtifact,
   BatchArtifact,
-  KnowledgeGraphArtifact,
   MaterialComparisonArtifact,
   PaperArtifact,
   SimilarityMatrixArtifact,
@@ -50,7 +49,6 @@ import StructureArtifactCard from '../artifacts/StructureArtifactCard'
 import PlotArtifactCard from '../artifacts/PlotArtifactCard'
 import ResearchReportWindowStub from '../artifacts/ResearchReportWindowStub'
 import BatchWorkflowCard from '../artifacts/BatchWorkflowCard'
-import KnowledgeGraphCard from '../artifacts/KnowledgeGraphCard'
 import MaterialComparisonCard from '../artifacts/MaterialComparisonCard'
 import PaperArtifactCard from '../artifacts/PaperArtifactCard'
 import SimilarityMatrixCard from '../artifacts/SimilarityMatrixCard'
@@ -346,26 +344,6 @@ export function renderBatch(
           return
         }
         toast.info(`No linked artifact found for ${file.relPath}`)
-      }}
-    />
-  )
-}
-
-export function renderKnowledgeGraph(
-  artifact: KnowledgeGraphArtifact,
-  ctx: RenderContext,
-): ReactNode {
-  const { sessionId, upsertArtifact, focusArtifact } = ctx
-  return (
-    <KnowledgeGraphCard
-      artifact={artifact}
-      onOpenDerivedArtifact={(next) => {
-        upsertArtifact(sessionId, next)
-        focusArtifact(sessionId, next.id)
-        toast.success(`Opened paper note for ${next.title}`)
-      }}
-      onMissingPaperRef={() => {
-        toast.warn('No reference is attached to this node')
       }}
     />
   )

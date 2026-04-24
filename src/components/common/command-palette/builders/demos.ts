@@ -22,7 +22,6 @@ export interface DemoDeps {
   onLoadStructureDemo: () => void
   onLoadResearchDemo: () => void
   onLoadBatchDemo: () => void
-  onLoadKnowledgeDemo: () => void
   onLoadMaterialCompareDemo: () => void
   onLoadSimilarityDemo: () => void
   onLoadOptimizationDemo: () => void
@@ -43,7 +42,6 @@ export function buildDemoCommands(deps: DemoDeps): Command[] {
     onLoadStructureDemo,
     onLoadResearchDemo,
     onLoadBatchDemo,
-    onLoadKnowledgeDemo,
     onLoadMaterialCompareDemo,
     onLoadSimilarityDemo,
     onLoadOptimizationDemo,
@@ -122,14 +120,6 @@ export function buildDemoCommands(deps: DemoDeps): Command[] {
       label: 'Load Demo: Batch Workflow (12 XRD files)',
       action: () => {
         onLoadBatchDemo()
-        onClose()
-      },
-    },
-    {
-      id: 'demo-knowledge',
-      label: 'Load Demo: Knowledge Graph (perovskites)',
-      action: () => {
-        onLoadKnowledgeDemo()
         onClose()
       },
     },

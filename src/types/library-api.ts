@@ -190,53 +190,6 @@ export type PaperReadResponse =
     }
   | { success: false; error: string }
 
-export interface PaperExtractionSummary {
-  id: number
-  paper_id: number | null
-  title: string
-  chain_count: number
-  node_count: number
-  section_count: number
-  table_count: number
-  extracted_at?: string
-}
-
-export interface PaperExtractionsResponse {
-  success?: boolean
-  extractions: PaperExtractionSummary[]
-  total?: number
-}
-
-export interface ChainNode {
-  id?: number
-  chain_id?: number
-  ordinal: number
-  role: 'system' | 'process' | 'state' | 'measurement' | string
-  name: string
-  value?: string
-  value_numeric?: number
-  unit?: string
-  metadata?: Record<string, unknown>
-}
-
-export interface KnowledgeChain {
-  id: number
-  extraction_id?: number
-  domain_type?: string
-  chain_type?: string
-  context_text?: string
-  context_section?: string
-  confidence?: number
-  project_id?: number
-  nodes: ChainNode[]
-}
-
-export interface PaperChainsResponse {
-  success?: boolean
-  chains: KnowledgeChain[]
-  total?: number
-}
-
 // ─── RAG (paper-level + multi) ─────────────────────────────────────
 
 export interface AskPaperRequest {

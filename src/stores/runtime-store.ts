@@ -647,7 +647,6 @@ const ARTIFACT_KIND_LABEL: Readonly<Record<ArtifactKind, string>> = {
   job: 'job',
   'research-report': 'report',
   batch: 'batch',
-  'knowledge-graph': 'kg',
   'material-comparison': 'compare',
   paper: 'paper',
   'similarity-matrix': 'similarity',

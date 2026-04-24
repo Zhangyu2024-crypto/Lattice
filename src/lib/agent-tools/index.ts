@@ -24,8 +24,6 @@ import { xpsFitPeaksTool } from './xps-fit-peaks'
 import { xpsValidateElementsTool } from './xps-validate-elements'
 import { ramanIdentifyTool } from './raman-identify'
 import { paperRagAskTool } from './paper-rag-ask'
-import { knowledgeSearchTool } from './knowledge-search'
-import { knowledgeExtractTool } from './knowledge-extract'
 import { listPapersTool } from './list-papers'
 // Phase B+ — plan mode, ask user, agent todo, tool search.
 import { enterPlanModeTool, exitPlanModeTool } from './plan-mode'
@@ -72,7 +70,6 @@ import { latexFixCompileErrorTool } from './latex-fix-compile-error'
 import { latexInsertFigureFromArtifactTool } from './latex-insert-figure-from-artifact'
 import { latexAddCitationTool } from './latex-add-citation'
 import { autoTagPaperTool } from './auto-tag-paper'
-import { autoExtractKnowledgeTool } from './auto-extract-knowledge'
 // Literature fetch — search + download OA PDFs + import to Library.
 import { literatureFetchTool } from './literature-fetch'
 // Phase 1 — Domain-aware compute + simulation agent tools.
@@ -127,11 +124,9 @@ export const LOCAL_TOOL_CATALOG: LocalTool[] = [
   // academic literature prefer literature_search (OpenAlex + arXiv).
   webFetchTool,
   webSearchTool,
-  // Literature / knowledge.
+  // Literature.
   listPapersTool,
   paperRagAskTool,
-  knowledgeSearchTool,
-  knowledgeExtractTool,
   // Phase B+ meta-tools — plan mode gate, user interaction,
   // agent-managed todo, deferred-tool discovery.
   enterPlanModeTool,
@@ -208,7 +203,6 @@ export const LOCAL_TOOL_CATALOG: LocalTool[] = [
   latexAddCitationTool,
   // Library management.
   autoTagPaperTool,
-  autoExtractKnowledgeTool,
   // Literature fetch — search + download + import to Library for RAG.
   literatureFetchTool,
   // Phase 1 — Domain-aware compute. Health check, snippet-based creation,
@@ -320,13 +314,10 @@ const TOOL_GROUP: Record<string, ToolGroup> = {
   research_draft_section: 'research',
   research_finalize_report: 'research',
 
-  // Literature / knowledge
+  // Literature
   list_papers: 'library',
   paper_rag_ask: 'library',
-  knowledge_search: 'library',
-  knowledge_extract: 'library',
   auto_tag_paper: 'library',
-  auto_extract_knowledge: 'library',
   literature_fetch: 'library',
 
   // LaTeX
@@ -366,7 +357,7 @@ const STRUCTURE_KEYWORDS = /structure|crystal|cif|nacl|batio|build.*struct|super
 const COMPUTE_KEYWORDS = /compute|script|simulate|lammps|cp2k|dft|md|docker|计算|模拟|脚本/i
 const RESEARCH_KEYWORDS = /research|literature|survey|report|研究|文献|报告/i
 const LATEX_KEYWORDS = /latex|tex|论文|写作|cite|citation/i
-const LIBRARY_KEYWORDS = /paper|pdf|library|knowledge|文献|知识|论文/i
+const LIBRARY_KEYWORDS = /paper|pdf|library|文献|论文/i
 const HYPOTHESIS_KEYWORDS = /hypothesis|hypothes|假说|假设|机制|验证|证据|evidence/i
 
 export function resolveToolsForContext(

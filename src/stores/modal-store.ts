@@ -36,7 +36,6 @@ interface ModalState {
   settingsOpen: boolean
   settingsTab: SettingsTabId
   libraryOpen: boolean
-  knowledgeOpen: boolean
   proLauncherOpen: boolean
   paperReader: PaperReaderTarget | null
   computeOverlayOpen: boolean
@@ -49,7 +48,6 @@ interface ModalState {
   setSettingsOpen: (open: boolean, tab?: SettingsTabId) => void
   toggleSettingsTab: (tab: SettingsTabId) => void
   setLibraryOpen: (open: boolean) => void
-  setKnowledgeOpen: (open: boolean) => void
   setProLauncherOpen: (open: boolean) => void
   setPaperReader: (target: PaperReaderTarget | null) => void
   openComputeOverlay: (req?: OpenComputeOverlayRequest) => void
@@ -65,7 +63,6 @@ export const useModalStore = create<ModalState>((set) => ({
   settingsOpen: false,
   settingsTab: 'general',
   libraryOpen: false,
-  knowledgeOpen: false,
   proLauncherOpen: false,
   paperReader: null,
   computeOverlayOpen: false,
@@ -93,7 +90,6 @@ export const useModalStore = create<ModalState>((set) => ({
     }),
 
   setLibraryOpen: (libraryOpen) => set({ libraryOpen }),
-  setKnowledgeOpen: (knowledgeOpen) => set({ knowledgeOpen }),
   setProLauncherOpen: (proLauncherOpen) => set({ proLauncherOpen }),
   setPaperReader: (paperReader) => set({ paperReader }),
 

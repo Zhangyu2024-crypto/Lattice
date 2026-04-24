@@ -31,10 +31,6 @@ import {
 import { toast } from '../../stores/toast-store'
 import { downloadTextFile } from '../../lib/pro-export'
 import { localProLibrary } from '../../lib/local-pro-library'
-import {
-  extractAllPapersToKnowledge,
-  extractPaperToKnowledge,
-} from '../../lib/knowledge/auto-extract'
 import { asyncPrompt } from '../../lib/prompt-dialog'
 import type {
   LibraryCollection as LibraryCollectionRow,
@@ -592,45 +588,11 @@ export default function LibraryModal({
             r.deduped ? 'Attached PDF to existing paper' : 'Imported PDF',
           )
           void refreshAll()
-          if (r.id != null) {
-            extractPaperToKnowledge(r.id).then((res) => {
-              if (res.chainCount > 0) {
-                toast.info(`Extracted ${res.chainCount} chains`)
-              }
-            }).catch(() => {})
-          }
         } else {
           toast.error(r.error)
         }
       },
     )
-  }
-
-  const handleExtractKnowledge = async () => {
-    if (!canEdit) {
-      toast.warn('Backend not ready')
-      return
-    }
-    setBusyKey('extract-knowledge')
-    setExtractProgress(null)
-    try {
-      const result = await extractAllPapersToKnowledge((p) => {
-        setExtractProgress({ done: p.done, total: p.total })
-      })
-      const total = result.results.reduce((s, r) => s + r.chainCount, 0)
-      if (total > 0) {
-        toast.success(`Extracted ${total} chains from ${result.done} papers`)
-      } else if (result.total === 0) {
-        toast.info('No papers with PDFs in library')
-      } else {
-        toast.info('No new chains extracted')
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Extraction failed')
-    } finally {
-      setBusyKey(null)
-      setExtractProgress(null)
-    }
   }
 
   const handleScanDirectory = async () => {
@@ -983,26 +945,6 @@ export default function LibraryModal({
                       disabled={!canEdit || busyKey === 'export-bib'}
                       onClick={handleExportBibtex}
                     />
-                    <IconButton
-                      icon={<Sparkles size={16} strokeWidth={1.75} />}
-                      label={
-                        !canEdit
-                          ? 'Connect backend to extract chains'
-                          : busyKey === 'extract-knowledge'
-                            ? extractProgress
-                              ? `Extracting ${extractProgress.done}/${extractProgress.total}…`
-                              : 'Extracting chains…'
-                            : 'Extract chains from all papers with PDFs'
-                      }
-                      size="md"
-                      disabled={!canEdit || busyKey === 'extract-knowledge'}
-                      onClick={handleExtractKnowledge}
-                    />
-                    {busyKey === 'extract-knowledge' && extractProgress ? (
-                      <span className="library-modal-stats-badge" aria-live="polite">
-                        {extractProgress.done}/{extractProgress.total}
-                      </span>
-                    ) : null}
                   </div>
                 ) : null}
                 <IconButton
@@ -1109,26 +1051,6 @@ export default function LibraryModal({
                   >
                     <Download size={14} strokeWidth={1.75} />
                     <span>Export</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleExtractKnowledge}
-                    disabled={!canEdit || busyKey === 'extract-knowledge'}
-                    className="library-toolbar-btn"
-                    title={
-                      !canEdit
-                        ? 'Connect backend to extract chains'
-                        : 'Extract chains from all papers with PDFs'
-                    }
-                  >
-                    <Sparkles size={14} strokeWidth={1.75} />
-                    <span>
-                      {busyKey === 'extract-knowledge'
-                        ? extractProgress
-                          ? `Extracting ${extractProgress.done}/${extractProgress.total}…`
-                          : 'Extracting…'
-                        : 'Chains'}
-                    </span>
                   </button>
                 </div>
               ) : null}

@@ -79,7 +79,6 @@ const KIND_BADGE_LABEL: Record<ArtifactKind, string> = {
   job: 'Job',
   'research-report': 'Report',
   batch: 'Batch',
-  'knowledge-graph': 'Knowledge',
   'material-comparison': 'Compare',
   paper: 'Paper',
   'similarity-matrix': 'Sim',

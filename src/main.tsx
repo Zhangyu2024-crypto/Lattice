@@ -19,14 +19,10 @@ import './lib/polyfills/uint8array-tohex'
 installGlobalErrorCapture()
 
 const LibraryModal = lazy(() => import('./components/library/LibraryModal'))
-const KnowledgeBrowserModal = lazy(
-  () => import('./components/knowledge/KnowledgeBrowserModal'),
-)
 
-function parseBootHash(): 'main' | 'library' | 'knowledge' | 'workbench' | 'pdf-reader' | 'data-manager' {
+function parseBootHash(): 'main' | 'library' | 'workbench' | 'pdf-reader' | 'data-manager' {
   const raw = window.location.hash.replace(/^#\/?/, '').split(/[?&]/)[0] ?? ''
   if (raw === 'library') return 'library'
-  if (raw === 'knowledge') return 'knowledge'
   if (raw === 'workbench') return 'workbench'
   if (raw === 'pdf-reader') return 'pdf-reader'
   if (raw === 'data-manager') return 'data-manager'
@@ -54,31 +50,6 @@ function LibraryWindowApp() {
           data={DEMO_LIBRARY}
           onClose={close}
           onOpenPaper={() => {}}
-        />
-      </Suspense>
-    </div>
-  )
-}
-
-function KnowledgeWindowApp() {
-  const close = () => {
-    void window.electronAPI?.closeKnowledgeWindow()
-  }
-  return (
-    <div className="app-satellite-host">
-      <ToastHost />
-      <LogConsole />
-      <Suspense
-        fallback={
-          <div className="app-satellite-loading" role="status">
-            Loading knowledge browser…
-          </div>
-        }
-      >
-        <KnowledgeBrowserModal
-          presentation="standalone"
-          open
-          onClose={close}
         />
       </Suspense>
     </div>
@@ -192,8 +163,6 @@ void Promise.all([
       <AppErrorBoundary>
         {boot === 'library' ? (
           <LibraryWindowApp />
-        ) : boot === 'knowledge' ? (
-          <KnowledgeWindowApp />
         ) : boot === 'workbench' ? (
           <ProWorkbenchWindowApp />
         ) : boot === 'pdf-reader' ? (

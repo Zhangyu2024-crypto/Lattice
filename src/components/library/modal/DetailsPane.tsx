@@ -1,7 +1,6 @@
 // DetailsPane — right pane of the LibraryModal 3-pane layout.
 //
-// Card-based layout: metadata header, abstract, tags, collections, and a
-// live preview of extracted knowledge chains from IndexedDB.
+// Card-based layout: metadata header, abstract, tags, collections.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
@@ -9,7 +8,6 @@ import {
   Copy,
   FileText,
   Link as LinkIcon,
-  Network,
   Plus,
   Sparkles,
   X,
@@ -17,11 +15,6 @@ import {
 import { toast } from '../../../stores/toast-store'
 import { copyText } from '../../../lib/clipboard-helper'
 import { runAutoTag } from '../../../lib/agent-tools/auto-tag-paper'
-import { localProKnowledge } from '../../../lib/local-pro-knowledge'
-import { extractPaperToKnowledge } from '../../../lib/knowledge/auto-extract'
-import { useLogStore } from '../../../stores/log-store'
-import type { KnowledgeChainMatch } from '../../../types/knowledge-api'
-import ChainCard from '../../common/ChainCard'
 import EmptyState from '../../common/EmptyState'
 import type { Collection, PaperCard } from './types'
 
@@ -47,13 +40,6 @@ export default function DetailsPane({
   const [newTag, setNewTag] = useState('')
   const [selectedCollection, setSelectedCollection] = useState('')
   const [abstractOpen, setAbstractOpen] = useState(false)
-  const [chains, setChains] = useState<KnowledgeChainMatch[]>([])
-  const [chainsLoading, setChainsLoading] = useState(false)
-  const [extractingChains, setExtractingChains] = useState(false)
-  /** When true, load chains with includeDiagnostic + includeLegacy so the
-   *  user can inspect everything stored for this paper. Default (false)
-   *  applies the v2 quality gate — accepted-only. */
-  const [showAllVersions, setShowAllVersions] = useState(false)
   const canEditCollections = canEdit && paper?.backendId != null
 
   // AI auto-tag state
@@ -77,38 +63,15 @@ export default function DetailsPane({
     }
   }, [availableCollections, canEditCollections, selectedCollection])
 
-  // Load knowledge chains whenever the selected paper or quality toggle
-  // changes. The accepted-only default is the v2 quality gate; the user
-  // can flip "show all versions" to see diagnostic + legacy rows too.
+  // Reset transient paper-scoped UI state whenever the selected paper
+  // changes (abstract expansion + any AI-tag suggestions from a previous
+  // paper should never bleed over).
   useEffect(() => {
     setAbstractOpen(false)
     setAiSuggested([])
     setAiAccepted(new Set())
     setAiReasoning('')
-    if (!paper || paper.backendId == null) {
-      setChains([])
-      return
-    }
-    let cancelled = false
-    setChainsLoading(true)
-    localProKnowledge
-      .chainsByPaper(paper.backendId, {
-        includeDiagnostic: showAllVersions,
-        includeLegacy: showAllVersions,
-      })
-      .then((result) => {
-        if (!cancelled) setChains(result)
-      })
-      .catch(() => {
-        if (!cancelled) setChains([])
-      })
-      .finally(() => {
-        if (!cancelled) setChainsLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [paper, showAllVersions])
+  }, [paper])
 
   const copyDoi = useCallback(async () => {
     if (!paper?.doi) {
@@ -117,62 +80,6 @@ export default function DetailsPane({
     }
     void copyText(paper.doi, `DOI copied: ${paper.doi}`)
   }, [paper])
-
-  const extractChainsForPaper = useCallback(async () => {
-    if (!paper?.backendId || extractingChains) return
-    setExtractingChains(true)
-    try {
-      const result = await extractPaperToKnowledge(paper.backendId)
-      if (!result.success) {
-        toast.error(result.error ?? 'Extraction failed')
-        // Open the log console so the user can see the stage that failed.
-        const logs = useLogStore.getState()
-        logs.resetFilters()
-        logs.setOpen(true)
-        return
-      }
-      const accepted = result.accepted ?? result.chainCount
-      const diagnostic = result.diagnostic ?? 0
-      const rejected = result.rejected ?? 0
-      if (accepted === 0 && diagnostic === 0 && rejected === 0) {
-        // True empty extraction — LLM returned nothing.
-        toast.info(
-          `No chains extracted (stage: ${result.stage ?? 'extract'}). Log console opened — check the last 'knowledge' entries for the LLM response.`,
-        )
-        const logs = useLogStore.getState()
-        logs.resetFilters()
-        logs.setOpen(true)
-      } else if (accepted === 0) {
-        // Weak extraction: everything was diagnostic/rejected. Open the
-        // log so the user can see why and decide whether to retry.
-        toast.info(
-          `${diagnostic} diagnostic, ${rejected} rejected — LLM output didn't clear the quality gate. Log console opened.`,
-        )
-        const logs = useLogStore.getState()
-        logs.resetFilters()
-        logs.setOpen(true)
-      } else {
-        const tail =
-          diagnostic > 0 || rejected > 0
-            ? ` (${diagnostic} diagnostic, ${rejected} rejected)`
-            : ''
-        toast.success(`Extracted ${accepted} chains${tail}`)
-      }
-      // Refresh displayed chains, respecting current quality toggle.
-      const refreshed = await localProKnowledge.chainsByPaper(paper.backendId, {
-        includeDiagnostic: showAllVersions,
-        includeLegacy: showAllVersions,
-      })
-      setChains(refreshed)
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Extraction failed')
-      const logs = useLogStore.getState()
-      logs.resetFilters()
-      logs.setOpen(true)
-    } finally {
-      setExtractingChains(false)
-    }
-  }, [paper, extractingChains, showAllVersions])
 
   const runAutoTagHandler = useCallback(async () => {
     if (!paper?.backendId) return
@@ -195,11 +102,6 @@ export default function DetailsPane({
       setAiTagLoading(false)
     }
   }, [paper])
-
-  const openKnowledgeWindow = useCallback(async () => {
-    const res = await window.electronAPI?.openKnowledgeWindow?.()
-    if (res && !res.success) toast.error(res.error ?? 'Failed to open Knowledge')
-  }, [])
 
   if (!paper) {
     return (
@@ -463,84 +365,6 @@ export default function DetailsPane({
           </div>
         </section>
       )}
-
-      {/* ── Chains ─────────────────────────────────────────────── */}
-      <section className="library-details-card">
-        <div className="library-details-card-head library-details-card-head--static">
-          <Network size={12} strokeWidth={1.75} />
-          <span>Chains</span>
-          <span className="library-details-card-count">
-            {chainsLoading ? '…' : chains.length}
-          </span>
-          {canEdit && paper.backendId != null && (
-            <button
-              type="button"
-              className="library-details-chain-extract-btn"
-              disabled={extractingChains || chainsLoading}
-              onClick={extractChainsForPaper}
-              title={
-                chains.length > 0
-                  ? 'Re-extract chains for this paper'
-                  : 'Extract chains from this paper'
-              }
-            >
-              <Sparkles
-                size={11}
-                strokeWidth={1.75}
-                className={extractingChains ? 'spin' : undefined}
-              />
-              <span>
-                {extractingChains
-                  ? 'Extracting…'
-                  : chains.length > 0
-                    ? 'Re-extract'
-                    : 'Extract'}
-              </span>
-            </button>
-          )}
-          {chains.length > 0 && (
-            <button
-              type="button"
-              className="library-details-chain-extract-btn"
-              onClick={openKnowledgeWindow}
-              title="Open dedicated Knowledge graph page"
-            >
-              <Network size={11} strokeWidth={1.75} />
-              <span>Open Knowledge</span>
-            </button>
-          )}
-          <button
-            type="button"
-            className="library-details-chain-extract-btn"
-            onClick={() => setShowAllVersions((v) => !v)}
-            title={
-              showAllVersions
-                ? 'Hide diagnostic + legacy chains'
-                : 'Show diagnostic + legacy chains too'
-            }
-            style={{ marginLeft: 'auto' }}
-          >
-            <span>{showAllVersions ? 'Accepted only' : 'Show all versions'}</span>
-          </button>
-        </div>
-        {chains.length === 0 && !chainsLoading && !extractingChains ? (
-          <div className="library-modal-empty-hint library-details-chain-empty">
-            No chains extracted yet. Click <strong>Extract</strong> to run
-            LLM extraction on this paper, or use the toolbar to batch all.
-          </div>
-        ) : (
-          <div className="library-details-chain-list">
-            {chains.slice(0, 20).map((c) => (
-              <ChainCard key={c.chain_id} chain={c} />
-            ))}
-            {chains.length > 20 && (
-              <div className="library-modal-empty-hint">
-                … and {chains.length - 20} more — open Knowledge for graph view
-              </div>
-            )}
-          </div>
-        )}
-      </section>
 
       {/* ── PDF path ───────────────────────────────────────────── */}
       {paper.pdfPath && (

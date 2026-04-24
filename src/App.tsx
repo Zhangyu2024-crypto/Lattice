@@ -21,7 +21,6 @@ import { DEMO_COMPUTE } from './stores/demo-compute'
 import { DEMO_STRUCTURE } from './stores/demo-structure'
 import { DEMO_RESEARCH_REPORT } from './stores/demo-research-report'
 import { DEMO_BATCH_WORKFLOW } from './stores/demo-batch'
-import { DEMO_KNOWLEDGE_GRAPH } from './stores/demo-knowledge-graph'
 import { DEMO_MATERIAL_COMPARISON } from './stores/demo-material-comparison'
 import { DEMO_SIMILARITY_MATRIX } from './stores/demo-similarity'
 import { DEMO_LIBRARY, DEMO_PAPER_ARTIFACT } from './stores/demo-library'
@@ -90,24 +89,18 @@ import type {
   SpectrumArtifact,
 } from './types/artifact'
 import type {
-  KnowledgeMaterialComparisonIpcPayload,
   LibraryOpenPaperIpcPayload,
 } from './types/electron'
 
 // Modal code is lazy-loaded — most sessions never open Settings /
-// Library / Knowledge, and keeping them off the critical path shaves
-// the initial bundle. Opener buttons prefetch on mouseenter so the
-// click-open path is still instant after hover warmup.
+// Library, and keeping them off the critical path shaves the initial
+// bundle. Opener buttons prefetch on mouseenter so the click-open path
+// is still instant after hover warmup.
 const LibraryModal = lazy(() => import('./components/library/LibraryModal'))
-const KnowledgeBrowserModal = lazy(
-  () => import('./components/knowledge/KnowledgeBrowserModal'),
-)
 const SettingsModal = lazy(() => import('./components/layout/SettingsModal'))
 
 const prefetchLibraryModal = () =>
   void import('./components/library/LibraryModal')
-const prefetchKnowledgeModal = () =>
-  void import('./components/knowledge/KnowledgeBrowserModal')
 const prefetchSettingsModal = () =>
   void import('./components/layout/SettingsModal')
 
@@ -134,8 +127,6 @@ export default function App() {
   const toggleSettingsTab = useModalStore((s) => s.toggleSettingsTab)
   const libraryOpen = useModalStore((s) => s.libraryOpen)
   const setLibraryOpen = useModalStore((s) => s.setLibraryOpen)
-  const knowledgeOpen = useModalStore((s) => s.knowledgeOpen)
-  const setKnowledgeOpen = useModalStore((s) => s.setKnowledgeOpen)
   const proLauncherOpen = useModalStore((s) => s.proLauncherOpen)
   const setProLauncherOpen = useModalStore((s) => s.setProLauncherOpen)
   const paperReaderLauncher = useModalStore((s) => s.paperReader)
@@ -311,26 +302,6 @@ export default function App() {
     }
     prefetchLibraryModal()
     setLibraryOpen(true)
-  }, [])
-
-  const handleOpenKnowledge = useCallback(async () => {
-    if (window.electronAPI?.openKnowledgeWindow) {
-      try {
-        const r = await window.electronAPI.openKnowledgeWindow()
-        if (r && !r.success && r.error) {
-          toast.error(`Could not open Knowledge: ${r.error}`)
-        }
-      } catch (err) {
-        toast.error(
-          err instanceof Error
-            ? err.message
-            : 'Could not open Knowledge window',
-        )
-      }
-      return
-    }
-    prefetchKnowledgeModal()
-    setKnowledgeOpen(true)
   }, [])
 
   const ensureLatexArtifact = useCallback((seed: LatexDocumentPayload) => {
@@ -546,7 +517,6 @@ export default function App() {
         | 'structure'
         | 'research-report'
         | 'batch'
-        | 'knowledge-graph'
         | 'material-comparison'
         | 'similarity-matrix'
         | 'paper'
@@ -673,23 +643,9 @@ export default function App() {
     return cleanup
   }, [handleOpenPaper])
 
-  useEffect(() => {
-    const cleanup = window.electronAPI?.onKnowledgeOpenMaterialComparison?.(
-      (msg: KnowledgeMaterialComparisonIpcPayload) => {
-        loadArtifactDemo(
-          'material-comparison',
-          msg.title,
-          msg.artifactPayload,
-        )
-      },
-    )
-    return cleanup
-  }, [loadArtifactDemo])
-
   const handleOpenMaterialComparison = useCallback(
     (payload: unknown, title: string) => {
       loadArtifactDemo('material-comparison', title, payload)
-      setKnowledgeOpen(false)
     },
     [loadArtifactDemo],
   )
@@ -936,13 +892,6 @@ export default function App() {
             DEMO_BATCH_WORKFLOW,
           )
         }
-        onLoadKnowledgeDemo={() =>
-          loadArtifactDemo(
-            'knowledge-graph',
-            'Knowledge Graph (perovskites)',
-            DEMO_KNOWLEDGE_GRAPH,
-          )
-        }
         onLoadMaterialCompareDemo={() =>
           loadArtifactDemo(
             'material-comparison',
@@ -972,7 +921,6 @@ export default function App() {
           )
         }
         onOpenLibrary={handleOpenLibrary}
-        onOpenKnowledge={handleOpenKnowledge}
         onLoadLatexDemo={loadLatexDemo}
         onExportSessionZip={handleExportSessionZip}
         onMockAgentStream={import.meta.env.DEV ? handleMockAgentStream : undefined}
@@ -989,16 +937,6 @@ export default function App() {
             onClose={() => setLibraryOpen(false)}
             data={DEMO_LIBRARY}
             onOpenPaper={handleOpenPaper}
-          />
-        </Suspense>
-      )}
-
-      {knowledgeOpen && (
-        <Suspense fallback={null}>
-          <KnowledgeBrowserModal
-            open={knowledgeOpen}
-            onClose={() => setKnowledgeOpen(false)}
-            onOpenMaterialComparison={handleOpenMaterialComparison}
           />
         </Suspense>
       )}

@@ -38,8 +38,6 @@ import type {
   LibraryStats,
   LibraryTagsResponse,
   PaperAnnotationsResponse,
-  PaperChainsResponse,
-  PaperExtractionsResponse,
   PaperReadResponse,
   RemoveTagResponse,
   ScanDirectoryRequest,
@@ -73,8 +71,6 @@ import {
 import {
   askMulti,
   askPaper,
-  paperChains,
-  paperExtractions,
   pdfBytes,
   pdfUrl,
   readPaper,
@@ -146,8 +142,6 @@ export interface LocalLibraryApi {
    */
   pdfBytes: (paperId: number) => Promise<ArrayBuffer | null>
   readPaper: (id: number) => Promise<PaperReadResponse>
-  paperExtractions: (id: number) => Promise<PaperExtractionsResponse>
-  paperChains: (id: number) => Promise<PaperChainsResponse>
   askPaper: (id: number, req: AskPaperRequest) => Promise<AskPaperResponse>
   askMulti: (req: AskMultiRequest) => Promise<AskMultiResponse>
 
@@ -199,8 +193,6 @@ export const localProLibrary: LocalLibraryApi = {
   pdfUrl,
   pdfBytes,
   readPaper,
-  paperExtractions,
-  paperChains,
   askPaper,
   askMulti,
 

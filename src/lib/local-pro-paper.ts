@@ -1,10 +1,13 @@
-// LocalProPaper — PDF read / extractions / chains subset of
-// `useLibraryApi`. Self-contained Port Plan §P4-ε.
+// LocalProPaper — PDF read subset of the library API.
 //
-// Routes through the repo-local Python worker (worker/tools/paper.py):
-//   • readPaper         — pdfplumber per-page text → PaperReadResponse
-//   • paperExtractions  — placeholder (empty list from worker)
-//   • paperChains       — heuristic process / measurement chain parse
+// Routes through the repo-local Python worker (`worker/tools/paper.py`):
+//
+//   • readPaper — pdfplumber per-page text → PaperReadResponse
+//
+// The former `paperExtractions` / `paperChains` helpers used to back the
+// knowledge/chain feature and were removed along with it. `readPaper`
+// itself has no knowledge-feature dependency and is kept because paper
+// RAG Q&A (askPaper / askMulti) still needs it.
 //
 // Contract: worker IPC failures throw, mirroring the legacy
 // `useLibraryApi` REST client. `{ success: false, error }` payloads from
@@ -12,11 +15,6 @@
 
 import { callWorker } from './worker-client'
 import type {
-  ChainNode,
-  KnowledgeChain,
-  PaperChainsResponse,
-  PaperExtractionSummary,
-  PaperExtractionsResponse,
   PaperReadResponse,
   PaperReadSection,
 } from '../types/library-api'
@@ -38,30 +36,6 @@ type WorkerReadPdf =
     }
   | { success: false; error: string }
 
-interface WorkerChainNode {
-  ordinal: number
-  role: string
-  name: string
-  line?: string
-}
-
-interface WorkerChain {
-  id: number
-  nodes: WorkerChainNode[]
-}
-
-type WorkerChains =
-  | { success: true; paper_id?: number | string; chains: WorkerChain[] }
-  | { success: false; error: string }
-
-type WorkerExtractions =
-  | {
-      success: true
-      paper_id?: number | string
-      extractions: PaperExtractionSummary[]
-    }
-  | { success: false; error: string }
-
 function pagesToSections(pages: WorkerPage[]): PaperReadSection[] {
   // One section per page keeps the worker output cheap to consume and
   // matches what the renderer's "Show full text" + whole-paper-chunker
@@ -72,25 +46,6 @@ function pagesToSections(pages: WorkerPage[]): PaperReadSection[] {
     level: 1,
     content: p.text,
   }))
-}
-
-function normaliseChain(chain: WorkerChain): KnowledgeChain {
-  const nodes: ChainNode[] = chain.nodes.map((n) => {
-    const role = n.role as ChainNode['role']
-    const base: ChainNode = {
-      chain_id: chain.id,
-      ordinal: n.ordinal,
-      role,
-      name: n.name,
-    }
-    if (n.line) base.metadata = { line: n.line }
-    return base
-  })
-  return {
-    id: chain.id,
-    chain_type: 'heuristic',
-    nodes,
-  }
 }
 
 export const localProPaper = {
@@ -121,57 +76,5 @@ export const localProPaper = {
       full_text: value.full_text,
       source: 'local_pdf',
     }
-  },
-
-  /** Placeholder pass-through — returns an empty list until a local LLM
-   *  extraction pipeline lands. */
-  async paperExtractions(
-    paperId: number,
-  ): Promise<PaperExtractionsResponse> {
-    const result = await callWorker<WorkerExtractions>(
-      'paper.extractions',
-      { paper_id: paperId },
-      { timeoutMs: 10_000 },
-    )
-    if (!result.ok) {
-      throw new Error(result.error)
-    }
-    const value = result.value
-    if (!value.success) {
-      throw new Error(value.error)
-    }
-    const extractions = value.extractions ?? []
-    return {
-      success: true,
-      extractions,
-      total: extractions.length,
-    }
-  },
-
-  /** Heuristic chain parse. Caller passes the full text (obtained via
-   *  `readPaper`); without text we return an empty chain list rather
-   *  than re-reading the PDF here — the renderer already orchestrates
-   *  read → chain separately. */
-  async paperChains(
-    paperId: number,
-    text?: string,
-  ): Promise<PaperChainsResponse> {
-    if (!text || !text.trim()) {
-      return { success: true, chains: [], total: 0 }
-    }
-    const result = await callWorker<WorkerChains>(
-      'paper.extract_chains',
-      { paper_id: paperId, text },
-      { timeoutMs: 15_000 },
-    )
-    if (!result.ok) {
-      throw new Error(result.error)
-    }
-    const value = result.value
-    if (!value.success) {
-      throw new Error(value.error)
-    }
-    const chains = (value.chains ?? []).map(normaliseChain)
-    return { success: true, chains, total: chains.length }
   },
 }
