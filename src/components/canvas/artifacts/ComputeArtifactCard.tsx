@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertCircle,
+  AlertTriangle,
   ChevronDown,
   ChevronRight,
   Clock,
@@ -121,6 +122,14 @@ export default function ComputeArtifactCard({
         onStop={handleStop}
         isRunning={isRunning}
       />
+      {(payload.status === 'cancelled' || payload.status === 'failed') && (
+        <StaleResultBanner
+          status={payload.status}
+          durationMs={payload.durationMs}
+          exitCode={payload.exitCode}
+          workdir={payload.runs?.[0]?.workdir}
+        />
+      )}
       {payload.runs && payload.runs.length > 0 && (
         <RunHistoryBar runs={payload.runs} />
       )}
@@ -188,6 +197,71 @@ function TopBar({
           Run
         </Button>
       )}
+    </div>
+  )
+}
+
+/** Prominent "results below may be stale" banner shown when the most
+ *  recent run ended in `cancelled` or `failed`. Pairs with the L1-L3
+ *  hallucination defense: even if the agent lies about the outcome in
+ *  chat, the card itself flags the untrusted state so the user can
+ *  disbelieve the LLM's summary. Clicking opens the archived workdir
+ *  so the user can inspect meta.json / stdout.log directly. */
+function StaleResultBanner({
+  status,
+  durationMs,
+  exitCode,
+  workdir,
+}: {
+  status: 'cancelled' | 'failed'
+  durationMs?: number
+  exitCode: number | null
+  workdir?: string
+}) {
+  const label =
+    status === 'cancelled' ? 'Last run cancelled' : 'Last run failed'
+  const detail =
+    status === 'cancelled'
+      ? `cancelled after ${formatDuration(durationMs)}`
+      : `exit=${exitCode ?? '?'} after ${formatDuration(durationMs)}`
+
+  const handleOpen = async () => {
+    if (!workdir) {
+      toast.warn('This run was not archived (older than retention window).')
+      return
+    }
+    const api = window.electronAPI
+    if (!api?.computeOpenWorkdir) {
+      toast.warn('Open-workdir needs the Electron desktop shell.')
+      return
+    }
+    const r = await api.computeOpenWorkdir(workdir)
+    if (!r.success) toast.error(r.error ?? 'Could not open workdir')
+  }
+
+  return (
+    <div
+      className="card-compute-stale-banner"
+      role="alert"
+      aria-live="polite"
+    >
+      <AlertTriangle size={13} strokeWidth={2} aria-hidden />
+      <div className="card-compute-stale-banner-body">
+        <div className="card-compute-stale-banner-title">{label}</div>
+        <div className="card-compute-stale-banner-detail">
+          {detail}. Any numeric results the chat mentions may be from an earlier run — verify against the run log before trusting them.
+        </div>
+      </div>
+      <button
+        type="button"
+        className="card-compute-stale-banner-action"
+        onClick={handleOpen}
+        disabled={!workdir}
+        title={workdir ?? 'Workdir was pruned (retention window)'}
+      >
+        <FolderOpen size={11} />
+        Open run log
+      </button>
     </div>
   )
 }

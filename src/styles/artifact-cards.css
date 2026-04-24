@@ -3618,6 +3618,75 @@
   background: var(--color-border);
 }
 
+/* === ComputeArtifactCard · stale-result banner ================ */
+
+/* Surfaces when the most recent compute run was cancelled or failed —
+   warns the user that any numbers the agent might be quoting in chat
+   could be stale. Desaturated to keep the grayscale canon (mixed with
+   panel tone instead of a saturated red) while still clearly signalling
+   "do not trust". */
+
+.card-compute-stale-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  flex-shrink: 0;
+  border-bottom: 1px solid color-mix(in srgb, #c07878 45%, var(--color-border));
+  background: color-mix(in srgb, #c07878 18%, var(--color-bg-panel));
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+}
+
+.card-compute-stale-banner > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: color-mix(in srgb, #c07878 75%, var(--color-text-primary));
+}
+
+.card-compute-stale-banner-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.card-compute-stale-banner-title {
+  font-weight: 600;
+}
+
+.card-compute-stale-banner-detail {
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+}
+
+.card-compute-stale-banner-action {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-panel);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--text-xxs);
+  white-space: nowrap;
+}
+
+.card-compute-stale-banner-action:hover:not(:disabled) {
+  background: var(--color-bg-active);
+  color: var(--color-text-primary);
+}
+
+.card-compute-stale-banner-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* === ComputeArtifactCard · run history strip ================== */
 
 .card-compute-run-history {
