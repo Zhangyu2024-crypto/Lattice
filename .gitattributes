@@ -1,0 +1,25 @@
+# Git LFS routing for large bundled binaries.
+#
+# This file is picked up automatically when the repo is under Git with
+# Git LFS installed (`git lfs install` once per clone). Files matching
+# below are stored as LFS pointers, not as raw blobs, so a push doesn't
+# try to upload ~800 MB through GitHub's per-file blob path (100 MB
+# hard cap) and so day-to-day clones stay fast.
+#
+# Currently bundled:
+#   worker/data/mp_xrd_database.db — 784 MB Materials Project XRD DB
+#   (154,879 phases). See worker/README.md "Materials Project XRD
+#   database" for the refresh / regen source in lattice-cli.
+#
+# To activate LFS when first cloning:
+#   1. Install git-lfs (https://git-lfs.com/) if not already.
+#   2. `git lfs install` in this repo (writes hooks).
+#   3. Normal `git clone` thereafter fetches the pointer + the binary.
+#
+# If you're re-rolling the DB (refreshed MP export, version bump):
+#   - just replace `worker/data/mp_xrd_database.db` with the new file.
+#   - `git add worker/data/mp_xrd_database.db` — LFS picks it up via
+#     this .gitattributes entry; no extra `git lfs track` command
+#     needed since the pattern is already committed here.
+
+worker/data/*.db filter=lfs diff=lfs merge=lfs -text

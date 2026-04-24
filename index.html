@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      `connect-src blob:` was originally added for the pdfjs path (worker
+      fetched a blob: URL). The viewer now uses Chromium's built-in
+      PDFium plugin and accepts both legacy `blob:` URLs and the
+      main-process `lattice-pdf:` protocol, so `frame-src` / `object-src`
+      need to allow both.
+    -->
+    <!--
+      `'wasm-unsafe-eval'` added to script-src for the BusyTeX Worker
+      (Emscripten glue in public/busytex/busytex.js).
+    -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' ws://localhost:* http://localhost:* ws://127.0.0.1:* http://127.0.0.1:* blob:; img-src 'self' data: blob:; worker-src 'self' blob:; frame-src 'self' blob: lattice-pdf:; object-src 'self' blob: lattice-pdf:;" />
+    <title>Lattice</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,506 @@
+/* ═══════════════════════════════════════════════════════════
+   Lattice — Flat grayscale chrome
+   -------------------------------------------------------------
+   Overall language: flat surfaces, hairline borders, minimal depth.
+   Do not use background gradients on shell / rails / topbars / modals —
+   those stay solid neutrals. Optional neutral gradients are reserved for
+   small marketing-style *cards* only (e.g. `.sidebar-space-hero`).
+
+   Main palette stays black, white, and gray so chart / spectrum ink stay
+   visually primary.
+
+   Icons: prefer Lucide outline glyphs at `--icon-size-*`, one icon per
+   control where it aids scanability — avoid decorative icon clutter.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Bundled webfonts ──────────────────────────────────────
+   Inter Variable + JetBrains Mono are shipped in `public/fonts/`
+   so the app renders identically on Windows / macOS / Linux
+   regardless of what the target system has installed. Without
+   this, Linux (and WSL) falls through to DejaVu Sans and the UI
+   looks cramped and heavy. We use `font-display: swap` so text is
+   visible immediately with system fallbacks if a woff2 is slow or
+   fails to load — `block` caused a long FOIT (empty-looking UI).
+   ──────────────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Inter Variable';
+  src: url('/fonts/InterVariable.woff2') format('woff2-variations'),
+       url('/fonts/InterVariable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  /* swap: avoid FOIT (invisible text until font loads) — on slow or
+     failing font loads, `block` left users staring at an empty dark UI. */
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Inter Variable';
+  src: url('/fonts/InterVariable-Italic.woff2') format('woff2-variations'),
+       url('/fonts/InterVariable-Italic.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMono-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/fonts/JetBrainsMono-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+:root {
+  /* ── Neutral gray backgrounds ──
+     Elevation ladder: activitybar (deepest) → sidebar → panel → tab-active
+     (highest). Previously `bg-panel` and `bg-tab-active` were both
+     `#1A1A1A`, which meant the active tab had no visible lift from its
+     container. We bump the active tab by ~3% luminance so it reads as
+     "foreground" without competing with content. */
+  /* Activity bar + status bar form the chrome "L" — both the deepest.
+     Sidebar is one step up. Panel / artifact body is a touch higher so
+     content has real foreground. Tab-active lifts above panel so the
+     active document reads as "on top". Input is darker than panel so it
+     reads as a recessed receptacle, not a floating chip. */
+  --color-bg-activitybar: #0A0A0A;
+  --color-bg-statusbar: #0E0E0E;
+  --color-bg-titlebar: #101010;
+  --color-bg-sidebar: #131313;
+  --color-bg-base: #191919;
+  --color-bg-panel: #1E1E1E;
+  --color-bg-tab: #161616;
+  --color-bg-tab-active: #252525;
+  --color-bg-input: #1B1B1B;
+  /* v7 bumps hover alpha from 0.05 → 0.07 so list-row mouseover
+     actually registers; 0.05 was below the JND on most IPS panels. */
+  --color-bg-hover: rgba(255, 255, 255, 0.07);
+  --color-bg-active: rgba(255, 255, 255, 0.10);
+
+  /* ── Borders ── */
+  --color-border: #2A2A2A;
+  --color-border-strong: #333333;
+  --color-border-focus: #E5E5E5;
+  --color-border-focus-dim: rgba(229, 229, 229, 0.18);
+
+  /* ── Text · attention ladder (Cursor-style) ──
+     emphasis — focal: where you are, what you’re editing, active nav.
+     primary  — comfortable reading: messages, paragraphs, inputs.
+     secondary — structure: labels, lists, breadcrumbs “parent” segments.
+     muted    — ambient chrome: ALL CAPS headers, icons, de-emphasized rail.
+     Slightly lifted vs v7 so body copy reads brighter on dark gray panels
+     without collapsing the step between tiers. */
+  --color-text-emphasis: #FFFFFF;
+  --color-text-primary: #FAFAFA;
+  --color-text-secondary: #C8C8C8;
+  --color-text-muted: #8E8E8E;
+  --color-text-active: #FFFFFF;
+  --color-text-inverse: #0A0A0A;  /* text on bright/accent bg */
+
+  /* ── Accent (chrome) — neutral graphite, Linear-style ──
+     Role: focus ring, active tab indicator, primary button bg.
+     Never use this for data or type tags. */
+  --color-accent: #E5E5E5;
+  --color-accent-hover: #F5F5F5;
+  --color-accent-press: #C7C7C7;
+  --color-accent-dim: rgba(255, 255, 255, 0.08);
+  /* v6 used `--color-accent-text` as "emphasized text color" (e.g., links,
+     interactive labels) and it happened to be cyan because accent was cyan.
+     v7 keeps the token name but retargets to a neutral emphasized white
+     so existing call sites stay readable without re-plumbing. Use
+     `--color-accent-fg` for the "text painted on top of an accent surface"
+     role — that's the one that needs to be dark since accent is now
+     bright graphite. */
+  --color-accent-text: #FAFAFA;
+  --color-accent-fg: #0A0A0A;
+
+  /* ── Agent accent — neutral (AI bubble / mention chips) ── */
+  --color-accent-agent: #C0C0C0;
+  --color-accent-agent-hover: #D0D0D0;
+  --color-accent-agent-dim: rgba(255, 255, 255, 0.10);
+  --color-accent-agent-border: rgba(255, 255, 255, 0.28);
+
+  /* ── Chart (spectra / overlays) — luminance-only series ── */
+  --color-chart-primary: #F5F5F5;
+  --color-chart-secondary: #B8B8B8;
+  --color-chart-tertiary: #808080;
+  --color-chart-grid: #1F1F1F;
+  --color-chart-axis: #888888;
+
+  /* ── Status colors — distinguished by lightness (badges, compute UI) ── */
+  --color-blue: #C8C8C8;
+  --color-green: #A8A8A8;
+  --color-yellow: #909090;
+  --color-red: #F0F0F0;
+  --color-orange: #B8B8B8;
+  --color-success: #A8A8A8;
+  --color-warning: #909090;
+  --color-danger: #F0F0F0;
+
+  /* ── Spectrum type tags — four gray steps ── */
+  --color-type-xrd: #E8E8E8;
+  --color-type-xps: #C4C4C4;
+  --color-type-raman: #9E9E9E;
+  --color-type-ir: #6E6E6E;
+
+  /* ── Peak markers ── */
+  --color-peak: #D0D0D0;
+
+  /* ── Typography ──
+     Sans: prefer the OS system UI font so the app reads as native on each
+     platform — San Francisco on macOS, Segoe UI Variable on Windows, the
+     distro default on Linux. `Inter Variable` (bundled in public/fonts) is
+     kept as a Latin fallback so WSL / bare Linux / old Windows without a
+     Variable system font still get a decent look instead of DejaVu Sans.
+     CJK fonts are enumerated before the bundled Latin fallback so mixed
+     Chinese/English strings don't flip to a thin Latin-only glyph set.
+
+     Mono: JetBrains Mono (bundled) + ui-monospace, then CJK-capable mono
+     fonts so axis numerals and inline Asian labels match desktop norms. */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI Variable Text', 'Segoe UI Variable', 'Segoe UI',
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei UI',
+    'Microsoft YaHei', 'Noto Sans SC', 'Noto Sans CJK SC',
+    'Source Han Sans SC', 'Inter Variable', Roboto, 'Helvetica Neue', Arial,
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji',
+    sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Segoe UI Mono',
+    'JetBrains Mono', 'Noto Sans Mono CJK SC', 'Microsoft YaHei Mono',
+    'IBM Plex Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  /* ── Font size scale ──
+     Use these tokens for every `font-size` in app CSS — avoids drift between
+     shell / chat / modals / cards. Hierarchy: micro/2xs/xxs = dense chrome &
+     badges; xs–base = UI body; md–lg = section labels; xl+ = heroes / empty
+     states. Canvas/ECharts use `CHART_TEXT_PX` in `src/lib/chart-text-px.ts`. */
+  --text-micro: 8px;
+  --text-2xs: 9px;
+  --text-xxs: 10px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 18px;
+  --text-2xl: 22px;
+  --text-3xl: 26px;
+
+  /* ── Spacing scale (4px base grid) ──
+     Named 0..8 so `var(--space-2)` = 8, `var(--space-4)` = 16 etc.
+     Use these instead of ad-hoc `padding: '6px 10px'` literals. */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+
+  /* ── App shell — one column grid: sidebar chrome + workspace topbar share
+     the same horizontal inset and height so the header divider reads as one
+     continuous line across the split. */
+  --shell-chrome-pad-x: var(--space-4);
+  --shell-header-height: 36px;
+
+  /* ── Radius scale ──
+     Tight VSCode-adjacent corners: chips/inputs 4px, controls 6px,
+     cards/modals same 6px cap. Prefer `border-radius: 50%` for circular
+     dots; use --radius-sm for pill-shaped chips instead of huge 999px. */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 6px;
+  --radius-xl: 6px;
+  --radius-full: 999px;
+
+  /* ── Elevation shadows ──
+     Each step is strong enough to lift off neutral gray without
+     turning the whole card into a drop-shadow blob. Linear uses the
+     two-layer (key + ambient) pattern; so do we. */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.30),
+    0 1px 2px rgba(0, 0, 0, 0.20);
+  --shadow-md: 0 8px 20px rgba(0, 0, 0, 0.40),
+    0 2px 4px rgba(0, 0, 0, 0.20);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.50),
+    0 4px 8px rgba(0, 0, 0, 0.25);
+  --shadow-modal: 0 8px 32px rgba(0, 0, 0, 0.55),
+    0 2px 6px rgba(0, 0, 0, 0.25);
+  /* Focus ring — not a shadow in the usual sense; keyed off accent. */
+  --ring-focus: 0 0 0 2px var(--color-bg-base),
+    0 0 0 4px var(--color-border-focus-dim);
+
+  /* ── Icon scale (Lucide / inline SVG in toolbars & lists) ── */
+  --icon-size-sm: 14px;
+  --icon-size-md: 16px;
+  --icon-size-lg: 18px;
+  --icon-size-xl: 20px;
+
+  /* ── Layout sizes ── */
+  --size-activitybar: 48px;
+  --size-sidebar: 280px;
+  --size-statusbar: 22px;
+  --size-chatpanel: 320px;
+  --size-bottompanel: 200px;
+
+  /* ── Animation ── */
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+  --duration-slow: 320ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Z-index scale ──
+     Layering tiers for the whole shell. Previously each CSS file declared
+     its own 1000 / 1100 / 1200 / 2000 / 9998 / 9999 values and the ordering
+     was only correct by accident — modal sometimes appeared below the side
+     drawer because a 900 drawer later got bumped to 1000. Always use these
+     tokens for anything above the page flow. Values intentionally leave
+     room between tiers so in-tier stacking contexts can add local offsets
+     without collisions.
+     Local stacking-context offsets (1 / 2 / 3 / 10 / 20) stay as raw
+     numbers — they're relative to their parent, not the shell. */
+  --z-base: 0;
+  --z-sticky: 50;
+  --z-chrome: 100;
+  --z-dropdown: 900;
+  --z-overlay: 1000;
+  --z-popover: 1100;
+  --z-modal-backdrop: 1200;
+  --z-modal: 1300;
+  --z-toast: 2000;
+  --z-drag: 9000;
+  --z-print: 99999;
+}
+
+/* === Global reset === */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Form elements (button/input/select/textarea) do NOT inherit font-family by
+   default in Chromium — they fall back to the UA sheet's `-webkit-small-
+   control` / Arial, which caused every sidebar button (`.sidebar-space-row`,
+   `.session-mini-btn`, `.session-activity-item`, `.session-title-btn`, …)
+   to render in a different face than the surrounding text. Forcing full
+   font inheritance here removes the need to sprinkle `font: inherit` on
+   every interactive class and prevents regressions when new buttons are
+   added without the incantation.
+
+   Size/weight reset too so a button's UA default of 13px-ish doesn't
+   override the design-system font-size tokens applied on the button class.
+   Callers that really want a different face still win via specificity
+   (e.g. `.tool-card-name { font-family: var(--font-mono) }`). */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  /* weight 500 read too heavy on Segoe UI — dropping to 400 matches the
+     VSCode / Linear default and lets font-weight:600 headings do the
+     hierarchy work instead. */
+  font-weight: 400;
+  line-height: 1.5;
+  /* Neutral tracking — negative tracking + global tabular numerals made
+     body copy and CJK punctuation look cramped and “digit monospace”. */
+  letter-spacing: 0;
+  /* Kern + contextual alts only on the root. Inter cv11/ss01 are nice for
+     Latin UI but apply via variable font when Inter actually renders; avoid
+     forcing tnum/zero everywhere (use `.tabular-nums` for data). */
+  font-feature-settings: 'kern' 1, 'calt' 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* optimizeLegibility often blurs small UI type on Windows ClearType. */
+  text-rendering: auto;
+}
+
+/* Everywhere the mono stack is applied, enable tabular + slashed-zero
+   explicitly — a few components pass `fontFamily: var(--font-mono)` as
+   inline style which bypasses the body defaults above if a descendant
+   overrides the font. */
+[style*="var(--font-mono)"],
+code,
+pre,
+kbd,
+samp {
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+
+/* Form elements inherit the app font family / size rather than UA defaults.
+   Without this, callers end up pasting `fontFamily: 'inherit'` into every
+   inline style block that builds a button/input. */
+input,
+textarea,
+button {
+  font: inherit;
+}
+
+/* Utility: stable-width numerals. Apply to any text that reports elapsed
+   time, counts, token totals, peak positions, etc. so incremental updates
+   don't cause layout jitter. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums slashed-zero;
+}
+
+/* === Scrollbar — refined thin style === */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* === Selection === */
+::selection {
+  background: rgba(255, 255, 255, 0.22);
+  color: #FFFFFF;
+}
+
+/* === Focus ring ===
+   Single global rule for every keyboard-focusable element. Previously each
+   component scattered its own `:focus-visible` block (some with
+   `outline-offset: -1px`, some with a cyan outline, some with a box-shadow
+   halo) so focus style drifted per surface and was easy to miss on small
+   chips. The rule below owns the default; components needing the ring to
+   sit INSIDE the element's border (tight radius, flush with edge) opt in
+   by adding `.focus-inset` alongside the button class — see StatusChip,
+   CommandPalette rows, `.panel-icon-btn`, `.panel-segmented-tab`,
+   `.activity-btn`, and `.resizer-strip` for usage. `border-radius:inherit`
+   keeps the ring matching the host's corner radius without every caller
+   having to repeat it. */
+:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+.focus-inset:focus-visible {
+  outline-offset: -2px;
+}
+
+/* === Visually-hidden utility ===
+   Renders text only to assistive tech — used by aria-live regions
+   (CommandPalette result count) and any other off-screen announcements.
+   `clip-path` is the modern equivalent of the legacy `clip: rect(...)`
+   dance and avoids the iOS VoiceOver quirk where `display:none` silences
+   the live region entirely. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* === Spinner dot animation === */
+@keyframes pulse-dot {
+  0%, 80%, 100% { opacity: 0.3; }
+  40% { opacity: 1; }
+}
+
+.thinking-dots span {
+  animation: pulse-dot 1.4s infinite ease-in-out;
+  animation-fill-mode: both;
+}
+
+.thinking-dots span:nth-child(1) { animation-delay: 0s; }
+.thinking-dots span:nth-child(2) { animation-delay: 0.16s; }
+.thinking-dots span:nth-child(3) { animation-delay: 0.32s; }
+
+/* === Generic spinner (used by running task steps / job status) === */
+@keyframes lattice-spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: lattice-spin 1s linear infinite;
+  transform-origin: center;
+}
+
+/* === Print-to-PDF isolation ===
+   Components that support printing tag the body with
+   `data-printing="<scope-name>"` and the subtree to print with
+   `data-print-scope="<scope-name>"`. Everything else is visually
+   suppressed so the OS print dialog captures only the scoped content. */
+@media print {
+  body[data-printing] {
+    background: #ffffff !important;
+  }
+  body[data-printing] * {
+    visibility: hidden !important;
+    animation: none !important;
+    transition: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  body[data-printing] [data-print-scope],
+  body[data-printing] [data-print-scope] * {
+    visibility: visible !important;
+    color: #000000 !important;
+    background: transparent !important;
+  }
+  body[data-printing] [data-print-scope] a {
+    color: #333333 !important;
+    text-decoration: underline;
+  }
+  body[data-printing] [data-print-scope] {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    z-index: var(--z-print);
+  }
+}
+
+/* Spinner used by ToolCallCard's running state. */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

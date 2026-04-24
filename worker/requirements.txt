@@ -1,0 +1,25 @@
+# Dependencies for repo-local Python worker (Self-contained Port §P4).
+#
+# Install once per Python environment:
+#     pip install -r worker/requirements.txt
+#
+# P4-α (echo, library.fetch_doi) needs nothing here — pure stdlib.
+# P4-β (spectrum.detect_peaks, spectrum.assess_quality) introduces
+# numpy + scipy; later phases (XRD search / XPS fit / Raman match /
+# RAG) will likely add scikit-learn, pymatgen, sentence-transformers
+# and others as they land.
+
+numpy>=1.23
+scipy>=1.10
+
+# P4-ζ (rag.retrieve): TF-IDF + cosine over chunked paper text.
+scikit-learn>=1.3
+
+# Optional — used by paper.read_pdf (P4-ε) for PDF full-text extraction.
+# When absent, the tool returns a `{success: False, error: ...}` payload
+# pointing at this file, and the rest of the worker keeps booting.
+pdfplumber>=0.10
+
+# BGMN Rietveld refinement (bundles the bgmn binary).
+# Used by xrd.refine_dara for full Rietveld fits.
+dara-xrd>=1.1.0

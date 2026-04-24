@@ -1,0 +1,1900 @@
+{
+  "Li": [
+    {
+      "orbital": "1s",
+      "energy_eV": 54.7,
+      "primary": true
+    },
+    {
+      "orbital": "KVV Auger",
+      "energy_eV": 1428.0,
+      "note": "Approx BE with Al Ka"
+    }
+  ],
+  "Be": [
+    {
+      "orbital": "1s",
+      "energy_eV": 111.8,
+      "primary": true
+    },
+    {
+      "orbital": "KLL Auger",
+      "energy_eV": 1380.0
+    }
+  ],
+  "B": [
+    {
+      "orbital": "1s",
+      "energy_eV": 187.5,
+      "note": "Elemental",
+      "primary": true
+    },
+    {
+      "orbital": "1s",
+      "energy_eV": 189.6,
+      "note": "B-O",
+      "primary": true
+    },
+    {
+      "orbital": "1s",
+      "energy_eV": 192.0,
+      "note": "B2O3",
+      "primary": true
+    },
+    {
+      "orbital": "KLL Auger",
+      "energy_eV": 1305.0
+    }
+  ],
+  "C": [
+    {
+      "orbital": "1s",
+      "energy_eV": 284.8,
+      "note": "C-C / C-H",
+      "primary": true
+    },
+    {
+      "orbital": "1s",
+      "energy_eV": 286.5,
+      "note": "C-O",
+      "primary": true
+    },
+    {
+      "orbital": "1s",
+      "energy_eV": 288.0,
+      "note": "C=O",
+      "primary": true
+    },
+    {
+      "orbital": "1s",
+      "energy_eV": 289.0,
+      "note": "O-C=O",
+      "primary": true
+    },
+    {
+      "orbital": "1s",
+      "energy_eV": 291.5,
+      "note": "CF2",
+      "primary": true
+    },
+    {
+      "orbital": "1s",
+      "energy_eV": 293.5,
+      "note": "CF3",
+      "primary": true
+    },
+    {
+      "orbital": "KLL Auger",
+      "energy_eV": 1223.0
+    }
+  ],
+  "N": [
+    {
+      "orbital": "1s",
+      "energy_eV": 398.0,
+      "note": "Nitride (M-N)",
+      "primary": true
+    },
+    {
+      "orbital": "1s",
+      "energy_eV": 399.5,
+      "note": "Pyridinic N",
+      "primary": true
+    },
+    {
+      "orbital": "1s",
+      "energy_eV": 400.5,
+      "note": "Pyrrolic N",
+      "primary": true
+    },
+    {
+      "orbital": "1s",
+      "energy_eV": 401.0,
+      "note": "Graphitic N",
+      "primary": true
+    },
+    {
+      "orbital": "1s",
+      "energy_eV": 403.0,
+      "note": "N-O",
+      "primary": true
+    },
+    {
+      "orbital": "1s",
+      "energy_eV": 406.0,
+      "note": "NO3-",
+      "primary": true
+    },
+    {
+      "orbital": "KLL Auger",
+      "energy_eV": 1105.0
+    }
+  ],
+  "O": [
+    {
+      "orbital": "1s",
+      "energy_eV": 529.5,
+      "note": "Metal Oxide (lattice O)",
+      "primary": true
+    },
+    {
+      "orbital": "1s",
+      "energy_eV": 531.0,
+      "note": "Hydroxide / Defect O",
+      "primary": true
+    },
+    {
+      "orbital": "1s",
+      "energy_eV": 532.0,
+      "note": "C=O / Organic",
+      "primary": true
+    },
+    {
+      "orbital": "1s",
+      "energy_eV": 533.0,
+      "note": "C-O / SiO2",
+      "primary": true
+    },
+    {
+      "orbital": "1s",
+      "energy_eV": 534.0,
+      "note": "Adsorbed H2O",
+      "primary": true
+    },
+    {
+      "orbital": "2s",
+      "energy_eV": 24.0
+    },
+    {
+      "orbital": "KLL Auger",
+      "energy_eV": 978.0
+    }
+  ],
+  "F": [
+    {
+      "orbital": "1s",
+      "energy_eV": 685.0,
+      "note": "Metal Fluoride",
+      "primary": true
+    },
+    {
+      "orbital": "1s",
+      "energy_eV": 687.0,
+      "note": "Semi-ionic F",
+      "primary": true
+    },
+    {
+      "orbital": "1s",
+      "energy_eV": 689.0,
+      "note": "Organic F (C-F)",
+      "primary": true
+    },
+    {
+      "orbital": "2s",
+      "energy_eV": 31.0
+    },
+    {
+      "orbital": "KLL Auger",
+      "energy_eV": 834.0
+    }
+  ],
+  "Ne": [
+    {
+      "orbital": "1s",
+      "energy_eV": 870.2,
+      "primary": true
+    },
+    {
+      "orbital": "2s",
+      "energy_eV": 48.5
+    },
+    {
+      "orbital": "2p",
+      "energy_eV": 21.7
+    }
+  ],
+  "Na": [
+    {
+      "orbital": "1s",
+      "energy_eV": 1071.8,
+      "primary": true
+    },
+    {
+      "orbital": "2s",
+      "energy_eV": 63.5
+    },
+    {
+      "orbital": "2p",
+      "energy_eV": 30.5
+    },
+    {
+      "orbital": "KLL Auger",
+      "energy_eV": 497.0,
+      "note": "KL23L23"
+    },
+    {
+      "orbital": "KLL Auger",
+      "energy_eV": 502.0,
+      "note": "KL1L23"
+    }
+  ],
+  "Mg": [
+    {
+      "orbital": "1s",
+      "energy_eV": 1303.0,
+      "primary": true
+    },
+    {
+      "orbital": "2s",
+      "energy_eV": 88.6
+    },
+    {
+      "orbital": "2p",
+      "energy_eV": 49.5,
+      "note": "Metal"
+    },
+    {
+      "orbital": "2p",
+      "energy_eV": 51.0,
+      "note": "Oxide"
+    },
+    {
+      "orbital": "KLL Auger",
+      "energy_eV": 306.0
+    }
+  ],
+  "Al": [
+    {
+      "orbital": "2s",
+      "energy_eV": 117.8,
+      "note": "Metal"
+    },
+    {
+      "orbital": "2s",
+      "energy_eV": 119.5,
+      "note": "Oxide"
+    },
+    {
+      "orbital": "2p",
+      "energy_eV": 72.9,
+      "note": "Metal",
+      "primary": true
+    },
+    {
+      "orbital": "2p",
+      "energy_eV": 74.5,
+      "note": "Oxide (Al2O3)",
+      "primary": true
+    },
+    {
+      "orbital": "KLL Auger",
+      "energy_eV": 1393.0
+    }
+  ],
+  "Si": [
+    {
+      "orbital": "2s",
+      "energy_eV": 150.5,
+      "note": "Elemental"
+    },
+    {
+      "orbital": "2s",
+      "energy_eV": 154.0,
+      "note": "SiO2"
+    },
+    {
+      "orbital": "2p",
+      "energy_eV": 99.3,
+      "note": "Elemental",
+      "primary": true
+    },
+    {
+      "orbital": "2p",
+      "energy_eV": 101.5,
+      "note": "Si suboxide",
+      "primary": true
+    },
+    {
+      "orbital": "2p",
+      "energy_eV": 103.5,
+      "note": "SiO2",
+      "primary": true
+    },
+    {
+      "orbital": "KLL Auger",
+      "energy_eV": 1383.0
+    }
+  ],
+  "P": [
+    {
+      "orbital": "2s",
+      "energy_eV": 189.0
+    },
+    {
+      "orbital": "2p",
+      "energy_eV": 129.0,
+      "note": "Elemental P",
+      "primary": true
+    },
+    {
+      "orbital": "2p",
+      "energy_eV": 130.0,
+      "note": "Red P",
+      "primary": true
+    },
+    {
+      "orbital": "2p",
+      "energy_eV": 133.5,
+      "note": "Phosphate (PO4)",
+      "primary": true
+    },
+    {
+      "orbital": "KLL Auger",
+      "energy_eV": 1333.0
+    }
+  ],
+  "S": [
+    {
+      "orbital": "2s",
+      "energy_eV": 230.9
+    },
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 162.0,
+      "note": "Sulfide (S2-)",
+      "primary": true
+    },
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 163.5,
+      "note": "Thiol (S-H)",
+      "primary": true
+    },
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 164.0,
+      "note": "Disulfide (S-S)",
+      "primary": true
+    },
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 166.0,
+      "note": "Sulfite (SO3)",
+      "primary": true
+    },
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 168.5,
+      "note": "Sulfate (SO4)",
+      "primary": true
+    },
+    {
+      "orbital": "2p1/2",
+      "energy_eV": 163.2,
+      "note": "Sulfide",
+      "doublet_of": "2p3/2"
+    },
+    {
+      "orbital": "2p1/2",
+      "energy_eV": 169.7,
+      "note": "Sulfate",
+      "doublet_of": "2p3/2"
+    },
+    {
+      "orbital": "LMM Auger",
+      "energy_eV": 1283.0
+    }
+  ],
+  "Cl": [
+    {
+      "orbital": "2s",
+      "energy_eV": 270.0
+    },
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 198.5,
+      "note": "Chloride (Cl-)",
+      "primary": true
+    },
+    {
+      "orbital": "2p1/2",
+      "energy_eV": 200.1,
+      "note": "Chloride (Cl-)",
+      "doublet_of": "2p3/2"
+    }
+  ],
+  "Ar": [
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 241.9,
+      "primary": true
+    },
+    {
+      "orbital": "2p1/2",
+      "energy_eV": 244.1,
+      "doublet_of": "2p3/2"
+    }
+  ],
+  "K": [
+    {
+      "orbital": "2s",
+      "energy_eV": 377.0
+    },
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 293.6,
+      "primary": true
+    },
+    {
+      "orbital": "2p1/2",
+      "energy_eV": 296.3,
+      "doublet_of": "2p3/2"
+    },
+    {
+      "orbital": "3s",
+      "energy_eV": 34.0
+    },
+    {
+      "orbital": "3p",
+      "energy_eV": 18.0
+    }
+  ],
+  "Ca": [
+    {
+      "orbital": "2s",
+      "energy_eV": 438.0
+    },
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 346.6,
+      "primary": true
+    },
+    {
+      "orbital": "2p1/2",
+      "energy_eV": 350.1,
+      "doublet_of": "2p3/2"
+    },
+    {
+      "orbital": "3s",
+      "energy_eV": 44.0
+    },
+    {
+      "orbital": "3p",
+      "energy_eV": 25.5
+    }
+  ],
+  "Sc": [
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 398.8,
+      "primary": true
+    },
+    {
+      "orbital": "2p1/2",
+      "energy_eV": 403.3,
+      "doublet_of": "2p3/2"
+    },
+    {
+      "orbital": "3s",
+      "energy_eV": 51.0
+    },
+    {
+      "orbital": "3p",
+      "energy_eV": 29.0
+    }
+  ],
+  "Ti": [
+    {
+      "orbital": "2s",
+      "energy_eV": 564.0
+    },
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 453.8,
+      "note": "Metal",
+      "primary": true
+    },
+    {
+      "orbital": "2p1/2",
+      "energy_eV": 460.0,
+      "doublet_of": "2p3/2"
+    },
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 458.5,
+      "note": "Oxide",
+      "primary": true
+    },
+    {
+      "orbital": "3s",
+      "energy_eV": 59.0
+    },
+    {
+      "orbital": "3p",
+      "energy_eV": 34.0
+    }
+  ],
+  "V": [
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 512.1,
+      "note": "Metal",
+      "primary": true
+    },
+    {
+      "orbital": "2p1/2",
+      "energy_eV": 519.8,
+      "doublet_of": "2p3/2"
+    },
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 517.0,
+      "note": "Oxide",
+      "primary": true
+    },
+    {
+      "orbital": "3s",
+      "energy_eV": 66.0
+    },
+    {
+      "orbital": "3p",
+      "energy_eV": 38.0
+    }
+  ],
+  "Cr": [
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 574.1,
+      "note": "Metal",
+      "primary": true
+    },
+    {
+      "orbital": "2p1/2",
+      "energy_eV": 583.8,
+      "doublet_of": "2p3/2"
+    },
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 576.8,
+      "note": "Oxide",
+      "primary": true
+    },
+    {
+      "orbital": "3s",
+      "energy_eV": 74.0
+    },
+    {
+      "orbital": "3p",
+      "energy_eV": 42.0
+    }
+  ],
+  "Mn": [
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 638.7,
+      "note": "Metal",
+      "primary": true
+    },
+    {
+      "orbital": "2p1/2",
+      "energy_eV": 649.9,
+      "doublet_of": "2p3/2"
+    },
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 641.5,
+      "note": "Oxide",
+      "primary": true
+    },
+    {
+      "orbital": "3s",
+      "energy_eV": 82.0
+    },
+    {
+      "orbital": "3p",
+      "energy_eV": 48.0
+    }
+  ],
+  "Fe": [
+    {
+      "orbital": "2s",
+      "energy_eV": 846.0
+    },
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 706.7,
+      "note": "Metal",
+      "primary": true
+    },
+    {
+      "orbital": "2p1/2",
+      "energy_eV": 719.8,
+      "doublet_of": "2p3/2"
+    },
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 710.9,
+      "note": "Oxide",
+      "primary": true
+    },
+    {
+      "orbital": "3s",
+      "energy_eV": 92.0
+    },
+    {
+      "orbital": "3p",
+      "energy_eV": 53.0
+    },
+    {
+      "orbital": "LMM Auger",
+      "energy_eV": 784.0,
+      "note": "Approx"
+    }
+  ],
+  "Co": [
+    {
+      "orbital": "2s",
+      "energy_eV": 926.0
+    },
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 778.1,
+      "primary": true
+    },
+    {
+      "orbital": "2p1/2",
+      "energy_eV": 793.3,
+      "doublet_of": "2p3/2"
+    },
+    {
+      "orbital": "3s",
+      "energy_eV": 101.0
+    },
+    {
+      "orbital": "3p",
+      "energy_eV": 59.0
+    },
+    {
+      "orbital": "LMM Auger",
+      "energy_eV": 713.0
+    }
+  ],
+  "Ni": [
+    {
+      "orbital": "2s",
+      "energy_eV": 1008.0
+    },
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 852.7,
+      "primary": true
+    },
+    {
+      "orbital": "2p1/2",
+      "energy_eV": 870.0,
+      "doublet_of": "2p3/2"
+    },
+    {
+      "orbital": "3s",
+      "energy_eV": 111.0
+    },
+    {
+      "orbital": "3p",
+      "energy_eV": 66.0
+    },
+    {
+      "orbital": "LMM Auger",
+      "energy_eV": 639.0
+    }
+  ],
+  "Cu": [
+    {
+      "orbital": "2s",
+      "energy_eV": 1096.0
+    },
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 932.6,
+      "primary": true
+    },
+    {
+      "orbital": "2p1/2",
+      "energy_eV": 952.5,
+      "doublet_of": "2p3/2"
+    },
+    {
+      "orbital": "3s",
+      "energy_eV": 122.5
+    },
+    {
+      "orbital": "3p",
+      "energy_eV": 75.0
+    },
+    {
+      "orbital": "LMM Auger",
+      "energy_eV": 568.0
+    }
+  ],
+  "Zn": [
+    {
+      "orbital": "2s",
+      "energy_eV": 1194.0
+    },
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 1021.8,
+      "primary": true
+    },
+    {
+      "orbital": "2p1/2",
+      "energy_eV": 1044.9,
+      "doublet_of": "2p3/2"
+    },
+    {
+      "orbital": "3s",
+      "energy_eV": 140.0
+    },
+    {
+      "orbital": "3p",
+      "energy_eV": 89.0
+    },
+    {
+      "orbital": "3d",
+      "energy_eV": 10.0
+    },
+    {
+      "orbital": "LMM Auger",
+      "energy_eV": 497.0
+    }
+  ],
+  "Ga": [
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 1116.7,
+      "primary": true
+    },
+    {
+      "orbital": "2p1/2",
+      "energy_eV": 1143.2,
+      "doublet_of": "2p3/2"
+    },
+    {
+      "orbital": "3s",
+      "energy_eV": 160.0
+    },
+    {
+      "orbital": "3p",
+      "energy_eV": 105.0
+    },
+    {
+      "orbital": "3d",
+      "energy_eV": 19.0
+    },
+    {
+      "orbital": "LMM Auger",
+      "energy_eV": 422.0
+    }
+  ],
+  "Ge": [
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 1217.0,
+      "primary": true
+    },
+    {
+      "orbital": "3s",
+      "energy_eV": 181.0
+    },
+    {
+      "orbital": "3p",
+      "energy_eV": 125.0
+    },
+    {
+      "orbital": "3d",
+      "energy_eV": 29.0
+    },
+    {
+      "orbital": "LMM Auger",
+      "energy_eV": 348.0
+    }
+  ],
+  "As": [
+    {
+      "orbital": "2p3/2",
+      "energy_eV": 1323.0,
+      "note": "Weak with Al Ka",
+      "primary": true
+    },
+    {
+      "orbital": "3s",
+      "energy_eV": 205.0
+    },
+    {
+      "orbital": "3p",
+      "energy_eV": 145.0
+    },
+    {
+      "orbital": "3d",
+      "energy_eV": 41.7
+    },
+    {
+      "orbital": "LMM Auger",
+      "energy_eV": 277.0
+    }
+  ],
+  "Se": [
+    {
+      "orbital": "3s",
+      "energy_eV": 230.0
+    },
+    {
+      "orbital": "3p",
+      "energy_eV": 166.0
+    },
+    {
+      "orbital": "3d",
+      "energy_eV": 55.5,
+      "primary": true
+    },
+    {
+      "orbital": "LMM Auger",
+      "energy_eV": 204.0
+    }
+  ],
+  "Br": [
+    {
+      "orbital": "3s",
+      "energy_eV": 257.0
+    },
+    {
+      "orbital": "3p",
+      "energy_eV": 189.0
+    },
+    {
+      "orbital": "3d",
+      "energy_eV": 69.0,
+      "primary": true
+    }
+  ],
+  "Kr": [
+    {
+      "orbital": "3s",
+      "energy_eV": 292.8
+    },
+    {
+      "orbital": "3p3/2",
+      "energy_eV": 214.4
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 86.0,
+      "primary": true
+    }
+  ],
+  "Rb": [
+    {
+      "orbital": "3s",
+      "energy_eV": 322.0
+    },
+    {
+      "orbital": "3p3/2",
+      "energy_eV": 238.5
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 110.0,
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 111.5,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "4s",
+      "energy_eV": 30.0
+    },
+    {
+      "orbital": "4p",
+      "energy_eV": 15.0
+    }
+  ],
+  "Sr": [
+    {
+      "orbital": "3s",
+      "energy_eV": 358.0
+    },
+    {
+      "orbital": "3p3/2",
+      "energy_eV": 269.0
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 133.2,
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 135.0,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "4s",
+      "energy_eV": 38.0
+    },
+    {
+      "orbital": "4p",
+      "energy_eV": 19.5
+    }
+  ],
+  "Y": [
+    {
+      "orbital": "3p3/2",
+      "energy_eV": 301.0
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 155.6,
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 157.6,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "4s",
+      "energy_eV": 45.0
+    },
+    {
+      "orbital": "4p",
+      "energy_eV": 25.6
+    }
+  ],
+  "Zr": [
+    {
+      "orbital": "3p3/2",
+      "energy_eV": 333.0
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 178.8,
+      "note": "Metal",
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 181.1,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 182.2,
+      "note": "Oxide",
+      "primary": true
+    },
+    {
+      "orbital": "4s",
+      "energy_eV": 51.0
+    },
+    {
+      "orbital": "4p",
+      "energy_eV": 28.0
+    }
+  ],
+  "Nb": [
+    {
+      "orbital": "3p3/2",
+      "energy_eV": 363.0
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 202.2,
+      "note": "Metal",
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 204.9,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 207.1,
+      "note": "Oxide",
+      "primary": true
+    },
+    {
+      "orbital": "4s",
+      "energy_eV": 58.0
+    },
+    {
+      "orbital": "4p",
+      "energy_eV": 34.0
+    }
+  ],
+  "Mo": [
+    {
+      "orbital": "3p3/2",
+      "energy_eV": 394.0
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 228.0,
+      "note": "Metal",
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 231.1,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 232.4,
+      "note": "Oxide (VI)",
+      "primary": true
+    },
+    {
+      "orbital": "4s",
+      "energy_eV": 63.0
+    },
+    {
+      "orbital": "4p",
+      "energy_eV": 35.0
+    }
+  ],
+  "Ru": [
+    {
+      "orbital": "3p3/2",
+      "energy_eV": 461.0
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 280.0,
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 284.2,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "4s",
+      "energy_eV": 75.0
+    },
+    {
+      "orbital": "4p",
+      "energy_eV": 43.0
+    }
+  ],
+  "Rh": [
+    {
+      "orbital": "3p3/2",
+      "energy_eV": 496.0
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 307.2,
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 312.0,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "4s",
+      "energy_eV": 81.0
+    },
+    {
+      "orbital": "4p",
+      "energy_eV": 48.0
+    }
+  ],
+  "Pd": [
+    {
+      "orbital": "3p3/2",
+      "energy_eV": 532.0
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 335.1,
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 340.4,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "4s",
+      "energy_eV": 88.0
+    },
+    {
+      "orbital": "4p",
+      "energy_eV": 51.0
+    }
+  ],
+  "Ag": [
+    {
+      "orbital": "3p3/2",
+      "energy_eV": 573.0
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 368.2,
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 374.2,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "4s",
+      "energy_eV": 97.0
+    },
+    {
+      "orbital": "4p",
+      "energy_eV": 62.0
+    },
+    {
+      "orbital": "MNN Auger",
+      "energy_eV": 1134.0,
+      "note": "Approx"
+    }
+  ],
+  "Cd": [
+    {
+      "orbital": "3p3/2",
+      "energy_eV": 617.0
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 405.2,
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 411.9,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "4s",
+      "energy_eV": 110.0
+    },
+    {
+      "orbital": "4p",
+      "energy_eV": 67.0
+    },
+    {
+      "orbital": "MNN Auger",
+      "energy_eV": 1098.0
+    }
+  ],
+  "In": [
+    {
+      "orbital": "3p3/2",
+      "energy_eV": 665.0
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 443.8,
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 451.4,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "4s",
+      "energy_eV": 122.0
+    },
+    {
+      "orbital": "4p",
+      "energy_eV": 76.0
+    },
+    {
+      "orbital": "MNN Auger",
+      "energy_eV": 1074.0
+    }
+  ],
+  "Sn": [
+    {
+      "orbital": "3p3/2",
+      "energy_eV": 715.0
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 485.0,
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 493.4,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "4s",
+      "energy_eV": 137.0
+    },
+    {
+      "orbital": "4p",
+      "energy_eV": 89.0
+    },
+    {
+      "orbital": "4d",
+      "energy_eV": 24.0
+    },
+    {
+      "orbital": "MNN Auger",
+      "energy_eV": 1050.0
+    }
+  ],
+  "Sb": [
+    {
+      "orbital": "3p3/2",
+      "energy_eV": 766.0
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 528.3,
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 537.5,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "4s",
+      "energy_eV": 152.0
+    },
+    {
+      "orbital": "4d",
+      "energy_eV": 32.0
+    }
+  ],
+  "Te": [
+    {
+      "orbital": "3p3/2",
+      "energy_eV": 820.0
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 573.0,
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 583.4,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "4d",
+      "energy_eV": 40.0
+    }
+  ],
+  "I": [
+    {
+      "orbital": "3p3/2",
+      "energy_eV": 875.0
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 619.3,
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 630.8,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "4d",
+      "energy_eV": 50.0
+    }
+  ],
+  "Xe": [
+    {
+      "orbital": "3p3/2",
+      "energy_eV": 940.6
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 676.4,
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 689.0,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "4d",
+      "energy_eV": 68.0
+    }
+  ],
+  "Cs": [
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 726.6,
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 740.5,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "4s",
+      "energy_eV": 230.0
+    },
+    {
+      "orbital": "4p3/2",
+      "energy_eV": 161.6
+    },
+    {
+      "orbital": "4d",
+      "energy_eV": 77.0
+    },
+    {
+      "orbital": "5s",
+      "energy_eV": 23.0
+    },
+    {
+      "orbital": "5p",
+      "energy_eV": 12.0
+    }
+  ],
+  "Ba": [
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 780.8,
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 796.1,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "4s",
+      "energy_eV": 253.0
+    },
+    {
+      "orbital": "4p3/2",
+      "energy_eV": 179.7
+    },
+    {
+      "orbital": "4d",
+      "energy_eV": 90.0
+    },
+    {
+      "orbital": "5s",
+      "energy_eV": 30.0
+    },
+    {
+      "orbital": "5p",
+      "energy_eV": 15.0
+    }
+  ],
+  "La": [
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 834.9,
+      "primary": true
+    },
+    {
+      "orbital": "3d3/2",
+      "energy_eV": 851.7,
+      "doublet_of": "3d5/2"
+    },
+    {
+      "orbital": "4d",
+      "energy_eV": 103.0
+    }
+  ],
+  "Ce": [
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 883.8,
+      "note": "Main",
+      "primary": true
+    },
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 916.6,
+      "note": "Satellite",
+      "primary": true
+    },
+    {
+      "orbital": "4d",
+      "energy_eV": 110.0
+    }
+  ],
+  "Pr": [
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 931.0,
+      "primary": true
+    },
+    {
+      "orbital": "4d",
+      "energy_eV": 115.0
+    }
+  ],
+  "Nd": [
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 980.4,
+      "primary": true
+    },
+    {
+      "orbital": "4d",
+      "energy_eV": 120.5
+    }
+  ],
+  "Sm": [
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 1083.3,
+      "primary": true
+    },
+    {
+      "orbital": "4d",
+      "energy_eV": 129.0
+    }
+  ],
+  "Eu": [
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 1131.0,
+      "primary": true
+    },
+    {
+      "orbital": "4d",
+      "energy_eV": 134.0
+    }
+  ],
+  "Gd": [
+    {
+      "orbital": "3d5/2",
+      "energy_eV": 1186.0,
+      "primary": true
+    },
+    {
+      "orbital": "4d",
+      "energy_eV": 141.0
+    }
+  ],
+  "Yb": [
+    {
+      "orbital": "4s",
+      "energy_eV": 480.0,
+      "primary": true
+    },
+    {
+      "orbital": "4p3/2",
+      "energy_eV": 343.0
+    },
+    {
+      "orbital": "4d",
+      "energy_eV": 182.0
+    },
+    {
+      "orbital": "5s",
+      "energy_eV": 53.0
+    },
+    {
+      "orbital": "5p",
+      "energy_eV": 25.0
+    },
+    {
+      "orbital": "4f",
+      "energy_eV": 2.0
+    }
+  ],
+  "Lu": [
+    {
+      "orbital": "4s",
+      "energy_eV": 506.0
+    },
+    {
+      "orbital": "4p3/2",
+      "energy_eV": 359.0
+    },
+    {
+      "orbital": "4d5/2",
+      "energy_eV": 195.0
+    },
+    {
+      "orbital": "4f7/2",
+      "energy_eV": 7.3,
+      "primary": true
+    },
+    {
+      "orbital": "5p",
+      "energy_eV": 28.0
+    }
+  ],
+  "Hf": [
+    {
+      "orbital": "4s",
+      "energy_eV": 538.0
+    },
+    {
+      "orbital": "4p3/2",
+      "energy_eV": 380.0
+    },
+    {
+      "orbital": "4d5/2",
+      "energy_eV": 213.7
+    },
+    {
+      "orbital": "4d3/2",
+      "energy_eV": 224.4
+    },
+    {
+      "orbital": "4f7/2",
+      "energy_eV": 14.3,
+      "primary": true
+    },
+    {
+      "orbital": "4f5/2",
+      "energy_eV": 15.9,
+      "doublet_of": "4f7/2"
+    },
+    {
+      "orbital": "5p",
+      "energy_eV": 33.0
+    }
+  ],
+  "Ta": [
+    {
+      "orbital": "4p3/2",
+      "energy_eV": 404.0
+    },
+    {
+      "orbital": "4d5/2",
+      "energy_eV": 229.5
+    },
+    {
+      "orbital": "4d3/2",
+      "energy_eV": 241.3
+    },
+    {
+      "orbital": "4f7/2",
+      "energy_eV": 21.9,
+      "note": "Metal",
+      "primary": true
+    },
+    {
+      "orbital": "4f5/2",
+      "energy_eV": 23.8,
+      "doublet_of": "4f7/2"
+    },
+    {
+      "orbital": "4f7/2",
+      "energy_eV": 26.5,
+      "note": "Oxide",
+      "primary": true
+    },
+    {
+      "orbital": "5p",
+      "energy_eV": 38.0
+    }
+  ],
+  "W": [
+    {
+      "orbital": "4p3/2",
+      "energy_eV": 425.0
+    },
+    {
+      "orbital": "4d5/2",
+      "energy_eV": 243.5
+    },
+    {
+      "orbital": "4d3/2",
+      "energy_eV": 255.9
+    },
+    {
+      "orbital": "4f7/2",
+      "energy_eV": 31.4,
+      "note": "Metal",
+      "primary": true
+    },
+    {
+      "orbital": "4f5/2",
+      "energy_eV": 33.6,
+      "doublet_of": "4f7/2"
+    },
+    {
+      "orbital": "4f7/2",
+      "energy_eV": 35.8,
+      "note": "Oxide",
+      "primary": true
+    },
+    {
+      "orbital": "5p",
+      "energy_eV": 42.0
+    }
+  ],
+  "Re": [
+    {
+      "orbital": "4p3/2",
+      "energy_eV": 447.0
+    },
+    {
+      "orbital": "4d5/2",
+      "energy_eV": 260.0
+    },
+    {
+      "orbital": "4f7/2",
+      "energy_eV": 40.3,
+      "primary": true
+    },
+    {
+      "orbital": "4f5/2",
+      "energy_eV": 42.7,
+      "doublet_of": "4f7/2"
+    },
+    {
+      "orbital": "5p",
+      "energy_eV": 46.0
+    }
+  ],
+  "Ir": [
+    {
+      "orbital": "4p3/2",
+      "energy_eV": 495.0
+    },
+    {
+      "orbital": "4d5/2",
+      "energy_eV": 296.8
+    },
+    {
+      "orbital": "4f7/2",
+      "energy_eV": 60.8,
+      "primary": true
+    },
+    {
+      "orbital": "4f5/2",
+      "energy_eV": 63.8,
+      "doublet_of": "4f7/2"
+    },
+    {
+      "orbital": "5p",
+      "energy_eV": 58.0
+    }
+  ],
+  "Pt": [
+    {
+      "orbital": "4p3/2",
+      "energy_eV": 519.0
+    },
+    {
+      "orbital": "4d5/2",
+      "energy_eV": 314.6
+    },
+    {
+      "orbital": "4d3/2",
+      "energy_eV": 331.6
+    },
+    {
+      "orbital": "4f7/2",
+      "energy_eV": 71.2,
+      "note": "Metal",
+      "primary": true
+    },
+    {
+      "orbital": "4f5/2",
+      "energy_eV": 74.5,
+      "doublet_of": "4f7/2"
+    },
+    {
+      "orbital": "5s",
+      "energy_eV": 102.0
+    },
+    {
+      "orbital": "5p",
+      "energy_eV": 65.0
+    }
+  ],
+  "Au": [
+    {
+      "orbital": "4p3/2",
+      "energy_eV": 546.0
+    },
+    {
+      "orbital": "4d5/2",
+      "energy_eV": 335.1
+    },
+    {
+      "orbital": "4d3/2",
+      "energy_eV": 353.2
+    },
+    {
+      "orbital": "4f7/2",
+      "energy_eV": 84.0,
+      "primary": true
+    },
+    {
+      "orbital": "4f5/2",
+      "energy_eV": 87.6,
+      "doublet_of": "4f7/2"
+    },
+    {
+      "orbital": "5s",
+      "energy_eV": 109.0
+    },
+    {
+      "orbital": "5p",
+      "energy_eV": 74.0
+    },
+    {
+      "orbital": "5d",
+      "energy_eV": 6.0
+    }
+  ],
+  "Hg": [
+    {
+      "orbital": "4p3/2",
+      "energy_eV": 577.0
+    },
+    {
+      "orbital": "4d5/2",
+      "energy_eV": 359.3
+    },
+    {
+      "orbital": "4f7/2",
+      "energy_eV": 99.9,
+      "primary": true
+    },
+    {
+      "orbital": "4f5/2",
+      "energy_eV": 104.0,
+      "doublet_of": "4f7/2"
+    },
+    {
+      "orbital": "5s",
+      "energy_eV": 120.0
+    },
+    {
+      "orbital": "5p",
+      "energy_eV": 83.0
+    }
+  ],
+  "Pb": [
+    {
+      "orbital": "4p3/2",
+      "energy_eV": 644.0
+    },
+    {
+      "orbital": "4d5/2",
+      "energy_eV": 412.9
+    },
+    {
+      "orbital": "4d3/2",
+      "energy_eV": 435.2
+    },
+    {
+      "orbital": "4f7/2",
+      "energy_eV": 136.9,
+      "note": "Metal",
+      "primary": true
+    },
+    {
+      "orbital": "4f5/2",
+      "energy_eV": 141.8,
+      "doublet_of": "4f7/2"
+    },
+    {
+      "orbital": "4f7/2",
+      "energy_eV": 138.5,
+      "note": "Oxide",
+      "primary": true
+    },
+    {
+      "orbital": "5d5/2",
+      "energy_eV": 19.0
+    }
+  ],
+  "Bi": [
+    {
+      "orbital": "4d5/2",
+      "energy_eV": 440.0
+    },
+    {
+      "orbital": "4d3/2",
+      "energy_eV": 466.0
+    },
+    {
+      "orbital": "4f7/2",
+      "energy_eV": 157.2,
+      "primary": true
+    },
+    {
+      "orbital": "4f5/2",
+      "energy_eV": 162.5,
+      "doublet_of": "4f7/2"
+    },
+    {
+      "orbital": "5d5/2",
+      "energy_eV": 26.0
+    }
+  ],
+  "Th": [
+    {
+      "orbital": "4d5/2",
+      "energy_eV": 677.0
+    },
+    {
+      "orbital": "4f7/2",
+      "energy_eV": 333.2,
+      "primary": true
+    },
+    {
+      "orbital": "4f5/2",
+      "energy_eV": 342.5,
+      "doublet_of": "4f7/2"
+    },
+    {
+      "orbital": "5d5/2",
+      "energy_eV": 85.0
+    }
+  ],
+  "U": [
+    {
+      "orbital": "4d5/2",
+      "energy_eV": 736.0
+    },
+    {
+      "orbital": "4d3/2",
+      "energy_eV": 778.0
+    },
+    {
+      "orbital": "4f7/2",
+      "energy_eV": 380.0,
+      "note": "Metal",
+      "primary": true
+    },
+    {
+      "orbital": "4f5/2",
+      "energy_eV": 391.0,
+      "doublet_of": "4f7/2"
+    },
+    {
+      "orbital": "4f7/2",
+      "energy_eV": 382.0,
+      "note": "Oxide",
+      "primary": true
+    },
+    {
+      "orbital": "5d5/2",
+      "energy_eV": 96.0
+    }
+  ]
+}

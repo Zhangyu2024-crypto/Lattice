@@ -1,0 +1,464 @@
+/* Log Console — filter bar, expandable rows, source badges.
+ *
+ * Grayscale-only palette (per CLAUDE.md). Source differentiation uses
+ * lightness variants, not hue. Levels keep the warning tones from the
+ * existing status bar vocabulary (red/yellow/green/accent) since they
+ * carry meaning: "error" vs "info" must be distinguishable at a glance.
+ *
+ * This file REPLACES the `.log-console*` / `.log-row*` block previously
+ * in views.css. Those old rules still exist (harmlessly) for now — the
+ * selectors here win via later import order. A later cleanup pass can
+ * delete the duplicates.
+ */
+
+.log-console {
+  position: fixed;
+  bottom: 22px;
+  left: 0;
+  right: 0;
+  height: 320px;
+  background: var(--color-bg-panel);
+  border-top: 1px solid var(--color-border);
+  z-index: var(--z-popover, 1100);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+}
+
+.log-console-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 32px;
+  flex-shrink: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  user-select: none;
+}
+
+.log-console-title {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: var(--text-xxs);
+  color: var(--color-text-muted);
+}
+
+.log-console-count {
+  font-size: var(--text-xxs);
+  color: var(--color-text-muted);
+  opacity: 0.7;
+  font-family: var(--font-mono);
+}
+
+.log-console-action {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  padding: 3px;
+  display: flex;
+  align-items: center;
+  border-radius: 3px;
+}
+
+.log-console-action:hover:not(:disabled) {
+  color: var(--color-text-primary);
+  background: var(--color-bg-active);
+}
+
+.log-console-action.is-active {
+  color: var(--color-text-primary);
+  background: var(--color-bg-active);
+}
+
+.log-console-action:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* ── Filter bar ───────────────────────────────────────────────── */
+
+.log-filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 12px 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+  background: color-mix(in srgb, var(--color-bg-sidebar) 60%, transparent);
+}
+
+.log-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.log-filter-label {
+  flex-shrink: 0;
+  width: 52px;
+  font-size: var(--text-xxs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.log-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.log-filter-pill {
+  padding: 1px 8px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  font-size: var(--text-xxs);
+  font-family: var(--font-sans);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  text-transform: capitalize;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+
+.log-filter-pill:hover {
+  background: var(--color-bg-active);
+  color: var(--color-text-primary);
+}
+
+.log-filter-pill.is-active {
+  background: var(--color-text-primary);
+  color: var(--color-bg-base);
+  border-color: var(--color-text-primary);
+}
+
+.log-filter-pill--error.is-active {
+  background: color-mix(in srgb, var(--color-red, #e57373) 80%, var(--color-text-primary));
+  border-color: transparent;
+  color: var(--color-bg-base);
+}
+.log-filter-pill--warn.is-active {
+  background: color-mix(in srgb, var(--color-yellow, #d4a056) 80%, var(--color-text-primary));
+  border-color: transparent;
+  color: var(--color-bg-base);
+}
+
+.log-filter-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: var(--color-bg-input);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  margin-top: 2px;
+}
+
+.log-filter-search:focus-within {
+  border-color: color-mix(in srgb, var(--color-text-primary) 30%, var(--color-border));
+}
+
+.log-filter-search-icon {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+}
+
+.log-filter-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 2px 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+}
+
+.log-filter-clear {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  color: var(--color-text-muted);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+}
+
+.log-filter-clear:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-active);
+}
+
+/* ── Body + rows ───────────────────────────────────────────────── */
+
+.log-console-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2px 0;
+}
+
+.log-console-empty {
+  padding: 24px 12px;
+  color: var(--color-text-muted);
+  text-align: center;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+}
+
+.log-row {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 15%, transparent);
+}
+
+.log-row:hover {
+  background: color-mix(in srgb, var(--color-bg-active) 35%, transparent);
+}
+
+.log-row-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  width: 100%;
+  min-width: 0;
+}
+
+.log-row-head:disabled {
+  cursor: default;
+}
+
+.log-row-chev {
+  flex-shrink: 0;
+  width: 12px;
+  color: var(--color-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.log-row-chev-spacer {
+  width: 12px;
+}
+
+.log-row-time {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  opacity: 0.7;
+  min-width: 58px;
+  font-family: var(--font-mono);
+}
+
+.log-row-icon {
+  flex-shrink: 0;
+  position: relative;
+  top: 1px;
+}
+
+.log-row--error .log-row-icon { color: var(--color-red, #e57373); }
+.log-row--warn .log-row-icon  { color: var(--color-yellow, #d4a056); }
+.log-row--success .log-row-icon { color: var(--color-green, #7bb586); }
+.log-row--info .log-row-icon  { color: var(--color-text-muted); }
+
+.log-row-source {
+  flex-shrink: 0;
+  padding: 0 6px;
+  line-height: 16px;
+  font-size: var(--text-xxs);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  border-radius: 3px;
+  min-width: 56px;
+  text-align: center;
+  background: color-mix(in srgb, #888 22%, transparent);
+  color: var(--color-text-secondary);
+}
+
+/* Source badge lightness scale — grayscale only. */
+.log-row-source--ui        { background: color-mix(in srgb, #8a8a8a 18%, transparent); }
+.log-row-source--agent     { background: color-mix(in srgb, #c0c0c0 20%, transparent); color: var(--color-text-primary); }
+.log-row-source--llm       { background: color-mix(in srgb, #b0b0b0 22%, transparent); color: var(--color-text-primary); }
+.log-row-source--worker    { background: color-mix(in srgb, #a8a8a8 24%, transparent); color: var(--color-text-primary); }
+.log-row-source--library   { background: color-mix(in srgb, #989898 20%, transparent); }
+.log-row-source--knowledge { background: color-mix(in srgb, #a0a0a0 22%, transparent); }
+.log-row-source--compute   { background: color-mix(in srgb, #909090 22%, transparent); }
+.log-row-source--sync      { background: color-mix(in srgb, #888888 22%, transparent); }
+.log-row-source--console   { background: color-mix(in srgb, #787878 22%, transparent); }
+.log-row-source--boundary  {
+  background: color-mix(in srgb, var(--color-red, #e57373) 25%, transparent);
+  color: var(--color-text-primary);
+}
+.log-row-source--window    {
+  background: color-mix(in srgb, var(--color-red, #e57373) 18%, transparent);
+  color: var(--color-text-primary);
+}
+
+.log-row-type {
+  flex-shrink: 0;
+  font-size: var(--text-xxs);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  opacity: 0.75;
+  min-width: 48px;
+}
+
+.log-row-msg {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+}
+
+.log-row--error .log-row-msg {
+  color: color-mix(in srgb, var(--color-red, #e57373) 80%, var(--color-text-primary));
+}
+
+.log-row-detail {
+  padding: 4px 12px 10px 50px;
+  background: color-mix(in srgb, var(--color-bg-base) 40%, transparent);
+  border-top: 1px dashed color-mix(in srgb, var(--color-border) 40%, transparent);
+}
+
+.log-row-detail-pre {
+  margin: 0;
+  max-height: 240px;
+  overflow: auto;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--color-bg-panel) 50%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.log-row-detail-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.log-row-detail-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  font-size: var(--text-xxs);
+  font-family: var(--font-sans);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.log-row-detail-btn:hover {
+  background: var(--color-bg-active);
+  color: var(--color-text-primary);
+}
+
+/* ── AppErrorBoundary ─────────────────────────────────────────── */
+
+.app-error-boundary {
+  position: fixed;
+  inset: 0;
+  background: var(--color-bg-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 40px;
+}
+
+.app-error-boundary-panel {
+  max-width: 640px;
+  width: 100%;
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.app-error-boundary-title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.app-error-boundary-message {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: color-mix(in srgb, var(--color-red, #e57373) 80%, var(--color-text-primary));
+  font-family: var(--font-mono);
+}
+
+.app-error-boundary-stack {
+  margin: 0;
+  max-height: 300px;
+  overflow: auto;
+  padding: 10px 12px;
+  background: var(--color-bg-base);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+  color: var(--color-text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.app-error-boundary-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.app-error-boundary-btn {
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+
+.app-error-boundary-btn:hover {
+  background: var(--color-bg-active);
+  color: var(--color-text-primary);
+}
+
+.app-error-boundary-btn--primary {
+  background: var(--color-text-primary);
+  color: var(--color-bg-base);
+  border-color: var(--color-text-primary);
+}
+
+.app-error-boundary-btn--primary:hover {
+  background: color-mix(in srgb, var(--color-text-primary) 85%, transparent);
+}
+
+.app-error-boundary-hint {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}

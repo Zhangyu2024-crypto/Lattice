@@ -1,0 +1,1722 @@
+/* Compute Notebook — single-stream cells + Cmd+K palette.
+ *
+ * Layout: topbar (38px) · stream (flex 1, scroll) · no rails, no tabs.
+ * Reuses the Creator overlay shell (`.creator-overlay` + topbar) for
+ * chrome; everything below is cell-local styling. Grayscale per the
+ * Lattice design canon; radii ≤6px; borders via color-mix for hairlines.
+ */
+
+/* ── Root + topbar ───────────────────────────────────────────────── */
+
+.compute-nb-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
+  position: relative;
+}
+
+.compute-nb-topbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  background: color-mix(in srgb, var(--color-bg-panel) 75%, var(--color-bg-base));
+  flex-shrink: 0;
+}
+
+.compute-nb-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dot-color, var(--color-text-muted));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-border) 60%, transparent);
+  flex-shrink: 0;
+}
+
+.compute-nb-topbar-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-emphasis);
+  letter-spacing: 0.02em;
+}
+
+.compute-nb-topbar-health {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  letter-spacing: 0.01em;
+}
+
+.compute-nb-spacer {
+  flex: 1;
+}
+
+.compute-nb-banner-start {
+  padding: 3px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  background: var(--color-bg-input);
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.compute-nb-banner-start:hover {
+  background: var(--color-bg-hover);
+}
+
+.compute-nb-kbd {
+  padding: 1px 6px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  border-radius: 4px;
+  background: var(--color-bg-input);
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+
+/* ── Buttons ────────────────────────────────────────────────────── */
+
+.compute-nb-run-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--color-text-primary) 8%, var(--color-bg-input));
+  color: var(--color-text-emphasis);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.compute-nb-run-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-text-primary) 12%, var(--color-bg-input));
+  border-color: var(--color-border-strong, var(--color-border));
+}
+
+.compute-nb-run-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.compute-nb-run-btn.is-small {
+  padding: 2px 8px;
+  font-weight: 500;
+}
+
+.compute-nb-ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  border-radius: 5px;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.compute-nb-ghost-btn:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+  border-color: color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
+.compute-nb-ghost-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.compute-nb-send-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-text-primary) 10%, var(--color-bg-input));
+  color: var(--color-text-emphasis);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.compute-nb-send-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-text-primary) 14%, var(--color-bg-input));
+}
+
+.compute-nb-send-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── New-cell split-button + menu ───────────────────────────────── */
+
+.compute-nb-newcell-wrap {
+  position: relative;
+}
+
+.compute-nb-newcell-menu,
+.compute-nb-foot-creator-wrap .compute-nb-newcell-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 240px;
+  background: var(--color-bg-panel);
+  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  border-radius: 6px;
+  box-shadow: var(--shadow-md, 0 6px 24px -12px rgba(0, 0, 0, 0.5));
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+}
+
+.compute-nb-newcell-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.compute-nb-newcell-item:hover {
+  background: var(--color-bg-hover);
+}
+
+.compute-nb-newcell-hint {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  flex: 1;
+}
+
+/* ── Body split (rail + main) ───────────────────────────────────── */
+
+.compute-nb-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+}
+
+.compute-nb-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-base);
+}
+
+/* ── Assets rail ────────────────────────────────────────────────── */
+
+.compute-nb-assets {
+  flex: 0 0 220px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  background: color-mix(in srgb, var(--color-bg-panel) 55%, var(--color-bg-base));
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.compute-nb-assets.is-collapsed {
+  flex: 0 0 32px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  cursor: pointer;
+}
+
+.compute-nb-assets-peek {
+  width: 24px;
+  height: 24px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: 5px;
+  background: var(--color-bg-input);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.compute-nb-assets-peek:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.compute-nb-assets-peek-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: var(--text-xxs);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+}
+
+.compute-nb-assets-peek-count {
+  font-size: var(--text-xxs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.compute-nb-assets-head {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 45%, transparent);
+}
+
+.compute-nb-assets-title {
+  font-size: var(--text-xxs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+}
+
+.compute-nb-assets-section {
+  padding: 4px 4px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 25%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.compute-nb-assets-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  font-size: var(--text-xxs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  position: sticky;
+  top: 0;
+  background: color-mix(in srgb, var(--color-bg-panel) 55%, var(--color-bg-base));
+}
+
+.compute-nb-assets-section-title {
+  flex: 0 0 auto;
+}
+
+.compute-nb-assets-section-count {
+  color: var(--color-text-muted);
+  font-weight: 500;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-text-primary) 5%, transparent);
+  margin-right: auto;
+}
+
+.compute-nb-assets-section-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.compute-nb-assets-section-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  border-radius: 4px;
+  background: var(--color-bg-input);
+  color: var(--color-text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--text-xxs);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  cursor: pointer;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.compute-nb-assets-section-action:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-strong, var(--color-border));
+}
+
+.compute-nb-assets-empty.is-err {
+  color: var(--color-danger, #d15a56);
+}
+
+.compute-nb-assets-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.compute-nb-assets-empty {
+  padding: 6px 10px 10px;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
+.compute-nb-assets-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.compute-nb-assets-row:hover:not(:disabled),
+.compute-nb-assets-row.is-hover {
+  background: var(--color-bg-hover);
+}
+
+.compute-nb-assets-row:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.compute-nb-assets-row.is-active {
+  background: color-mix(in srgb, var(--color-text-primary) 7%, transparent);
+  border-color: color-mix(in srgb, var(--color-border-strong, var(--color-border)) 55%, transparent);
+}
+
+.compute-nb-assets-row-icon {
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+}
+
+.compute-nb-assets-row-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compute-nb-assets-row-sub {
+  font-family: var(--font-sans);
+  font-size: var(--text-xxs);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.compute-nb-assets-row-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+
+.compute-nb-assets-row-dot.is-ok {
+  background: var(--color-success, #3c8760);
+}
+.compute-nb-assets-row-dot.is-err {
+  background: var(--color-danger, #b85450);
+}
+.compute-nb-assets-row-dot.is-running {
+  background: var(--color-yellow, #c8a04a);
+}
+
+.compute-nb-assets-cell-idx {
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+  color: var(--color-text-muted);
+}
+
+/* ── Cell stream ────────────────────────────────────────────────── */
+
+.compute-nb-stream {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.compute-nb-stream::-webkit-scrollbar {
+  width: 10px;
+}
+.compute-nb-stream::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* ── Cell ───────────────────────────────────────────────────────── */
+
+.compute-nb-cell {
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-bg-panel) 62%, var(--color-bg-base));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.compute-nb-cell.is-focused {
+  border-color: color-mix(in srgb, var(--color-border-strong, var(--color-border)) 90%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-border-strong, var(--color-border)) 45%, transparent);
+}
+
+.compute-nb-cell-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  background: color-mix(in srgb, var(--color-bg-panel) 90%, transparent);
+  flex-shrink: 0;
+  min-height: 32px;
+}
+
+.compute-nb-cell-meta {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  letter-spacing: 0.01em;
+}
+
+/* ── Kind chip (color-mix intensity varies subtly by kind so the eye
+      can skim a long stream; strictly grayscale per the design canon) */
+
+.compute-nb-kind-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-emphasis);
+  background: color-mix(in srgb, var(--color-text-primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
+.compute-nb-kind-chip.is-python {
+  background: color-mix(in srgb, var(--color-text-primary) 12%, transparent);
+}
+.compute-nb-kind-chip.is-lammps {
+  background: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+}
+.compute-nb-kind-chip.is-cp2k {
+  background: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+}
+.compute-nb-kind-chip.is-structure-ai,
+.compute-nb-kind-chip.is-structure-code {
+  background: color-mix(in srgb, var(--color-text-primary) 14%, transparent);
+  border-color: color-mix(in srgb, var(--color-border-strong, var(--color-border)) 50%, transparent);
+}
+
+/* ── Status chip ────────────────────────────────────────────────── */
+
+.compute-nb-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: var(--text-xxs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.compute-nb-status-chip.is-idle {
+  background: color-mix(in srgb, var(--color-text-primary) 5%, transparent);
+  color: var(--color-text-muted);
+}
+.compute-nb-status-chip.is-running {
+  background: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+  color: var(--color-text-secondary);
+}
+.compute-nb-status-chip.is-ok {
+  background: color-mix(in srgb, var(--color-success, #3c8760) 14%, transparent);
+  color: var(--color-text-emphasis);
+}
+.compute-nb-status-chip.is-err {
+  background: color-mix(in srgb, var(--color-danger, #b85450) 16%, transparent);
+  color: var(--color-text-emphasis);
+}
+
+/* ── Provenance chip ────────────────────────────────────────────── */
+
+.compute-nb-provenance-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: var(--text-xxs);
+  font-family: var(--font-mono);
+  color: var(--color-text-secondary);
+  background: color-mix(in srgb, var(--color-text-primary) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+  cursor: default;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+
+.compute-nb-provenance-chip.is-clickable {
+  cursor: pointer;
+}
+
+.compute-nb-provenance-chip.is-clickable:hover {
+  background: color-mix(in srgb, var(--color-text-primary) 10%, transparent);
+  color: var(--color-text-primary);
+}
+
+/* ── Tweak popover ──────────────────────────────────────────────── */
+
+.compute-nb-tweak-wrap {
+  position: relative;
+}
+
+.compute-nb-tweak-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 300px;
+  padding: 10px 12px;
+  background: var(--color-bg-panel);
+  border: 1px solid color-mix(in srgb, var(--color-border-strong, var(--color-border)) 70%, transparent);
+  border-radius: 6px;
+  box-shadow: 0 10px 28px -10px rgba(0, 0, 0, 0.55);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.compute-nb-tweak-title {
+  font-size: var(--text-xxs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+}
+
+.compute-nb-tweak-row {
+  display: flex;
+  gap: 6px;
+}
+
+.compute-nb-tweak-num {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--text-xxs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.compute-nb-tweak-num input {
+  width: 100%;
+  padding: 4px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg-input);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.compute-nb-tweak-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+/* ── Cell body (editor + output) ─────────────────────────────────── */
+
+.compute-nb-cell-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.compute-nb-cell-editor {
+  min-height: 180px;
+  display: flex;
+  background: var(--color-bg-editor, var(--color-bg-base));
+}
+
+.compute-nb-cell-editor > * {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.compute-nb-structure-input {
+  min-height: 120px;
+  padding: 12px 14px;
+  border: none;
+  background: var(--color-bg-editor, var(--color-bg-base));
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  resize: vertical;
+  outline: none;
+}
+
+.compute-nb-structure-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.compute-nb-structure-input:disabled {
+  opacity: 0.6;
+}
+
+.compute-nb-cell-output {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-primary);
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 35%, transparent);
+}
+
+.compute-nb-cell-output.is-running {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 12px;
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: var(--text-sm);
+}
+
+.compute-nb-output-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.compute-nb-output-label {
+  font-family: var(--font-sans);
+  font-size: var(--text-xxs);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.compute-nb-console {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 5px;
+  background: color-mix(in srgb, #000 12%, var(--color-bg-panel));
+  color: var(--color-text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.compute-nb-console.is-err {
+  color: var(--color-danger, #d15a56);
+  background: color-mix(in srgb, var(--color-danger, #b85450) 8%, var(--color-bg-panel));
+}
+
+.compute-nb-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.compute-nb-figure {
+  margin: 0;
+  padding: 6px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+  border-radius: 5px;
+  background: var(--color-bg-base);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.compute-nb-figure img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.compute-nb-figure-caption {
+  font-size: var(--text-xxs);
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.compute-nb-output-empty {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-muted);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  padding: 4px 0;
+}
+
+/* ── Structure output ───────────────────────────────────────────── */
+
+.compute-nb-structure-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.compute-nb-structure-formula {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-emphasis);
+}
+
+.compute-nb-structure-sg {
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-text-primary) 5%, transparent);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+}
+
+.compute-nb-structure-viewer {
+  position: relative;
+  height: 360px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  border-radius: 5px;
+  overflow: hidden;
+  background: #1a1a1a;
+}
+
+.compute-nb-structure-viewer > * {
+  width: 100%;
+  height: 100%;
+}
+
+.compute-nb-structure-source {
+  max-height: 260px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+/* ── Empty stream ───────────────────────────────────────────────── */
+
+.compute-nb-empty-stream {
+  margin: 40px auto 0;
+  max-width: 640px;
+  padding: 32px;
+  border: 1px dashed color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-bg-panel) 50%, var(--color-bg-base));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.compute-nb-empty-title {
+  margin: 4px 0 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-text-emphasis);
+}
+
+.compute-nb-empty-body {
+  margin: 0;
+  max-width: 480px;
+  font-size: var(--text-xs);
+  line-height: 1.55;
+  color: var(--color-text-muted);
+}
+
+.compute-nb-empty-body kbd {
+  font-family: var(--font-mono);
+  padding: 1px 5px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  border-radius: 3px;
+  background: var(--color-bg-input);
+  font-size: var(--text-xxs);
+}
+
+.compute-nb-empty-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.compute-nb-empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: 6px;
+  background: var(--color-bg-input);
+  color: var(--color-text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.compute-nb-empty-card:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-strong, var(--color-border));
+}
+
+.compute-nb-empty-hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* ── Stream-foot "+ New cell" ───────────────────────────────────── */
+
+.compute-nb-foot-creator-wrap {
+  position: relative;
+  align-self: flex-start;
+}
+
+.compute-nb-foot-creator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px dashed color-mix(in srgb, var(--color-border) 75%, transparent);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.compute-nb-foot-creator:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+  border-style: solid;
+  border-color: var(--color-border-strong, var(--color-border));
+}
+
+.compute-nb-foot-creator-wrap .compute-nb-newcell-menu {
+  right: auto;
+  left: 0;
+}
+
+/* ── Ask AI dock (bottom of main column) ────────────────────────── */
+
+.compute-nb-dock {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 14px 10px;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  background: color-mix(in srgb, var(--color-bg-panel) 70%, var(--color-bg-base));
+}
+
+.compute-nb-dock-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.compute-nb-dock-title {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.01em;
+}
+
+.compute-nb-dock-target {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  background: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+  color: var(--color-text-emphasis);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compute-nb-dock-target:hover {
+  background: color-mix(in srgb, var(--color-text-primary) 10%, transparent);
+}
+
+.compute-nb-dock-target-arrow {
+  color: var(--color-text-muted);
+}
+
+.compute-nb-dock-hint {
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-size: var(--text-xs);
+}
+
+.compute-nb-dock-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.compute-nb-dock-input {
+  flex: 1 1 auto;
+  min-height: 44px;
+  max-height: 160px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-input);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  transition: border-color 120ms ease;
+  overflow-y: auto;
+}
+
+.compute-nb-dock-input:focus {
+  border-color: var(--color-border-strong, var(--color-border));
+}
+
+.compute-nb-dock-input:disabled {
+  opacity: 0.6;
+}
+
+/* ── Cell insert gap (hover-reveal "+") ─────────────────────────── */
+
+.compute-nb-cell-gap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 16px;
+  margin: -2px 0;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.compute-nb-cell-gap:hover,
+.compute-nb-cell-gap:focus-within,
+.compute-nb-cell-gap.is-open {
+  opacity: 1;
+}
+
+.compute-nb-cell-gap.is-disabled {
+  pointer-events: none;
+  opacity: 0 !important;
+}
+
+.compute-nb-cell-gap-line {
+  flex: 1;
+  height: 1px;
+  background: color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.compute-nb-cell-gap-btn {
+  width: 20px;
+  height: 20px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  border-radius: 999px;
+  background: var(--color-bg-panel);
+  color: var(--color-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.compute-nb-cell-gap-btn:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-strong, var(--color-border));
+}
+
+.compute-nb-cell-gap-menu {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 240px;
+  background: var(--color-bg-panel);
+  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  border-radius: 6px;
+  box-shadow: var(--shadow-md, 0 6px 24px -12px rgba(0, 0, 0, 0.5));
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+}
+
+/* Needs an anchor — the gap itself is the positioning parent. */
+.compute-nb-cell-gap {
+  position: relative;
+}
+
+/* ── Inline "Save structure" rename input ───────────────────────── */
+
+.compute-nb-save-rename {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.compute-nb-save-rename-input {
+  width: 180px;
+  padding: 3px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-bg-input);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-family: var(--font-sans);
+  outline: none;
+}
+
+.compute-nb-save-rename-input:focus {
+  border-color: var(--color-border-strong, var(--color-border));
+}
+
+/* ── Cell overflow menu (⋯ Ask AI / Duplicate / Tweak / Delete) ─── */
+
+.compute-nb-overflow-wrap {
+  position: relative;
+}
+
+.compute-nb-overflow-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 220px;
+  background: var(--color-bg-panel);
+  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  border-radius: 6px;
+  box-shadow: var(--shadow-md, 0 6px 24px -12px rgba(0, 0, 0, 0.5));
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+}
+
+.compute-nb-overflow-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.compute-nb-overflow-item:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+}
+
+.compute-nb-overflow-item.is-danger {
+  color: var(--color-danger, #d15a56);
+}
+
+.compute-nb-overflow-icon {
+  color: var(--color-text-secondary);
+  width: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.compute-nb-overflow-item.is-danger .compute-nb-overflow-icon {
+  color: var(--color-danger, #d15a56);
+}
+
+.compute-nb-overflow-label {
+  flex: 1;
+}
+
+.compute-nb-overflow-hint {
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+  color: var(--color-text-muted);
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--color-text-primary) 5%, transparent);
+}
+
+.compute-nb-overflow-sep {
+  height: 1px;
+  margin: 4px 4px;
+  background: color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
+.compute-nb-overflow-tweak {
+  position: relative;
+}
+
+/* Tweak popover when opened from inside the overflow menu: anchor to the
+   overflow item (its container `.compute-nb-overflow-tweak` is now the
+   positioning parent) so it reads as a true submenu. */
+.compute-nb-overflow-tweak .compute-nb-tweak-popover {
+  top: calc(100% + 2px);
+  right: 0;
+}
+
+/* ── Run ▾ menu (topbar split-button) ───────────────────────────── */
+
+.compute-nb-runmenu-wrap {
+  position: relative;
+}
+
+.compute-nb-runmenu-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 220px;
+  background: var(--color-bg-panel);
+  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  border-radius: 6px;
+  box-shadow: var(--shadow-md, 0 6px 24px -12px rgba(0, 0, 0, 0.5));
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+}
+
+.compute-nb-runmenu-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+/* ── ComputeProLauncherCard (editor-area / file-tree opener) ─────── */
+
+.compute-pro-launcher-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-bg-panel) 60%, var(--color-bg-base));
+}
+
+.compute-pro-launcher-icon {
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.compute-pro-launcher-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.compute-pro-launcher-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-emphasis);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.compute-pro-launcher-sub {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.compute-pro-launcher-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--color-text-primary) 10%, var(--color-bg-input));
+  color: var(--color-text-emphasis);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.compute-pro-launcher-btn:hover {
+  background: color-mix(in srgb, var(--color-text-primary) 14%, var(--color-bg-input));
+}
+
+.compute-nb-resize-handle {
+  position: relative;
+  height: 6px;
+  margin: 0;
+  cursor: row-resize;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: background 120ms ease;
+}
+
+.compute-nb-resize-handle:hover,
+.compute-nb-resize-handle.is-dragging {
+  background: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+}
+
+.compute-nb-resize-handle-bar {
+  display: block;
+  width: 28px;
+  height: 2px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--color-text-primary) 22%, transparent);
+  transition: background 120ms ease;
+}
+
+.compute-nb-resize-handle:hover .compute-nb-resize-handle-bar,
+.compute-nb-resize-handle.is-dragging .compute-nb-resize-handle-bar {
+  background: color-mix(in srgb, var(--color-text-primary) 48%, transparent);
+}
+
+/* ── Rail file tree (Phase 2) ───────────────────────────────────── */
+
+.compute-nb-assets-tree-row {
+  /* Divs rather than <button> so nested chevron clicks + double-click
+   * dispatch cleanly. Re-apply the interactive affordances the <button>
+   * version had. */
+  user-select: none;
+}
+
+.compute-nb-assets-tree-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+
+.compute-nb-assets-tree-chevron:hover {
+  color: var(--color-text-primary);
+}
+
+.compute-nb-assets-tree-chevron--leaf {
+  /* Empty chevron slot so filename columns line up between folders +
+   * files at the same depth. */
+  cursor: default;
+}
+
+/* ── Inline Ask AI dock (rendered under the focused cell) ───────── */
+
+.compute-nb-dock.is-inline {
+  /* Attached to the focused cell as a continuation — no top gap, no
+   * top border, no top-rounded corners. The cell's own bottom border
+   * serves as the seam so the dock reads as "part of the cell's
+   * footprint". Bottom margin + rounded bottom corners close the
+   * composite shape off from the next cell / InsertGap. */
+  margin: -1px 0 10px;
+  padding: 6px 10px 8px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-top: none;
+  border-left-width: 2px;
+  border-left-color: color-mix(in srgb, var(--color-text-primary) 28%, transparent);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+  background: color-mix(in srgb, var(--color-bg-panel) 90%, transparent);
+}
+
+/* When a cell has the inline dock immediately after it, flatten the
+ * cell's own bottom corners so the composite reads as one piece. The
+ * selector targets a wrapping `<div key={cell.id}>` that contains both
+ * the cell and the dock — see ComputeNotebook.tsx's cell.map. */
+.compute-nb-stream > div:has(> .compute-nb-dock.is-inline) > .compute-nb-cell {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* ── Tweak wrap (standalone button + popover, was nested under ⋯) ─ */
+
+.compute-nb-tweak-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+/* ── Danger variant of session-mini-btn (per-cell Delete) ───────── */
+
+.session-mini-btn.is-danger:hover {
+  color: var(--color-danger, #c0553d);
+  border-color: color-mix(in srgb, var(--color-danger, #c0553d) 50%, transparent);
+}
+
+/* ── Tweak popover tab row (4 tabs: Supercell / Dope / Slab / Vacancy) ─ */
+
+.compute-nb-tweak-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--color-border);
+  margin: -2px -2px 8px;
+}
+
+.compute-nb-tweak-tab {
+  flex: 1;
+  padding: 6px 4px;
+  border: none;
+  background: transparent;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 120ms ease, border-color 120ms ease;
+  font-family: inherit;
+}
+
+.compute-nb-tweak-tab:hover {
+  color: var(--color-text-primary);
+}
+
+.compute-nb-tweak-tab.is-active {
+  color: var(--color-text-primary);
+  border-bottom-color: color-mix(in srgb, var(--color-text-primary) 65%, transparent);
+  font-weight: 600;
+}
+
+/* ── Export ▾ popover (CIF / LAMMPS cell / CP2K cell) ──────────── */
+
+.compute-nb-export-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.compute-nb-export-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 200px;
+  background: var(--color-bg-panel);
+  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  border-radius: 6px;
+  box-shadow: var(--shadow-md, 0 6px 24px -12px rgba(0, 0, 0, 0.5));
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+}
+
+.compute-nb-export-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+.compute-nb-export-item:hover {
+  background: var(--color-bg-hover);
+}
+
+/* ── Execution count chip (Jupyter-style `In [N]`) ───────────────── */
+
+.compute-nb-exec-count {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+  letter-spacing: 0.02em;
+}
+
+/* Run ▾ menu separator between run-batch items and auxiliary ones. */
+.compute-nb-runmenu-sep {
+  height: 1px;
+  margin: 4px 2px;
+  background: color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
+/* ── Markdown cell body (click-to-edit) ───────────────────────── */
+
+.compute-nb-markdown-preview {
+  padding: 10px 14px 12px;
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  cursor: text;
+  min-height: 40px;
+  outline: none;
+}
+
+.compute-nb-markdown-preview:focus-visible {
+  background: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
+}
+
+.compute-nb-markdown-preview > :first-child { margin-top: 0; }
+.compute-nb-markdown-preview > :last-child { margin-bottom: 0; }
+.compute-nb-markdown-preview h1,
+.compute-nb-markdown-preview h2,
+.compute-nb-markdown-preview h3 {
+  font-weight: 600;
+  color: var(--color-text-emphasis);
+  margin: 10px 0 6px;
+}
+.compute-nb-markdown-preview code {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+.compute-nb-markdown-preview pre {
+  padding: 8px 10px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--color-text-primary) 6%, transparent);
+  overflow-x: auto;
+}
+
+.compute-nb-markdown-placeholder {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.compute-nb-markdown-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px 10px;
+}
+
+.compute-nb-markdown-input {
+  width: 100%;
+  min-height: 120px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: 5px;
+  background: var(--color-bg-input);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.compute-nb-markdown-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--color-border-strong, var(--color-border)) 85%, transparent);
+}
+
+.compute-nb-markdown-hint {
+  font-size: var(--text-xxs);
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+/* ── Python traceback highlighting inside stderr pre ────────────── */
+
+.compute-nb-traceback-before {
+  color: var(--color-text-muted);
+  opacity: 0.85;
+}
+
+.compute-nb-traceback-line {
+  display: inline;
+}
+
+.compute-nb-traceback-path {
+  color: var(--color-accent, #8aa4d8);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  text-underline-offset: 2px;
+}
+
+.compute-nb-traceback-lineno {
+  color: var(--color-text-emphasis);
+  font-weight: 600;
+}
+
+.compute-nb-traceback-error-head {
+  color: var(--color-danger, #c0553d);
+  font-weight: 600;
+}
+
+/* Kind chips for new cell kinds — inherit base chip styling, tint by
+ * class so the eye spots them without re-reading the label. */
+.compute-nb-kind-chip.is-shell {
+  background: color-mix(in srgb, var(--color-text-primary) 10%, transparent);
+  color: var(--color-text-emphasis);
+}
+
+.compute-nb-kind-chip.is-markdown {
+  background: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
+  color: var(--color-text-muted);
+}
+
+/* ── Cell drag handle (dnd-kit) + collapse toggle ───────────────── */
+
+.compute-nb-cell-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: grab;
+  opacity: 0.5;
+  transition: opacity 120ms ease, color 120ms ease;
+}
+
+.compute-nb-cell:hover .compute-nb-cell-drag-handle {
+  opacity: 1;
+}
+
+.compute-nb-cell-drag-handle:active {
+  cursor: grabbing;
+  color: var(--color-text-primary);
+}
+
+.compute-nb-cell.is-dragging {
+  cursor: grabbing;
+  box-shadow: 0 4px 18px -8px rgba(0, 0, 0, 0.45);
+}
+
+.compute-nb-cell-collapse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+
+.compute-nb-cell-collapse:hover {
+  color: var(--color-text-primary);
+}
+
+.compute-nb-cell-collapsed-peek {
+  width: 100%;
+  padding: 8px 14px;
+  border: none;
+  background: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.compute-nb-cell-collapsed-peek:hover {
+  background: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+  color: var(--color-text-primary);
+}
+
+.compute-nb-cell-output-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-xxs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.compute-nb-cell-output-toggle:hover {
+  color: var(--color-text-primary);
+}

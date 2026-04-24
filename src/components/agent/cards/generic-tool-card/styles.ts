@@ -1,0 +1,173 @@
+// Inline style map for GenericToolCard and its sub-components. Split out
+// of GenericToolCard.tsx so the main file focuses on composition. No CSS
+// file is coordinated — we reuse existing `agent-card-*` hooks where
+// helpful and use inline styles for the new surfaces (table / chip row /
+// JSON tree) so the component ships without a stylesheet change.
+
+import type { CSSProperties } from 'react'
+
+export const S: Record<string, CSSProperties> = {
+  section: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  },
+  sectionLabel: {
+    fontSize: 'var(--text-xxs)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.06em',
+    color: 'var(--color-text-muted)',
+  },
+  inputGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'max-content 1fr',
+    columnGap: 10,
+    rowGap: 2,
+    fontFamily: 'var(--font-sans)',
+    fontSize: 'var(--text-xs)',
+  },
+  inputKey: {
+    color: 'var(--color-text-muted)',
+  },
+  inputValue: {
+    color: 'var(--color-text-primary)',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    minWidth: 0,
+  },
+  inputEmpty: {
+    fontSize: 'var(--text-xs)',
+    color: 'var(--color-text-muted)',
+    fontStyle: 'italic',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-sans)',
+  },
+  th: {
+    textAlign: 'left',
+    color: 'var(--color-text-muted)',
+    borderBottom: '1px solid var(--color-border)',
+    fontWeight: 500,
+    fontSize: 'var(--text-xxs)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+    padding: '4px 6px',
+    position: 'sticky',
+    top: 0,
+    background: 'rgba(0, 0, 0, 0.25)',
+  },
+  td: {
+    borderBottom:
+      '1px solid color-mix(in srgb, var(--color-border) 50%, transparent)',
+    color: 'var(--color-text-primary)',
+    padding: '3px 6px',
+    maxWidth: 260,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  tableWrap: {
+    maxHeight: 320,
+    overflow: 'auto',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-sm)',
+    background: 'rgba(0, 0, 0, 0.18)',
+  },
+  tableFooter: {
+    padding: '4px 6px',
+    fontSize: 'var(--text-xxs)',
+    color: 'var(--color-text-muted)',
+    borderTop: '1px solid var(--color-border)',
+    background: 'rgba(0, 0, 0, 0.25)',
+  },
+  chipRow: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  chip: {
+    display: 'inline-block',
+    padding: '2px 8px',
+    borderRadius: 999,
+    border: '1px solid var(--color-border)',
+    background: 'rgba(255, 255, 255, 0.04)',
+    color: 'var(--color-text-primary)',
+    fontSize: 'var(--text-xxs)',
+    fontFamily: 'var(--font-sans)',
+    whiteSpace: 'nowrap',
+  },
+  blob: {
+    margin: 0,
+    padding: '8px 10px',
+    background: 'rgba(0, 0, 0, 0.25)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-sm)',
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--text-xs)',
+    color: 'var(--color-text-primary)',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+    maxHeight: 320,
+    overflow: 'auto',
+  },
+  blobActions: {
+    display: 'flex',
+    gap: 6,
+    marginTop: 4,
+  },
+  blobBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+    padding: '2px 8px',
+    borderRadius: 'var(--radius-sm)',
+    background: 'transparent',
+    border: '1px solid var(--color-border)',
+    color: 'var(--color-text-primary)',
+    fontFamily: 'inherit',
+    fontSize: 'var(--text-xxs)',
+    cursor: 'pointer',
+  },
+  kvGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'max-content 1fr',
+    columnGap: 10,
+    rowGap: 4,
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-sans)',
+  },
+  kvKey: {
+    color: 'var(--color-text-muted)',
+    alignSelf: 'start',
+  },
+  kvValue: {
+    color: 'var(--color-text-primary)',
+    minWidth: 0,
+  },
+  jsonTree: {
+    margin: 0,
+    padding: '8px 10px',
+    background: 'rgba(0, 0, 0, 0.25)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-sm)',
+    fontFamily: 'var(--font-mono)',
+    fontSize: 'var(--text-xs)',
+    color: 'var(--color-text-primary)',
+    maxHeight: 320,
+    overflow: 'auto',
+  },
+  subHeader: {
+    fontSize: 'var(--text-xxs)',
+    color: 'var(--color-text-muted)',
+    fontFamily: 'var(--font-sans)',
+  },
+  expandHint: {
+    fontSize: 'var(--text-xxs)',
+    color: 'var(--color-text-muted)',
+    fontStyle: 'italic',
+  },
+}
