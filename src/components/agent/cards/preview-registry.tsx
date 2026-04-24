@@ -172,7 +172,6 @@ export const ARTIFACT_KIND_LABEL: Partial<Record<ArtifactKind, string>> = {
   job: 'Job',
   'research-report': 'Report',
   batch: 'Batch',
-  'knowledge-graph': 'Knowledge Graph',
   'material-comparison': 'Material Compare',
   paper: 'Paper',
   'similarity-matrix': 'Similarity',

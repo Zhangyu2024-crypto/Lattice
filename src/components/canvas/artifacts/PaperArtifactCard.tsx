@@ -1,8 +1,8 @@
-// PaperArtifactCard — full PDF reader with 4-tab side panel.
+// PaperArtifactCard — full PDF reader with 3-tab side panel.
 //
 // Layout: [ PDF viewer | draggable split | Side panel ] — ratio persisted in
-// localStorage. Side tabs: Annotations | AI Ask | Knowledge | Info
-// Text selection: floating menu -> highlight / note / ask / extract
+// localStorage. Side tabs: Annotations | AI Ask | Info
+// Text selection: floating menu -> highlight / note / ask
 //
 // Mirrors lattice-cli's `app.js` PDF reader (lines 3278-4466).
 
@@ -12,24 +12,16 @@ import {
   Download,
   ExternalLink,
   FileText,
-  Loader2,
   Tag,
 } from 'lucide-react'
 import type { Artifact } from '../../../types/artifact'
 import type {
-  ChainNode,
   PaperAnnotation,
-  PaperExtractionSummary,
-  KnowledgeChain,
-  PaperReadResponse,
-  PaperReadSection,
   UpdateAnnotationRequest,
 } from '../../../types/library-api'
-import type { SaveChainsRequest } from '../../../types/knowledge-api'
 import type { PaperArtifactPayload } from '../../../stores/demo-library'
 import { useRuntimeStore } from '../../../stores/runtime-store'
 import { localProLibrary } from '../../../lib/local-pro-library'
-import { localProKnowledge } from '../../../lib/local-pro-knowledge'
 import {
   formatPaperArtifactTitle,
   isUnknownPaperAuthor,
@@ -45,7 +37,6 @@ import PdfContinuousViewer from '../../library/PdfContinuousViewer'
 import type { SelectionInfo } from '../../library/PdfContinuousViewer'
 import PdfSelectionToolbar from '../../library/PdfSelectionToolbar'
 import type { SelectionAction } from '../../library/PdfSelectionToolbar'
-import ChainExtractModal from '../../library/ChainExtractModal'
 import {
   Badge,
   Button,
@@ -53,9 +44,6 @@ import {
 import AnnotationsTab, { type SideTab } from './paper/tabs/AnnotationsTab'
 import type { AiMessage } from './paper/tabs/AiAskTab'
 import AiAskTab from './paper/tabs/AiAskTab'
-import KnowledgeTab, {
-  type WholeExtractProgress,
-} from './paper/tabs/KnowledgeTab'
 import InfoTab from './paper/tabs/InfoTab'
 
 interface Props {
@@ -120,12 +108,11 @@ export default function PaperArtifactCard({
 }: Props) {
   const payload = artifact.payload as unknown as PaperArtifactPayload
   const { metadata } = payload
-  // Self-contained Port §P3 v3 — library + knowledge facades are always
-  // "ready" whenever the Electron shell is running. Annotations persist
-  // locally; RAG / PDF / chain / extraction features throw with a
-  // descriptive message until the P4 Python worker lands.
+  // Self-contained Port §P3 v3 — library facade is always "ready"
+  // whenever the Electron shell is running. Annotations persist locally;
+  // RAG / PDF features throw with a descriptive message until the P4
+  // Python worker lands.
   const libApi = localProLibrary
-  const kbApi = localProKnowledge
   const activeSessionId = useRuntimeStore((s) => s.activeSessionId)
   const patchArtifact = useRuntimeStore((s) => s.patchArtifact)
 
@@ -135,21 +122,6 @@ export default function PaperArtifactCard({
   // Annotations from backend
   const [annotations, setAnnotations] = useState<PaperAnnotation[]>([])
   const [annotationsLoading, setAnnotationsLoading] = useState(false)
-
-  // Knowledge chains for this paper
-  const [chains, setChains] = useState<KnowledgeChain[]>([])
-  const [chainsLoading, setChainsLoading] = useState(false)
-
-  // AI auto-extracted knowledge (cached on artifact payload)
-  type AutoKnowledge = {
-    triples: Array<{ material: string; property: string; value: string; method?: string; confidence?: string }>
-    findings: Array<{ text: string; page?: number }>
-  }
-  const [autoKnowledge, setAutoKnowledge] = useState<AutoKnowledge | null>(
-    ((payload as unknown as Record<string, unknown>).extractedKnowledge as AutoKnowledge) ?? null,
-  )
-  const [autoKnowledgeLoading, setAutoKnowledgeLoading] = useState(false)
-  const autoKnowledgeTriggered = useRef(false)
 
   // AI Ask chat
   const [aiMessages, setAiMessages] = useState<AiMessage[]>([])
@@ -173,39 +145,18 @@ export default function PaperArtifactCard({
   } | null>(null)
   const [layoutStacked, setLayoutStacked] = useState(false)
 
-  // Info tab lazy data: full text + extractions are fetched on demand and
-  // cached. Full text can be large, so keep it behind a user toggle.
+  // Info tab lazy data: full text is fetched on demand and cached. Full
+  // text can be large, so keep it behind a user toggle.
   const [fullText, setFullText] = useState<string | null>(null)
   const [fullTextLoading, setFullTextLoading] = useState(false)
   const [fullTextError, setFullTextError] = useState<string | null>(null)
   const [showFullText, setShowFullText] = useState(false)
-  const [extractions, setExtractions] = useState<PaperExtractionSummary[] | null>(null)
-  const [extractionsLoading, setExtractionsLoading] = useState(false)
 
   // Inline annotation editor
   const [editingAnnId, setEditingAnnId] = useState<number | null>(null)
   const [editDraftContent, setEditDraftContent] = useState('')
   const [editDraftColor, setEditDraftColor] = useState('#D4D4D4')
   const [editSaving, setEditSaving] = useState(false)
-
-  // Chain extraction modal
-  const [extractModalOpen, setExtractModalOpen] = useState(false)
-  const [extractedChains, setExtractedChains] = useState<KnowledgeChain[]>([])
-  const [extracting, setExtracting] = useState(false)
-  // Snapshot of the selection at extract time. The selection state is cleared
-  // synchronously inside handleSelectionAction, so the modal can't read it
-  // back live — without this, saveChains writes empty context to the DB.
-  const [extractContext, setExtractContext] = useState<{
-    text: string
-    page: number
-  } | null>(null)
-
-  // Whole-paper extraction: orchestrates readPaper -> N x extractSelection -> saveChains.
-  const [wholeExtracting, setWholeExtracting] = useState(false)
-  const [wholeExtractProgress, setWholeExtractProgress] =
-    useState<WholeExtractProgress | null>(null)
-  // Monotonic request id to discard stale async results on paperId change or unmount.
-  const wholeExtractReqId = useRef(0)
 
   // Derive the paperId (backend integer ID) from the artifact. Demo papers use
   // string ids like "pap-001" which must NOT be coerced — parseInt would yield
@@ -451,65 +402,6 @@ export default function PaperArtifactCard({
     }
   }, [libApi, paperId])
 
-  const loadChains = useCallback(async () => {
-    if (paperId == null) return
-    setChainsLoading(true)
-    try {
-      const saved = await kbApi.chainsByPaper(paperId)
-      setChains(saved.map((m) => ({
-        id: m.chain_id,
-        extraction_id: m.extraction_id,
-        domain_type: m.domain_type ?? 'materials',
-        chain_type: m.chain_type ?? '',
-        context_text: m.context_text ?? '',
-        context_section: m.context_section ?? '',
-        confidence: m.confidence,
-        nodes: m.nodes,
-      })))
-    } catch {
-      setChains([])
-    } finally {
-      setChainsLoading(false)
-    }
-  }, [kbApi, paperId])
-
-  // Auto-extract knowledge on mount if no cached result exists.
-  useEffect(() => {
-    if (autoKnowledge || autoKnowledgeTriggered.current) return
-    if (paperId == null) return
-    autoKnowledgeTriggered.current = true
-    setAutoKnowledgeLoading(true)
-    void (async () => {
-      try {
-        const { runAutoExtract } = await import(
-          '../../../lib/agent-tools/auto-extract-knowledge'
-        )
-        const result = await runAutoExtract(
-          paperId,
-          activeSessionId ?? '',
-        )
-        if (result.success) {
-          const knowledge = {
-            triples: result.triples,
-            findings: result.findings,
-          }
-          setAutoKnowledge(knowledge)
-          // Cache on artifact payload so re-opening skips the LLM call
-          patchArtifact(activeSessionId ?? '', artifact.id, {
-            payload: {
-              ...payload,
-              extractedKnowledge: { ...knowledge, extractedAt: Date.now() },
-            },
-          } as never)
-        }
-      } catch {
-        // Non-fatal — user can still manually trigger via agent
-      } finally {
-        setAutoKnowledgeLoading(false)
-      }
-    })()
-  }, [paperId, autoKnowledge, activeSessionId, artifact.id, payload, patchArtifact])
-
   const loadFullText = useCallback(async () => {
     if (!libApi.ready || paperId == null) return
     if (fullText != null || fullTextLoading) return
@@ -532,50 +424,9 @@ export default function PaperArtifactCard({
     }
   }, [libApi, paperId, fullText, fullTextLoading])
 
-  const loadExtractions = useCallback(
-    async (opts?: { force?: boolean }) => {
-      if (!libApi.ready || paperId == null) return
-      if (extractionsLoading) return
-      if (!opts?.force && extractions != null) return
-      setExtractionsLoading(true)
-      try {
-        const res = await libApi.paperExtractions(paperId)
-        setExtractions(res.extractions ?? [])
-      } catch (err) {
-        toast.error(
-          `Extractions failed: ${err instanceof Error ? err.message : String(err)}`,
-        )
-        setExtractions([])
-      } finally {
-        setExtractionsLoading(false)
-      }
-    },
-    [libApi, paperId, extractions, extractionsLoading],
-  )
-
   useEffect(() => {
     void loadAnnotations()
-    void loadChains()
-  }, [loadAnnotations, loadChains])
-
-  useEffect(
-    () => () => {
-      wholeExtractReqId.current += 1
-    },
-    [],
-  )
-
-  useEffect(() => {
-    wholeExtractReqId.current += 1
-    setWholeExtracting(false)
-    setWholeExtractProgress(null)
-  }, [paperId])
-
-  // Lazy-load extractions the first time the user opens the Info tab. Full
-  // text stays gated behind an explicit "Show full text" toggle.
-  useEffect(() => {
-    if (tab === 'info') void loadExtractions()
-  }, [tab, loadExtractions])
+  }, [loadAnnotations])
 
   useEffect(() => {
     aiEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -715,157 +566,10 @@ export default function PaperArtifactCard({
           }
           break
         }
-        case 'define': {
-          if (!kbApi.ready) {
-            toast.warn('Knowledge extraction not available')
-            return
-          }
-          setTab('knowledge')
-          setExtracting(true)
-          try {
-            const res = await kbApi.extractSelection({
-              text: sel.text,
-              paper_id: paperId ?? undefined,
-              page: sel.page,
-            })
-            if (res.success) {
-              setExtractContext({ text: sel.text, page: sel.page })
-              setExtractedChains(res.chains)
-              setExtractModalOpen(true)
-              toast.success(`Extracted ${res.chains.length} chains`)
-            } else {
-              toast.error(res.error)
-            }
-          } catch (err) {
-            toast.error(
-              `Extraction failed: ${err instanceof Error ? err.message : String(err)}`,
-            )
-          } finally {
-            setExtracting(false)
-          }
-          break
-        }
       }
     },
-    [selection, paperId, libApi, kbApi, loadAnnotations],
+    [selection, paperId, libApi, loadAnnotations, artifact.id, artifact.title],
   )
-
-  // ── Whole-paper extraction ────────────────────────────────────
-
-  const handleExtractWhole = useCallback(async () => {
-    if (paperId == null || !libApi.ready || !kbApi.ready) {
-      toast.warn('Backend needed for whole-paper extraction')
-      return
-    }
-    if (wholeExtracting) return
-
-    const runId = ++wholeExtractReqId.current
-    const isStale = () => runId !== wholeExtractReqId.current
-
-    setTab('knowledge')
-    setWholeExtracting(true)
-    setWholeExtractProgress({
-      phase: 'reading',
-      total: 0,
-      done: 0,
-      succeeded: 0,
-      failed: 0,
-      chainCount: 0,
-    })
-
-    try {
-      const raw = await libApi.readPaper(paperId)
-      if (isStale()) return
-      if (!raw.success) {
-        toast.error(`Read paper failed: ${raw.error}`)
-        return
-      }
-
-      const chunks = buildWholePaperChunks(raw)
-      if (chunks.length === 0) {
-        toast.warn('No extractable sections found')
-        return
-      }
-
-      setWholeExtractProgress({
-        phase: 'extracting',
-        total: chunks.length,
-        done: 0,
-        succeeded: 0,
-        failed: 0,
-        chainCount: 0,
-      })
-
-      const extracted = await mapLimit(
-        chunks,
-        WHOLE_EXTRACT_CONCURRENCY,
-        async (chunk) => {
-          const res = await kbApi.extractSelection({
-            text: chunk.text,
-            paper_id: paperId,
-            page: 1,
-          })
-          if (!res.success) throw new Error(res.error)
-          return res.chains.map((chain) => chainToSaveDraft(chain, chunk.label))
-        },
-        (ok, drafts) => {
-          if (isStale()) return
-          const added = ok && drafts ? drafts.length : 0
-          setWholeExtractProgress((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  done: prev.done + 1,
-                  succeeded: prev.succeeded + (ok ? 1 : 0),
-                  failed: prev.failed + (ok ? 0 : 1),
-                  chainCount: prev.chainCount + added,
-                }
-              : prev,
-          )
-        },
-      )
-      if (isStale()) return
-
-      const drafts = dedupeSaveDrafts(extracted.flat(), chains)
-      if (drafts.length === 0) {
-        toast.warn('No new chains found')
-        return
-      }
-
-      setWholeExtractProgress((prev) =>
-        prev ? { ...prev, phase: 'saving' } : prev,
-      )
-      const saved = await kbApi.saveChains({ paper_id: paperId, chains: drafts })
-      if (isStale()) return
-      if (!saved.success) {
-        toast.error(`Save failed: ${saved.error}`)
-        return
-      }
-
-      await loadChains()
-      if (isStale()) return
-      void loadExtractions({ force: true })
-      toast.success(`Saved ${saved.count} chains`)
-    } catch (err) {
-      if (isStale()) return
-      toast.error(
-        `Whole-paper extraction failed: ${err instanceof Error ? err.message : String(err)}`,
-      )
-    } finally {
-      if (!isStale()) {
-        setWholeExtracting(false)
-        setWholeExtractProgress(null)
-      }
-    }
-  }, [
-    paperId,
-    libApi,
-    kbApi,
-    wholeExtracting,
-    chains,
-    loadChains,
-    loadExtractions,
-  ])
 
   // ── AI Ask (full-text paper QA) ──────────────────────────────
   //
@@ -1207,7 +911,7 @@ export default function PaperArtifactCard({
           <div className="card-paper-tab-row">
             {tabBtn('annotations', 'Annotations', tab, setTab)}
             {tabBtn('ai', 'Chat', tab, setTab)}
-            {tabBtn('knowledge', 'Knowledge', tab, setTab)}
+            {tabBtn('info', 'Info', tab, setTab)}
           </div>
           <div className="card-paper-tab-body">
             {tab === 'annotations' && (
@@ -1239,79 +943,12 @@ export default function PaperArtifactCard({
                 ready
               />
             )}
-            {tab === 'knowledge' && (
-              autoKnowledgeLoading ? (
-                <div style={{ padding: 16, color: 'var(--color-text-muted)', fontSize: 'var(--text-xs)' }}>
-                  <Loader2 size={14} className="spin" style={{ marginRight: 6, verticalAlign: 'middle' }} />
-                  Extracting knowledge from paper…
-                </div>
-              ) : autoKnowledge ? (
-                <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 12, overflow: 'auto', fontSize: 'var(--text-xs)' }}>
-                  {autoKnowledge.triples.length > 0 && (
-                    <div>
-                      <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--color-text-primary)' }}>
-                        Structured Facts ({autoKnowledge.triples.length})
-                      </div>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-xs)' }}>
-                        <thead>
-                          <tr style={{ borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-muted)' }}>
-                            <th style={{ textAlign: 'left', padding: '4px 6px' }}>Material</th>
-                            <th style={{ textAlign: 'left', padding: '4px 6px' }}>Property</th>
-                            <th style={{ textAlign: 'left', padding: '4px 6px' }}>Value</th>
-                            <th style={{ textAlign: 'left', padding: '4px 6px' }}>Method</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {autoKnowledge.triples.map((t, i) => (
-                            <tr key={i} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                              <td style={{ padding: '4px 6px', color: 'var(--color-text-primary)' }}>{t.material}</td>
-                              <td style={{ padding: '4px 6px' }}>{t.property}</td>
-                              <td style={{ padding: '4px 6px', fontFamily: 'var(--font-mono)' }}>{t.value}</td>
-                              <td style={{ padding: '4px 6px', color: 'var(--color-text-muted)' }}>{t.method ?? '—'}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                  {autoKnowledge.findings.length > 0 && (
-                    <div>
-                      <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--color-text-primary)' }}>
-                        Key Findings ({autoKnowledge.findings.length})
-                      </div>
-                      <ul style={{ margin: 0, paddingLeft: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {autoKnowledge.findings.map((f, i) => (
-                          <li key={i} style={{ color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
-                            {f.text}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <KnowledgeTab
-                  chains={chains}
-                  loading={chainsLoading || extracting}
-                  onRefresh={loadChains}
-                  onExtractWhole={handleExtractWhole}
-                  canExtractWhole={
-                    libApi.ready && kbApi.ready && paperId != null
-                  }
-                  wholeExtracting={wholeExtracting}
-                  wholeExtractProgress={wholeExtractProgress}
-                />
-              )
-            )}
             {tab === 'info' && (
               <InfoTab
                 metadata={resolvedMetadata}
                 paperId={paperId}
                 annotationCount={annotations.length}
-                chainCount={chains.length}
                 backendAvailable={libApi.ready && paperId != null}
-                extractions={extractions}
-                extractionsLoading={extractionsLoading}
                 fullText={fullText}
                 fullTextLoading={fullTextLoading}
                 fullTextError={fullTextError}
@@ -1326,23 +963,6 @@ export default function PaperArtifactCard({
           </div>
         </div>
       </div>
-
-      <ChainExtractModal
-        open={extractModalOpen}
-        chains={extractedChains}
-        paperId={paperId}
-        contextText={extractContext?.text ?? ''}
-        contextPage={extractContext?.page ?? 1}
-        onClose={() => {
-          setExtractModalOpen(false)
-          setExtractedChains([])
-          setExtractContext(null)
-        }}
-        onSaved={() => {
-          void loadChains()
-          void loadExtractions({ force: true })
-        }}
-      />
     </div>
   )
 }
@@ -1419,223 +1039,4 @@ function AbstractFallback({
       </div>
     </div>
   )
-}
-
-// ─── Whole-paper extraction helpers ─────────────────────────────
-//
-// Mirrors lattice-cli's section-first strategy: prefer markdown sections
-// filtered by keyword + numeric density, split long sections on paragraph
-// boundaries with a small overlap, fall back to the concatenated full text
-// when no structured sections are available. We intentionally keep the
-// per-chunk ceiling below the backend's 8000-char truncation so meaningful
-// signal is preserved end-to-end.
-
-type WholePaperChunk = { label: string; text: string }
-
-type SaveChainDraft = SaveChainsRequest['chains'][number]
-
-const WHOLE_EXTRACT_MAX_CHARS = 7000
-const WHOLE_EXTRACT_OVERLAP = 400
-const WHOLE_EXTRACT_CONCURRENCY = 2
-const WHOLE_EXTRACT_FULLTEXT_CAP = 15000
-const WHOLE_EXTRACT_MIN_CHARS = 200
-
-const SECTION_KEYWORDS = [
-  'experimental',
-  'experiment',
-  'methods',
-  'method',
-  'materials and methods',
-  'synthesis',
-  'preparation',
-  'fabrication',
-  'characterization',
-  'results',
-  'discussion',
-  'results and discussion',
-  'properties',
-  'performance',
-]
-
-function buildWholePaperChunks(
-  raw: Extract<PaperReadResponse, { success: true }>,
-): WholePaperChunk[] {
-  const sections = Array.isArray(raw.sections) ? raw.sections : []
-  if (sections.length > 0) {
-    const candidates = pickCandidateSections(sections)
-    const picked = candidates.length > 0 ? candidates : sections
-    const chunks: WholePaperChunk[] = []
-    for (const section of picked) {
-      for (const c of splitSectionChunk(section)) chunks.push(c)
-    }
-    if (chunks.length > 0) return chunks
-  }
-
-  const fullText = typeof raw.full_text === 'string' ? raw.full_text : ''
-  const trimmedFull = fullText.slice(0, WHOLE_EXTRACT_FULLTEXT_CAP)
-  if (trimmedFull.trim().length < WHOLE_EXTRACT_MIN_CHARS) return []
-  return splitLongText('Full text', trimmedFull)
-}
-
-function pickCandidateSections(
-  sections: PaperReadSection[],
-): PaperReadSection[] {
-  const matched: PaperReadSection[] = []
-  for (const section of sections) {
-    const title = (section.title ?? '').toLowerCase().trim()
-    const content = section.content ?? ''
-    if (content.trim().length < WHOLE_EXTRACT_MIN_CHARS) continue
-    const byKeyword = SECTION_KEYWORDS.some((kw) => title.includes(kw))
-    const byDensity = numericDensity(content) >= 0.015
-    if (byKeyword || byDensity) matched.push(section)
-  }
-  return matched
-}
-
-function numericDensity(text: string): number {
-  if (!text) return 0
-  const digits = text.replace(/[^0-9]/g, '').length
-  return digits / text.length
-}
-
-function splitSectionChunk(section: PaperReadSection): WholePaperChunk[] {
-  const content = (section.content ?? '').trim()
-  if (content.length < WHOLE_EXTRACT_MIN_CHARS) return []
-  const label = section.title?.trim() || 'Section'
-  if (content.length <= WHOLE_EXTRACT_MAX_CHARS) {
-    return [{ label, text: content }]
-  }
-  return splitLongText(label, content)
-}
-
-function splitLongText(label: string, text: string): WholePaperChunk[] {
-  const max = WHOLE_EXTRACT_MAX_CHARS
-  const overlap = Math.min(WHOLE_EXTRACT_OVERLAP, Math.floor(max / 2))
-  const paragraphs = text
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter(Boolean)
-  if (paragraphs.length === 0) return []
-
-  const chunks: WholePaperChunk[] = []
-  let buffer = ''
-  for (const para of paragraphs) {
-    if (para.length > max) {
-      if (buffer.length > 0) {
-        chunks.push({ label: `${label} · ${chunks.length + 1}`, text: buffer })
-        buffer = ''
-      }
-      for (let i = 0; i < para.length; i += max - overlap) {
-        const slice = para.slice(i, i + max)
-        if (slice.trim().length >= WHOLE_EXTRACT_MIN_CHARS) {
-          chunks.push({ label: `${label} · ${chunks.length + 1}`, text: slice })
-        }
-        if (i + max >= para.length) break
-      }
-      continue
-    }
-    const candidate = buffer ? `${buffer}\n\n${para}` : para
-    if (candidate.length > max) {
-      if (buffer.length >= WHOLE_EXTRACT_MIN_CHARS) {
-        chunks.push({ label: `${label} · ${chunks.length + 1}`, text: buffer })
-      }
-      const tail = buffer.slice(Math.max(0, buffer.length - overlap))
-      buffer = tail ? `${tail}\n\n${para}` : para
-    } else {
-      buffer = candidate
-    }
-  }
-  if (buffer.trim().length >= WHOLE_EXTRACT_MIN_CHARS) {
-    chunks.push({ label: `${label} · ${chunks.length + 1}`, text: buffer })
-  }
-  return chunks
-}
-
-async function mapLimit<T, R>(
-  items: readonly T[],
-  limit: number,
-  worker: (item: T, index: number) => Promise<R>,
-  onSettled?: (ok: boolean, value: R | undefined, index: number) => void,
-): Promise<R[]> {
-  const size = items.length
-  const results: R[] = new Array(size) as R[]
-  if (size === 0) return results
-  const concurrency = Math.max(1, Math.min(limit, size))
-  let cursor = 0
-  const run = async (): Promise<void> => {
-    while (true) {
-      const i = cursor++
-      if (i >= size) return
-      try {
-        const value = await worker(items[i], i)
-        results[i] = value
-        onSettled?.(true, value, i)
-      } catch {
-        onSettled?.(false, undefined, i)
-      }
-    }
-  }
-  await Promise.all(Array.from({ length: concurrency }, run))
-  return results.filter((v) => v !== undefined) as R[]
-}
-
-function chainToSaveDraft(
-  chain: KnowledgeChain,
-  contextSection: string,
-): SaveChainDraft {
-  const nodes = (chain.nodes ?? []).map((n, i) => {
-    const node: Omit<ChainNode, 'id' | 'chain_id'> = {
-      ordinal: Number.isFinite(n.ordinal) ? n.ordinal : i,
-      role: n.role,
-      name: n.name,
-    }
-    if (n.value !== undefined) node.value = n.value
-    if (n.value_numeric !== undefined) node.value_numeric = n.value_numeric
-    if (n.unit !== undefined) node.unit = n.unit
-    if (n.metadata !== undefined) node.metadata = n.metadata
-    return node
-  })
-  const draft: SaveChainDraft = {
-    nodes,
-    context_section: chain.context_section ?? contextSection,
-  }
-  if (chain.confidence !== undefined) draft.confidence = chain.confidence
-  if (chain.domain_type !== undefined) draft.domain_type = chain.domain_type
-  if (chain.chain_type !== undefined) draft.chain_type = chain.chain_type
-  if (chain.context_text !== undefined) draft.context_text = chain.context_text
-  return draft
-}
-
-function chainSig(
-  nodes: ReadonlyArray<
-    Pick<ChainNode, 'role' | 'name' | 'value'>
-  >,
-): string {
-  return nodes
-    .map(
-      (n) =>
-        `${(n.role ?? '').toLowerCase()}|${(n.name ?? '').trim().toLowerCase()}|${String(n.value ?? '').trim().toLowerCase()}`,
-    )
-    .join('>>')
-}
-
-function dedupeSaveDrafts(
-  drafts: SaveChainDraft[],
-  existing: KnowledgeChain[],
-): SaveChainDraft[] {
-  const seen = new Set<string>()
-  for (const chain of existing) {
-    if (chain.nodes && chain.nodes.length > 0) {
-      seen.add(chainSig(chain.nodes))
-    }
-  }
-  const out: SaveChainDraft[] = []
-  for (const draft of drafts) {
-    if (!draft.nodes || draft.nodes.length === 0) continue
-    const sig = chainSig(draft.nodes)
-    if (seen.has(sig)) continue
-    seen.add(sig)
-    out.push(draft)
-  }
-  return out
 }

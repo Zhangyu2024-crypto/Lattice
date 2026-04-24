@@ -6,7 +6,6 @@ import {
   Info,
   Loader2,
   MessageSquare,
-  Sparkles,
   Trash2,
   X,
 } from 'lucide-react'
@@ -18,7 +17,7 @@ import {
   IconButton,
 } from '../../../../ui'
 
-export type SideTab = 'annotations' | 'ai' | 'knowledge' | 'info'
+export type SideTab = 'annotations' | 'ai' | 'info'
 
 const HIGHLIGHT_COLOR_PRESETS = [
   '#F5F5F5',
@@ -117,18 +116,6 @@ export default function AnnotationsTab({
             >
               <MessageSquare size={14} className="card-paper-rail-tile-icon" aria-hidden />
               <span className="card-paper-rail-tile-title">AI Ask</span>
-              <ChevronRight size={14} className="card-paper-rail-tile-chevron" aria-hidden />
-            </button>
-          </li>
-          <li>
-            <button
-              type="button"
-              className="card-paper-rail-tile card-paper-rail-tile--compact"
-              onClick={() => onNavigateTab('knowledge')}
-              title="Extract and browse argument chains"
-            >
-              <Sparkles size={14} className="card-paper-rail-tile-icon" aria-hidden />
-              <span className="card-paper-rail-tile-title">Knowledge</span>
               <ChevronRight size={14} className="card-paper-rail-tile-chevron" aria-hidden />
             </button>
           </li>

@@ -160,14 +160,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.send('library:send-paper-to-main', payload),
   onLibraryOpenPaper: (callback: (payload: unknown) => void) =>
     subscribe('library:open-paper', callback),
-  openKnowledgeWindow: () =>
-    ipcRenderer.invoke('knowledge-window:open'),
-  closeKnowledgeWindow: () =>
-    ipcRenderer.invoke('knowledge-window:close'),
-  knowledgeSendMaterialComparisonToMain: (payload: unknown) =>
-    ipcRenderer.send('knowledge:material-comparison-to-main', payload),
-  onKnowledgeOpenMaterialComparison: (callback: (payload: unknown) => void) =>
-    subscribe('knowledge:open-material-comparison', callback),
   // ─── Cloud sync (WebDAV / rclone) ───────────────────────────────
   syncSetup: (req: unknown) => ipcRenderer.invoke('sync:setup', req),
   syncTestConnection: (req?: unknown) =>

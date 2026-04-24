@@ -13,8 +13,6 @@ import type {
   AskMultiResponse,
   AskPaperRequest,
   AskPaperResponse,
-  PaperChainsResponse,
-  PaperExtractionsResponse,
   PaperReadResponse,
 } from '../../types/library-api'
 import { electron, IPC_UNAVAILABLE } from './helpers'
@@ -93,26 +91,6 @@ export async function readPaper(id: number): Promise<PaperReadResponse> {
     journal: row.journal,
     doi: row.doi,
   }
-}
-
-export async function paperExtractions(
-  id: number,
-): Promise<PaperExtractionsResponse> {
-  return await localProPaper.paperExtractions(id)
-}
-
-export async function paperChains(
-  id: number,
-): Promise<PaperChainsResponse> {
-  // Chain heuristic wants text; extract first, then parse. A failed
-  // read surfaces as an empty chain list rather than a thrown error
-  // so the UI's "Chains" tab can say "no chains yet" instead of
-  // showing a scary stack trace.
-  const read = await readPaper(id)
-  if (!read.success) {
-    return { success: true, chains: [], total: 0 }
-  }
-  return await localProPaper.paperChains(id, read.full_text)
 }
 
 export async function askPaper(

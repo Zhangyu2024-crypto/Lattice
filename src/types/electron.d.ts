@@ -374,12 +374,6 @@ export interface LibraryOpenPaperIpcPayload {
   abstract: string
 }
 
-/** Knowledge window → main window: material comparison from Compare pane. */
-export interface KnowledgeMaterialComparisonIpcPayload {
-  title: string
-  artifactPayload: unknown
-}
-
 export interface LibraryPaperRowPayload {
   id: number
   title: string
@@ -941,14 +935,6 @@ declare global {
       ) => void
       onLibraryOpenPaper: (
         callback: (payload: LibraryOpenPaperIpcPayload) => void,
-      ) => () => void
-      openKnowledgeWindow: () => Promise<{ success: boolean; error?: string }>
-      closeKnowledgeWindow: () => Promise<{ success: boolean }>
-      knowledgeSendMaterialComparisonToMain: (
-        payload: KnowledgeMaterialComparisonIpcPayload,
-      ) => void
-      onKnowledgeOpenMaterialComparison: (
-        callback: (payload: KnowledgeMaterialComparisonIpcPayload) => void,
       ) => () => void
       // ─── Cloud sync ──────────────────────────────────────────────
       syncSetup: (req: SyncSetupRequest) => Promise<SyncSimpleResult>

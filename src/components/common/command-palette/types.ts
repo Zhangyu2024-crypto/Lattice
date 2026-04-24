@@ -35,14 +35,12 @@ export interface CommandPaletteProps {
   onLoadStructureDemo: () => void
   onLoadResearchDemo: () => void
   onLoadBatchDemo: () => void
-  onLoadKnowledgeDemo: () => void
   onLoadMaterialCompareDemo: () => void
   onLoadSimilarityDemo: () => void
   onLoadOptimizationDemo: () => void
   onLoadHypothesisDemo: () => void
   onLoadLatexDemo?: () => void
   onOpenLibrary: () => void
-  onOpenKnowledge: () => void
   onExportSessionZip: () => void
   onMockAgentStream?: () => void
   onRunAgent: (prompt: string) => void

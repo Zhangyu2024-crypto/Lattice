@@ -10,7 +10,6 @@ import ResearchReportArtifactCard from '../../canvas/artifacts/ResearchReportArt
 import ResearchReportWindowStub from '../../canvas/artifacts/ResearchReportWindowStub'
 import HypothesisArtifactCard from '../../canvas/artifacts/HypothesisArtifactCard'
 import BatchWorkflowCard from '../../canvas/artifacts/BatchWorkflowCard'
-import KnowledgeGraphCard from '../../canvas/artifacts/KnowledgeGraphCard'
 import MaterialComparisonCard from '../../canvas/artifacts/MaterialComparisonCard'
 import PaperArtifactCard from '../../canvas/artifacts/PaperArtifactCard'
 import SimilarityMatrixCard from '../../canvas/artifacts/SimilarityMatrixCard'
@@ -33,7 +32,6 @@ const FILE_KIND_TO_ARTIFACT_KIND: Record<string, string> = {
   hypothesis: 'hypothesis',
   paper: 'paper',
   'material-comp': 'material-comparison',
-  knowledge: 'knowledge-graph',
   batch: 'batch',
   optimization: 'optimization',
   similarity: 'similarity-matrix',
@@ -159,8 +157,6 @@ function renderCard(artifact: Artifact) {
       return <PaperArtifactCard artifact={artifact} />
     case 'material-comparison':
       return <MaterialComparisonCard artifact={artifact} />
-    case 'knowledge-graph':
-      return <KnowledgeGraphCard artifact={artifact} />
     case 'batch':
       return <BatchWorkflowCard artifact={artifact} sessionId={PREVIEW_SESSION} />
     case 'optimization':

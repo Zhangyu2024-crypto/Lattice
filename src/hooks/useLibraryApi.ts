@@ -33,8 +33,6 @@ import type {
   LibraryStats,
   LibraryTagsResponse,
   PaperAnnotationsResponse,
-  PaperChainsResponse,
-  PaperExtractionsResponse,
   PaperReadResponse,
   RemoveTagResponse,
   ScanDirectoryRequest,
@@ -101,10 +99,8 @@ export interface LibraryApi {
   /** Returns the bibtex file contents as a string for client-side download. */
   exportBibtex: (opts?: { tag?: string; collection?: string }) => Promise<string>
 
-  // Reading / RAG / chains
+  // Reading / RAG
   readPaper: (id: number) => Promise<PaperReadResponse>
-  paperExtractions: (id: number) => Promise<PaperExtractionsResponse>
-  paperChains: (id: number) => Promise<PaperChainsResponse>
   askPaper: (
     id: number,
     req: AskPaperRequest,
@@ -254,12 +250,6 @@ export function useLibraryApi(): LibraryApi {
 
       readPaper: (id) =>
         jsonFetch<PaperReadResponse>(`/api/library/paper/${id}/read`),
-      paperExtractions: (id) =>
-        jsonFetch<PaperExtractionsResponse>(
-          `/api/library/paper/${id}/extractions`,
-        ),
-      paperChains: (id) =>
-        jsonFetch<PaperChainsResponse>(`/api/library/paper/${id}/chains`),
       askPaper: (id, req) =>
         jsonFetch<AskPaperResponse>(`/api/library/paper/${id}/ask`, {
           method: 'POST',

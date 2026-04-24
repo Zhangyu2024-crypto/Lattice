@@ -44,8 +44,6 @@ _TOOL_SPECS: List[Tuple[str, str, str]] = [
     ("web.search", "web", "search"),
     ("raman.identify", "raman", "identify"),
     ("paper.read_pdf", "paper", "read_pdf"),
-    ("paper.extract_chains", "paper", "extract_chains"),
-    ("paper.extractions", "paper", "extractions"),
     ("rag.retrieve", "rag", "retrieve"),
     ("cif_db.get", "cif_db", "get"),
     ("cif_db.search", "cif_db", "search"),

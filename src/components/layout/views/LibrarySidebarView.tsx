@@ -1,17 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ExternalLink, FileUp, PanelLeftClose, RefreshCw } from 'lucide-react'
+import { ExternalLink, FileUp, PanelLeftClose } from 'lucide-react'
 import { CollapsibleSidebarSpaceSection } from './CollapsibleSidebarBlocks'
 import { localProLibrary } from '../../../lib/local-pro-library'
-import { localProKnowledge } from '../../../lib/local-pro-knowledge'
-import {
-  extractPaperToKnowledge,
-  extractAllPapersToKnowledge,
-  type BatchExtractProgress,
-} from '../../../lib/knowledge/auto-extract'
 import { DEMO_LIBRARY } from '../../../stores/demo-library'
 import { toast } from '../../../stores/toast-store'
 import type { LibraryPaperRow, LibraryStats } from '../../../types/library-api'
-import type { KnowledgeStats } from '../../../types/knowledge-api'
 import { TableActions } from '../../common/TableActions'
 
 interface Props {
@@ -61,9 +54,6 @@ export default function LibrarySidebarView({
     source: 'demo',
   })
   const [error, setError] = useState<string | null>(null)
-  const [knowledgeStats, setKnowledgeStats] = useState<KnowledgeStats | null>(null)
-  const [syncing, setSyncing] = useState(false)
-  const [syncProgress, setSyncProgress] = useState<BatchExtractProgress | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -105,8 +95,6 @@ export default function LibrarySidebarView({
         setError(err instanceof Error ? err.message : 'Failed to load library')
       })
 
-    localProKnowledge.stats().then(setKnowledgeStats).catch(() => {})
-
     return () => {
       cancelled = true
     }
@@ -139,41 +127,11 @@ export default function LibrarySidebarView({
           ])
           setSnapshot({ papers: papersRes.papers, stats, source: 'local' })
         } catch { /* non-critical refresh failure */ }
-        if (result.id != null) {
-          extractPaperToKnowledge(result.id).then((r) => {
-            if (r.chainCount > 0) {
-              toast.info(`Extracted ${r.chainCount} chains`)
-              localProKnowledge.stats().then(setKnowledgeStats).catch(() => {})
-            }
-          }).catch(() => { /* non-critical */ })
-        }
       } else {
         toast.error(result.error ?? 'Import failed')
       }
     } catch (err) {
       toast.error(`Import failed: ${err instanceof Error ? err.message : String(err)}`)
-    }
-  }, [])
-
-  const handleSyncKnowledge = useCallback(async () => {
-    setSyncing(true)
-    setSyncProgress(null)
-    try {
-      const result = await extractAllPapersToKnowledge((p) => setSyncProgress(p))
-      const total = result.results.reduce((s, r) => s + r.chainCount, 0)
-      if (total > 0) {
-        toast.success(`Extracted ${total} chains from ${result.done} papers`)
-      } else if (result.total === 0) {
-        toast.info('No papers with PDFs found in library')
-      } else {
-        toast.info('No new chains extracted')
-      }
-      localProKnowledge.stats().then(setKnowledgeStats).catch(() => {})
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Sync failed')
-    } finally {
-      setSyncing(false)
-      setSyncProgress(null)
     }
   }, [])
 
@@ -274,56 +232,6 @@ export default function LibrarySidebarView({
           ))}
         </CollapsibleSidebarSpaceSection>
 
-        <CollapsibleSidebarSpaceSection
-          title="Chains"
-          empty="No chains extracted yet"
-          end={
-            <button
-              type="button"
-              onClick={handleSyncKnowledge}
-              disabled={syncing}
-              title="Extract chains from all library papers"
-              aria-label="Sync chains"
-              className="session-mini-btn"
-            >
-              <RefreshCw
-                size={12}
-                className={syncing ? 'spin-slow' : undefined}
-              />
-            </button>
-          }
-        >
-          {syncing && syncProgress && (
-            <div className="knowledge-sync-progress">
-              Extracting {syncProgress.done} / {syncProgress.total}…
-            </div>
-          )}
-          {knowledgeStats && knowledgeStats.total_chains > 0 ? (
-            <>
-              <div className="knowledge-stats-grid">
-                <span className="knowledge-stats-label">Extractions</span>
-                <span className="knowledge-stats-value">{knowledgeStats.total_extractions}</span>
-                <span className="knowledge-stats-label">Chains</span>
-                <span className="knowledge-stats-value">{knowledgeStats.total_chains}</span>
-                <span className="knowledge-stats-label">Nodes</span>
-                <span className="knowledge-stats-value">{knowledgeStats.total_nodes}</span>
-              </div>
-              {knowledgeStats.top_materials.length > 0 && (
-                <div className="knowledge-stats-top">
-                  {knowledgeStats.top_materials.slice(0, 5).map((m) => (
-                    <span key={m.name} className="knowledge-stats-tag">
-                      {m.name} ({m.count})
-                    </span>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : !syncing ? (
-            <div className="knowledge-sync-progress">
-              Click sync to extract chains from papers
-            </div>
-          ) : null}
-        </CollapsibleSidebarSpaceSection>
       </div>
     </div>
   )

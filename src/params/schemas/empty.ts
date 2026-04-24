@@ -11,10 +11,6 @@ export const jobSchema: KindSchema = { kind: 'job', groups: [] }
 
 export const structureSchema: KindSchema = { kind: 'structure', groups: [] }
 export const batchSchema: KindSchema = { kind: 'batch', groups: [] }
-export const knowledgeGraphSchema: KindSchema = {
-  kind: 'knowledge-graph',
-  groups: [],
-}
 export const materialComparisonSchema: KindSchema = {
   kind: 'material-comparison',
   groups: [],

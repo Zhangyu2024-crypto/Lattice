@@ -15,7 +15,6 @@ const KIND_LABEL: Record<Artifact['kind'], string> = {
   job: 'Job Monitor',
   'research-report': 'Research Report',
   batch: 'Batch Workflow',
-  'knowledge-graph': 'Knowledge Graph',
   'material-comparison': 'Material Comparison',
   paper: 'Paper',
   'similarity-matrix': 'Similarity Matrix',

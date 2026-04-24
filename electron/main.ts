@@ -47,7 +47,6 @@ protocol.registerSchemesAsPrivileged([
 
 let mainWindow: BrowserWindow | null = null
 let libraryWindow: BrowserWindow | null = null
-let knowledgeWindow: BrowserWindow | null = null
 const pythonManager = new PythonManager()
 
 function broadcastBackendStatus(payload: {
@@ -210,51 +209,6 @@ function createLibraryWindow() {
 
   libraryWindow.on('closed', () => {
     libraryWindow = null
-  })
-}
-
-function createKnowledgeWindow() {
-  if (knowledgeWindow && !knowledgeWindow.isDestroyed()) {
-    knowledgeWindow.focus()
-    return
-  }
-  knowledgeWindow = new BrowserWindow({
-    width: 1280,
-    height: 820,
-    minWidth: 880,
-    minHeight: 520,
-    title: 'Lattice — Knowledge',
-    backgroundColor: '#1e1e1e',
-    titleBarStyle: 'hiddenInset',
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.mjs'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: false,
-      plugins: true,
-    },
-  })
-
-  if (process.env.VITE_DEV_SERVER_URL) {
-    void knowledgeWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}#/knowledge`)
-  } else {
-    void knowledgeWindow.loadFile(path.join(__dirname, '../dist/index.html'), {
-      hash: 'knowledge',
-    })
-  }
-
-  knowledgeWindow.webContents.on('did-finish-load', () => {
-    if (pythonManager.isReady) {
-      knowledgeWindow?.webContents.send('backend:status', {
-        ready: true,
-        port: pythonManager.backendPort,
-        token: pythonManager.backendToken,
-      })
-    }
-  })
-
-  knowledgeWindow.on('closed', () => {
-    knowledgeWindow = null
   })
 }
 
@@ -672,31 +626,6 @@ ipcMain.handle('library-window:close', () => {
 ipcMain.on('library:send-paper-to-main', (_event, payload) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('library:open-paper', payload)
-    mainWindow.focus()
-  }
-})
-
-ipcMain.handle('knowledge-window:open', () => {
-  try {
-    createKnowledgeWindow()
-    return { success: true }
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
-    return { success: false, error: message }
-  }
-})
-
-ipcMain.handle('knowledge-window:close', () => {
-  if (knowledgeWindow && !knowledgeWindow.isDestroyed()) {
-    knowledgeWindow.close()
-  }
-  knowledgeWindow = null
-  return { success: true }
-})
-
-ipcMain.on('knowledge:material-comparison-to-main', (_event, payload) => {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('knowledge:open-material-comparison', payload)
     mainWindow.focus()
   }
 })

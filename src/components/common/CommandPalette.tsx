@@ -32,14 +32,12 @@ export default function CommandPalette({
   onLoadStructureDemo,
   onLoadResearchDemo,
   onLoadBatchDemo,
-  onLoadKnowledgeDemo,
   onLoadMaterialCompareDemo,
   onLoadSimilarityDemo,
   onLoadOptimizationDemo,
   onLoadHypothesisDemo,
   onLoadLatexDemo,
   onOpenLibrary,
-  onOpenKnowledge,
   onExportSessionZip,
   onMockAgentStream,
   onRunAgent,
@@ -80,7 +78,6 @@ export default function CommandPalette({
       onLoadStructureDemo,
       onLoadResearchDemo,
       onLoadBatchDemo,
-      onLoadKnowledgeDemo,
       onLoadMaterialCompareDemo,
       onLoadSimilarityDemo,
       onLoadOptimizationDemo,
@@ -95,7 +92,7 @@ export default function CommandPalette({
     // ("XRD: Run Phase Search") from the global palette without first
     // navigating into a workbench and opening Ctrl+K.
     ...buildCrossWorkbenchCommands(onClose),
-    ...buildWindowCommands({ onClose, onOpenLibrary, onOpenKnowledge }),
+    ...buildWindowCommands({ onClose, onOpenLibrary }),
     ...(canRunDomainCommand
       ? buildDomainAgentCommands({ onClose, onRunAgent })
       : []),

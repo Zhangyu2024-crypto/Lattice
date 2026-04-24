@@ -17,7 +17,6 @@ import {
   renderCurveAnalysis,
   renderHypothesis,
   renderJob,
-  renderKnowledgeGraph,
   renderLatexDocument,
   renderMaterialComparison,
   renderOptimization,
@@ -93,8 +92,6 @@ export function renderArtifactBody(
       return renderResearchReport(artifact, ctx)
     case 'batch':
       return renderBatch(artifact, ctx)
-    case 'knowledge-graph':
-      return renderKnowledgeGraph(artifact, ctx)
     case 'material-comparison':
       return renderMaterialComparison(artifact, ctx)
     case 'paper':

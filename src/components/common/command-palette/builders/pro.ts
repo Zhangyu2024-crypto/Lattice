@@ -51,18 +51,16 @@ export function buildProCommands({
 export interface WindowDeps {
   onClose: () => void
   onOpenLibrary: () => void
-  onOpenKnowledge: () => void
 }
 
 /**
- * "Open in separate window" entries for the Library and Knowledge tabs.
- * These sit between the cross-workbench bridges and the agent prompts so
- * users scanning the palette find all module entry points together.
+ * "Open in separate window" entries for the Library. Sits between the
+ * cross-workbench bridges and the agent prompts so users scanning the
+ * palette find all module entry points together.
  */
 export function buildWindowCommands({
   onClose,
   onOpenLibrary,
-  onOpenKnowledge,
 }: WindowDeps): Command[] {
   return [
     {
@@ -70,14 +68,6 @@ export function buildWindowCommands({
       label: 'Library: Open in separate window',
       action: () => {
         onOpenLibrary()
-        onClose()
-      },
-    },
-    {
-      id: 'open-knowledge',
-      label: 'Knowledge: Open in separate window',
-      action: () => {
-        onOpenKnowledge()
         onClose()
       },
     },

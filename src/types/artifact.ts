@@ -11,7 +11,6 @@ export type ArtifactKind =
   | 'job'
   | 'research-report'
   | 'batch'
-  | 'knowledge-graph'
   | 'material-comparison'
   | 'paper'
   | 'similarity-matrix'
@@ -1216,7 +1215,6 @@ export function isLatexDocumentArtifact(a: Artifact): a is LatexDocumentArtifact
 
 // ─── Still opaque (payload details live in each card's local types) ──
 export type ResearchReportArtifact = ArtifactBase<'research-report', OpaquePayload>
-export type KnowledgeGraphArtifact = ArtifactBase<'knowledge-graph', OpaquePayload>
 export type MaterialComparisonArtifact = ArtifactBase<'material-comparison', OpaquePayload>
 export type PaperArtifact = ArtifactBase<'paper', OpaquePayload>
 export type SimilarityMatrixArtifact = ArtifactBase<'similarity-matrix', OpaquePayload>
@@ -1361,7 +1359,6 @@ export type Artifact =
   | JobArtifact
   | ResearchReportArtifact
   | BatchArtifact
-  | KnowledgeGraphArtifact
   | MaterialComparisonArtifact
   | PaperArtifact
   | SimilarityMatrixArtifact
