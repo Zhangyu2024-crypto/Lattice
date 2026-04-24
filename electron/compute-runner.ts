@@ -300,6 +300,18 @@ if _plt is not None:
         _capture_figures()
     _plt.show = _show_intercept
 
+def lattice_progress(current, total):
+    """Emit a progress marker the UI parses into a progress bar.
+
+    Usage inside a compute script::
+
+        for i, strain in enumerate(strains):
+            lattice_progress(i + 1, len(strains))
+            run_cp2k(strain)
+    """
+    _sys.stdout.write(f"__LATTICE_PROGRESS__ {int(current)}/{int(total)}\\n")
+    _sys.stdout.flush()
+
 # -- User code below --
 `
 

@@ -133,6 +133,12 @@ export default function ComputeArtifactCard({
       {payload.runs && payload.runs.length > 0 && (
         <RunHistoryBar runs={payload.runs} />
       )}
+      {isRunning && payload.progress && (
+        <ComputeProgressBar
+          current={payload.progress.current}
+          total={payload.progress.total}
+        />
+      )}
       <div className="card-compute-main-split">
         <div className="card-compute-left">
           <CodeEditor value={code} onChange={setCode} />
@@ -358,6 +364,29 @@ function formatHistoryTime(iso: string): string {
   } catch {
     return iso
   }
+}
+
+function ComputeProgressBar({
+  current,
+  total,
+}: {
+  current: number
+  total: number
+}) {
+  const pct = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0
+  return (
+    <div className="card-compute-progress" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+      <div className="card-compute-progress-track">
+        <div
+          className="card-compute-progress-fill"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="card-compute-progress-label">
+        {current}/{total} ({pct}%)
+      </span>
+    </div>
+  )
 }
 
 function StatusChip({ status }: { status: ComputeStatus }) {

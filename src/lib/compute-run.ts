@@ -193,6 +193,20 @@ export async function cancelCompute(artifactId: string): Promise<boolean> {
 
 // ─── Internals ────────────────────────────────────────────────────────
 
+const PROGRESS_RE = /__LATTICE_PROGRESS__\s+(\d+)\/(\d+)/
+
+function parseProgress(
+  stdout: string,
+): { current: number; total: number } | undefined {
+  let last: { current: number; total: number } | undefined
+  let m: RegExpExecArray | null
+  const re = new RegExp(PROGRESS_RE, 'g')
+  while ((m = re.exec(stdout)) !== null) {
+    last = { current: parseInt(m[1], 10), total: parseInt(m[2], 10) }
+  }
+  return last
+}
+
 function scheduleFlush(active: ActiveRun): void {
   if (active.rafScheduled) return
   active.rafScheduled = true
@@ -203,6 +217,7 @@ function scheduleFlush(active: ActiveRun): void {
       payload: mergePayload(active.sessionId, active.artifactId, {
         stdout: active.stdout,
         stderr: active.stderr,
+        progress: parseProgress(active.stdout),
       }),
     } as never)
   })
@@ -239,6 +254,7 @@ function finalizeRun(active: ActiveRun, msg: ComputeExitEventPayload): void {
       status,
       durationMs: msg.durationMs,
       runId: null,
+      progress: undefined,
       runs: updateRunEntry(active.sessionId, active.artifactId, active.runId, {
         status,
         finishedAt: new Date().toISOString(),
