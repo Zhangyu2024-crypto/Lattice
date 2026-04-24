@@ -80,15 +80,17 @@ export default function ActivityBar({
       >
         <BookOpen {...iconProps} />
       </button>
-      <button
-        type="button"
-        className={`activity-btn ${computeOverlayOpen ? 'active' : ''}`}
-        onClick={onOpenCompute}
-        title="Compute"
-        aria-label="Compute"
-      >
-        <SquareTerminal {...iconProps} />
-      </button>
+      {false && (
+        <button
+          type="button"
+          className={`activity-btn ${computeOverlayOpen ? 'active' : ''}`}
+          onClick={onOpenCompute}
+          title="Compute"
+          aria-label="Compute"
+        >
+          <SquareTerminal {...iconProps} />
+        </button>
+      )}
       <button
         type="button"
         className={`activity-btn ${isActiveView('writing') ? 'active' : ''}`}
@@ -117,18 +119,20 @@ export default function ActivityBar({
 
       <div className="activity-bar-spacer" />
 
-      <button
-        type="button"
-        className="activity-btn"
-        onClick={() => {
-          void (window as unknown as { electronAPI?: { openDataManagerWindow?: () => Promise<unknown> } })
-            .electronAPI?.openDataManagerWindow?.()
-        }}
-        title="Data Management"
-        aria-label="Data Management"
-      >
-        <Database {...iconProps} />
-      </button>
+      {false && (
+        <button
+          type="button"
+          className="activity-btn"
+          onClick={() => {
+            void (window as unknown as { electronAPI?: { openDataManagerWindow?: () => Promise<unknown> } })
+              .electronAPI?.openDataManagerWindow?.()
+          }}
+          title="Data Management"
+          aria-label="Data Management"
+        >
+          <Database {...iconProps} />
+        </button>
+      )}
       <button
         type="button"
         className="activity-btn"
