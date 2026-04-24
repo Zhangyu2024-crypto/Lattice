@@ -236,12 +236,26 @@ const deepClone = <T>(value: T): T => {
 }
 
 const LATEX_LOG_TAIL_MAX_PERSIST = 16 * 1024
+const FIGURE_SENTINEL = '__LATTICE_FIGURES__'
 
 const pruneArtifactForPersist = (a: Artifact): Artifact => {
   if (a.kind === 'spectrum' && a.payload) {
     const payload = a.payload as unknown as { x: number[]; y: number[] }
     if (Array.isArray(payload.x) && payload.x.length > SPECTRUM_POINTS_MAX_PERSIST) {
       return { ...a, payload: { ...a.payload, x: [], y: [] } as typeof a.payload }
+    }
+  }
+  if (a.kind === 'compute' && a.payload) {
+    const stdout = (a.payload as { stdout?: string }).stdout
+    if (typeof stdout === 'string' && stdout.includes(FIGURE_SENTINEL)) {
+      const idx = stdout.lastIndexOf(FIGURE_SENTINEL)
+      return {
+        ...a,
+        payload: {
+          ...a.payload,
+          stdout: stdout.slice(0, idx).trimEnd(),
+        } as typeof a.payload,
+      }
     }
   }
   if (a.kind === 'latex-document' && a.payload) {
@@ -604,6 +618,31 @@ const backfillArtifact = (artifact: Artifact): Artifact => {
       : { ...artifact, payload: next as typeof artifact.payload }
   }
   return artifact
+}
+
+const stripComputeFigureSentinels = (session: Session): Session => {
+  if (!session.artifacts || typeof session.artifacts !== 'object') return session
+  let changed = false
+  const next: Record<ArtifactId, Artifact> = {}
+  for (const [id, a] of Object.entries(session.artifacts)) {
+    if (a.kind !== 'compute') { next[id] = a; continue }
+    const payload = a.payload as { stdout?: string; status?: string; runId?: string | null }
+    let patched = false
+    let nextPayload = { ...a.payload }
+    if (typeof payload.stdout === 'string' && payload.stdout.includes(FIGURE_SENTINEL)) {
+      const idx = payload.stdout.lastIndexOf(FIGURE_SENTINEL);
+      (nextPayload as { stdout: string }).stdout = payload.stdout.slice(0, idx).trimEnd()
+      patched = true
+    }
+    if (payload.status === 'running') {
+      (nextPayload as { status: string }).status = 'idle';
+      (nextPayload as { runId: string | null }).runId = null
+      patched = true
+    }
+    next[id] = patched ? { ...a, payload: nextPayload as typeof a.payload } : a
+    if (patched) changed = true
+  }
+  return changed ? { ...session, artifacts: next } : session
 }
 
 const backfillSessionArtifacts = (session: Session): Session => {
@@ -1738,9 +1777,9 @@ export const useRuntimeStore = create<SessionState>()(
     {
       name: 'lattice.session',
       // v5: compute-pro payload shape switched from `code + language + runs
-      // + chat` to `cells[]`. Bump forces the `migrate` function (which calls
-      // `backfillComputeProPayload`) to run on existing persisted sessions.
-      version: 5,
+      // v6: strip __LATTICE_FIGURES__ base64 blobs from compute stdout +
+      // reset stale 'running' status on hydration (orphaned by crash).
+      version: 6,
       storage: createJSONStorage(() => debouncedLocalStorage),
       partialize: (state) => ({
         sessions: Object.fromEntries(
@@ -1768,7 +1807,8 @@ export const useRuntimeStore = create<SessionState>()(
           )) {
             if (!raw || typeof raw !== 'object') continue
             try {
-              sessions[id] = backfillSessionArtifacts(raw as Session)
+              const migrated = backfillSessionArtifacts(raw as Session)
+              sessions[id] = stripComputeFigureSentinels(migrated)
             } catch (err) {
               // Preserve the session's data as-is rather than dropping it —
               // the mention layer will treat any peak without an id as

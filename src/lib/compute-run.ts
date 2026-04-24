@@ -208,6 +208,13 @@ function scheduleFlush(active: ActiveRun): void {
   })
 }
 
+const FIGURE_SENTINEL = '__LATTICE_FIGURES__'
+
+function stripFigureSentinel(raw: string): string {
+  const idx = raw.lastIndexOf(FIGURE_SENTINEL)
+  return idx >= 0 ? raw.slice(0, idx).trimEnd() : raw
+}
+
 function finalizeRun(active: ActiveRun, msg: ComputeExitEventPayload): void {
   const sessionStore = useRuntimeStore.getState()
   const status: ComputeArtifactPayload['status'] = msg.cancelled
@@ -225,7 +232,7 @@ function finalizeRun(active: ActiveRun, msg: ComputeExitEventPayload): void {
   }))
   sessionStore.patchArtifact(active.sessionId, active.artifactId, {
     payload: mergePayload(active.sessionId, active.artifactId, {
-      stdout: active.stdout,
+      stdout: stripFigureSentinel(active.stdout),
       stderr: stderrWithError,
       figures,
       exitCode: msg.exitCode,
