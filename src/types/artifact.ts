@@ -370,6 +370,11 @@ export interface ComputeArtifactPayload {
   /** Set while a run is in flight so Cancel knows which IPC runId to target. */
   runId?: string | null
   image?: string
+  /** Live progress parsed from `__LATTICE_PROGRESS__ current/total` stdout
+   *  lines. Updated on every RAF flush while status === 'running'; cleared
+   *  to undefined on run exit. Scripts emit markers via the injected
+   *  `lattice_progress(current, total)` helper. */
+  progress?: { current: number; total: number }
   /** Per-run archive trail. Newest first; capped to the last 20 entries
    *  UI-side. Only the most recent KEEP_RUNS_PER_ARTIFACT (3 by default)
    *  have an on-disk workdir — older entries' `workdir` may point at a
