@@ -1,5 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, Clock, FileText, Image as ImageIcon, Package, Play, Square } from 'lucide-react'
+import {
+  AlertCircle,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  FileText,
+  FolderOpen,
+  History,
+  Image as ImageIcon,
+  Package,
+  Play,
+  Square,
+} from 'lucide-react'
 import { EditorView, keymap, lineNumbers } from '@codemirror/view'
 import { EditorState } from '@codemirror/state'
 import { python } from '@codemirror/lang-python'
@@ -9,6 +21,7 @@ import type {
   Artifact,
   ComputeArtifactPayload,
   ComputeFigure,
+  ComputeRunEntry,
   ComputeStatus,
 } from '../../../types/artifact'
 import { useComputeConfigStore } from '../../../stores/compute-config-store'
@@ -108,6 +121,9 @@ export default function ComputeArtifactCard({
         onStop={handleStop}
         isRunning={isRunning}
       />
+      {payload.runs && payload.runs.length > 0 && (
+        <RunHistoryBar runs={payload.runs} />
+      )}
       <div className="card-compute-main-split">
         <div className="card-compute-left">
           <CodeEditor value={code} onChange={setCode} />
@@ -174,6 +190,100 @@ function TopBar({
       )}
     </div>
   )
+}
+
+/** Collapsible strip listing the last few runs of this artifact. Shows
+ *  only when `payload.runs` has any entries. Click a row's folder icon
+ *  to pop the archived workdir in the host file manager. */
+function RunHistoryBar({ runs }: { runs: ComputeRunEntry[] }) {
+  const [open, setOpen] = useState(false)
+  const latest = runs[0]
+  const count = runs.length
+
+  const handleOpen = async (workdir?: string) => {
+    if (!workdir) {
+      toast.warn('This run was not archived (older than retention window).')
+      return
+    }
+    const api = window.electronAPI
+    if (!api?.computeOpenWorkdir) {
+      toast.warn('Open-workdir needs the Electron desktop shell.')
+      return
+    }
+    const r = await api.computeOpenWorkdir(workdir)
+    if (!r.success) toast.error(r.error ?? 'Could not open workdir')
+  }
+
+  return (
+    <div className="card-compute-run-history">
+      <button
+        type="button"
+        className="card-compute-run-history-head"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+        <History size={11} />
+        <span>Run history</span>
+        <span className="card-compute-run-history-count">{count}</span>
+        {!open && latest && (
+          <span className="card-compute-run-history-latest">
+            latest: {formatRunSummary(latest)}
+          </span>
+        )}
+      </button>
+      {open && (
+        <ul className="card-compute-run-history-list">
+          {runs.slice(0, 8).map((r) => (
+            <li key={r.runId} className="card-compute-run-history-item">
+              <span className={`card-compute-run-history-dot card-compute-run-history-dot--${r.status}`} />
+              <span className="card-compute-run-history-time">
+                {formatHistoryTime(r.startedAt)}
+              </span>
+              <span className="card-compute-run-history-dur">
+                {formatDuration(r.durationMs)}
+              </span>
+              <span className="card-compute-run-history-exit">
+                exit {r.exitCode ?? (r.status === 'running' ? '—' : r.cancelled ? 'cancel' : '?')}
+              </span>
+              <button
+                type="button"
+                className="card-compute-run-history-open"
+                onClick={() => handleOpen(r.workdir)}
+                disabled={!r.workdir}
+                title={r.workdir ?? 'Workdir pruned (retention window)'}
+              >
+                <FolderOpen size={11} />
+              </button>
+            </li>
+          ))}
+          {runs.length > 8 && (
+            <li className="card-compute-run-history-more">
+              … {runs.length - 8} older entries (archived workdirs auto-pruned beyond the 3 most recent)
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function formatRunSummary(r: ComputeRunEntry): string {
+  if (r.status === 'running') return 'running…'
+  const exit = r.exitCode ?? (r.cancelled ? 'cancel' : '?')
+  return `exit ${exit} · ${formatDuration(r.durationMs)}`
+}
+
+function formatHistoryTime(iso: string): string {
+  try {
+    const d = new Date(iso)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const sameDay = d.toDateString() === new Date().toDateString()
+    if (sameDay) return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+    return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+  } catch {
+    return iso
+  }
 }
 
 function StatusChip({ status }: { status: ComputeStatus }) {

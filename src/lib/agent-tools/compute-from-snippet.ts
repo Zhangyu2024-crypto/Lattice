@@ -24,6 +24,18 @@ interface Output {
 
 const CODE_FENCE_RE = /```(?:python|lammps|cp2k|py)?\s*\n([\s\S]*?)\n```/i
 
+/** Compress a free-form customization instruction into a short artifact
+ *  title suffix. Keeps the user's intent visible even when the LLM
+ *  rewrite path fails silently — without this, a customized BaTiO3
+ *  template stays labeled "CP2K CELL_OPT (template)" instead of showing
+ *  the requested material. */
+function summarizeCustomization(raw: string): string {
+  const oneLine = raw.replace(/\s+/g, ' ').trim()
+  if (!oneLine) return ''
+  const MAX = 48
+  return oneLine.length <= MAX ? oneLine : `${oneLine.slice(0, MAX - 1)}…`
+}
+
 export const computeFromSnippetTool: LocalTool<Input, Output> = {
   name: 'compute_from_snippet',
   description:
@@ -65,11 +77,12 @@ export const computeFromSnippetTool: LocalTool<Input, Output> = {
     let code = snippet.code ?? ''
     const language = (snippet.language ?? 'python') as ComputeLanguage
 
-    if (input?.customizations?.trim()) {
+    const customization = input?.customizations?.trim() ?? ''
+    if (customization) {
       const prompt =
         `Modify the following ${language} script according to the instruction. ` +
         `Return ONLY the modified script in a code fence.\n\n` +
-        `### Instruction\n${input.customizations.trim()}\n\n` +
+        `### Instruction\n${customization}\n\n` +
         `### Script\n\`\`\`${language}\n${code}\n\`\`\``
       const llm = await sendLlmChat({
         mode: 'agent',
@@ -83,8 +96,13 @@ export const computeFromSnippetTool: LocalTool<Input, Output> = {
       }
     }
 
+    // When a customization was requested, surface it in the artifact
+    // title so the user doesn't mistake the starting-point snippet
+    // material (e.g. BaTiO3) for the material actually being computed.
+    const baseTitle = snippet.title ?? snippet.id ?? 'Compute'
+    const suffix = customization ? ` — ${summarizeCustomization(customization)}` : ''
     const artifact = createComputeArtifact(ctx.sessionId, {
-      title: snippet.title ?? snippet.id ?? 'Compute',
+      title: `${baseTitle}${suffix}`,
       code,
       language,
     })

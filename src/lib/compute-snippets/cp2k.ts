@@ -9,12 +9,15 @@ import type { ComputeSnippet } from '../../types/pro-api'
 export const CP2K_SNIPPETS: ComputeSnippet[] = [
   {
     id: 'cp2k_cell_opt',
-    title: 'CP2K CELL_OPT (BaTiO3)',
+    title: 'CP2K CELL_OPT (template)',
     name: 'CP2K CELL_OPT',
-    description: 'Cell + atomic relaxation for cubic BaTiO3.',
+    description:
+      'Cell + atomic relaxation scaffold. Shipped with a cubic BaTiO3 example cell — edit SUBSYS / CELL / COORD / KIND blocks for the target material, or pass a `customizations` hint (e.g. "use Si diamond structure") so the LLM rewrites it before creation.',
     category: 'DFT',
     language: 'cp2k',
-    code: `&GLOBAL
+    code: `! Template: cubic BaTiO3. Replace CELL / COORD / KIND blocks for
+! your target material before running.
+&GLOBAL
   PROJECT cell_opt
   RUN_TYPE CELL_OPT
 &END GLOBAL
@@ -82,9 +85,10 @@ export const CP2K_SNIPPETS: ComputeSnippet[] = [
   },
   {
     id: 'cp2k_md',
-    title: 'CP2K Ab Initio MD (NVT)',
+    title: 'CP2K Ab Initio MD (NVT, template)',
     name: 'CP2K AIMD (NVT)',
-    description: 'Born-Oppenheimer MD at constant temperature.',
+    description:
+      'Born-Oppenheimer MD at constant temperature. Example cell is cubic Si — override via SUBSYS / CELL / COORD / KIND or pass a `customizations` hint to have the LLM rewrite for a different material.',
     category: 'MD',
     language: 'cp2k',
     code: `&GLOBAL
@@ -154,9 +158,10 @@ export const CP2K_SNIPPETS: ComputeSnippet[] = [
   },
   {
     id: 'cp2k_band',
-    title: 'CP2K Band Structure (Si)',
+    title: 'CP2K Band Structure (template)',
     name: 'CP2K band structure',
-    description: 'Electronic band structure along a high-symmetry k-path.',
+    description:
+      'Electronic band structure along a high-symmetry k-path. Example cell is cubic Si (FCC k-path) — override SUBSYS + SPECIAL_POINTs or pass a `customizations` hint for a different material / k-path.',
     category: 'DFT',
     language: 'cp2k',
     code: `&GLOBAL

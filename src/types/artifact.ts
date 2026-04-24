@@ -338,6 +338,25 @@ export interface ComputeFigure {
 
 export type ComputeStatus = 'idle' | 'running' | 'succeeded' | 'failed' | 'cancelled'
 
+/** History entry for one execution of a compute artifact. Persisted on
+ *  `ComputeArtifactPayload.runs[]`; the N most recent (see
+ *  COMPUTE_RUN_HISTORY_LIMIT) are kept. Corresponds 1:1 to an archived
+ *  workdir under `<userData>/workspace/compute/<sid>/<aid>/run_.../`
+ *  when `workdir` is set. */
+export interface ComputeRunEntry {
+  runId: string
+  startedAt: string
+  finishedAt?: string
+  exitCode?: number | null
+  cancelled?: boolean
+  durationMs?: number
+  status: ComputeStatus
+  /** Absolute path to the archived workdir (script, stdout.log,
+   *  stderr.log, meta.json, anything the script wrote). Undefined when
+   *  archival was skipped or failed. */
+  workdir?: string
+}
+
 export interface ComputeArtifactPayload {
   language: 'python' | 'lammps' | 'cp2k' | 'shell'
   code: string
@@ -351,6 +370,11 @@ export interface ComputeArtifactPayload {
   /** Set while a run is in flight so Cancel knows which IPC runId to target. */
   runId?: string | null
   image?: string
+  /** Per-run archive trail. Newest first; capped to the last 20 entries
+   *  UI-side. Only the most recent KEEP_RUNS_PER_ARTIFACT (3 by default)
+   *  have an on-disk workdir — older entries' `workdir` may point at a
+   *  pruned directory, so UI should check existence before opening. */
+  runs?: ComputeRunEntry[]
 }
 
 export type ComputeArtifact = ArtifactBase<'compute', ComputeArtifactPayload>
