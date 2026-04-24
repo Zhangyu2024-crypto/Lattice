@@ -5809,8 +5809,8 @@
   gap: 2px;
 }
 
+.artifact-db-row-open,
 .artifact-db-row-remove {
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -5825,8 +5825,17 @@
   transition: opacity 80ms ease;
 }
 
+.artifact-db-row-open { margin-left: auto; }
+.artifact-db-row-remove { margin-left: 0; }
+
+.artifact-db-row:hover .artifact-db-row-open,
 .artifact-db-row:hover .artifact-db-row-remove {
   opacity: 1;
+}
+
+.artifact-db-row-open:hover {
+  color: var(--color-text-primary);
+  background: color-mix(in srgb, var(--color-text-primary) 10%, transparent);
 }
 
 .artifact-db-row-remove:hover {
