@@ -193,15 +193,31 @@ export async function cancelCompute(artifactId: string): Promise<boolean> {
 
 // ─── Internals ────────────────────────────────────────────────────────
 
-const PROGRESS_RE = /__LATTICE_PROGRESS__\s+(\d+)\/(\d+)/
+// Two progress patterns, both parsed:
+//   1. Explicit sentinel: `__LATTICE_PROGRESS__ 4/11`  (from lattice_progress() helper)
+//   2. Natural bracket:   `[4/11]`                      (agent scripts often print this)
+// The sentinel takes priority (searched last → wins). Bracket format is a
+// heuristic fallback so existing scripts get a free progress bar without
+// calling the helper. Only `[N/M]` at the START of a line is matched to
+// avoid false positives on e.g. array indices in the middle of output.
+const SENTINEL_RE = /__LATTICE_PROGRESS__\s+(\d+)\/(\d+)/g
+const BRACKET_RE  = /^\[(\d+)\/(\d+)\]/gm
 
 function parseProgress(
   stdout: string,
 ): { current: number; total: number } | undefined {
   let last: { current: number; total: number } | undefined
   let m: RegExpExecArray | null
-  const re = new RegExp(PROGRESS_RE, 'g')
-  while ((m = re.exec(stdout)) !== null) {
+  // First pass: bracket pattern (lower priority)
+  BRACKET_RE.lastIndex = 0
+  while ((m = BRACKET_RE.exec(stdout)) !== null) {
+    const cur = parseInt(m[1], 10)
+    const tot = parseInt(m[2], 10)
+    if (tot > 0 && cur <= tot) last = { current: cur, total: tot }
+  }
+  // Second pass: explicit sentinel (overrides bracket if present)
+  SENTINEL_RE.lastIndex = 0
+  while ((m = SENTINEL_RE.exec(stdout)) !== null) {
     last = { current: parseInt(m[1], 10), total: parseInt(m[2], 10) }
   }
   return last
