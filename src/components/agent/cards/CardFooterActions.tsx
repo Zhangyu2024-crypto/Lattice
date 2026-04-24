@@ -132,10 +132,10 @@ export default function CardFooterActions({ step, sessionId, artifact }: Props) 
             void useArtifactDbStore
               .getState()
               .bookmarkArtifact(artifact, session.id, session.title)
-              .then(() => toast.success('Bookmarked to database'))
+              .then(() => toast.success('Bookmarked'))
               .catch(() => toast.error('Failed to bookmark'))
           }}
-          title="Save to artifact database"
+          title="Save to bookmarks"
         >
           <Bookmark size={11} aria-hidden />
           Bookmark

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import {
   Bookmark,
+  ExternalLink,
   FileText,
   FolderOpen,
   PanelLeftClose,
@@ -13,7 +14,10 @@ import {
   useArtifactDbStore,
   queryDbEntries,
 } from '../../../stores/artifact-db-store'
+import { useRuntimeStore } from '../../../stores/runtime-store'
+import { useModalStore } from '../../../stores/modal-store'
 import { toast } from '../../../stores/toast-store'
+import { WORKBENCH_ARTIFACT_KINDS } from '../../agent/cards/preview-registry'
 import type { DbIndexEntry } from '../../../types/artifact-db'
 import type { ArtifactKind } from '../../../types/artifact'
 
@@ -68,17 +72,40 @@ export default function ArtifactDbSidebarView({ onCollapseSidebar }: Props) {
 
   const handleRemove = useCallback(
     (id: string) => {
-      void removeEntry(id).then(() => toast.info('Removed from database'))
+      void removeEntry(id).then(() => toast.info('Removed'))
     },
     [removeEntry],
   )
+
+  const handleOpen = useCallback(async (entry: DbIndexEntry) => {
+    const full = await useArtifactDbStore.getState().getFullEntry(entry.id)
+    if (!full) {
+      toast.error('Bookmark data not found')
+      return
+    }
+    const { sessionId, artifactId } = full.source
+    const runtime = useRuntimeStore.getState()
+    const sessionExists = sessionId in runtime.sessions
+    if (!sessionExists) {
+      toast.error('Source session no longer available')
+      return
+    }
+    runtime.setActiveSession(sessionId)
+    runtime.focusArtifact(sessionId, artifactId)
+    const isPro = WORKBENCH_ARTIFACT_KINDS.has(entry.sourceArtifactKind)
+    if (isPro && window.electronAPI?.openWorkbenchWindow) {
+      void window.electronAPI.openWorkbenchWindow({ sessionId, artifactId })
+    } else {
+      useModalStore.getState().setArtifactOverlay({ sessionId, artifactId })
+    }
+  }, [])
 
   return (
     <div className="sidebar-space-view">
       <div className="sidebar-header is-split">
         <span>
           <Bookmark size={13} style={{ marginRight: 6, verticalAlign: -2 }} />
-          Artifact Database
+          Bookmarks
         </span>
         <div className="sidebar-header-actions">
           {onCollapseSidebar ? (
@@ -231,6 +258,7 @@ export default function ArtifactDbSidebarView({ onCollapseSidebar }: Props) {
                   entry.id === selectedEntryId ? null : entry.id,
                 )
               }
+              onOpen={() => void handleOpen(entry)}
               onRemove={() => handleRemove(entry.id)}
             />
           ))
@@ -244,11 +272,13 @@ function DbEntryRow({
   entry,
   isSelected,
   onSelect,
+  onOpen,
   onRemove,
 }: {
   entry: DbIndexEntry
   isSelected: boolean
   onSelect: () => void
+  onOpen: () => void
   onRemove: () => void
 }) {
   const kindLabel = KIND_ICON_LABEL[entry.sourceArtifactKind] ?? entry.sourceArtifactKind
@@ -260,7 +290,11 @@ function DbEntryRow({
   return (
     <div
       className={`artifact-db-row ${isSelected ? 'is-selected' : ''}`}
-      onClick={onSelect}
+      onClick={onOpen}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        onSelect()
+      }}
       role="button"
       tabIndex={0}
     >
@@ -292,12 +326,23 @@ function DbEntryRow({
         ) : null}
         <button
           type="button"
+          className="artifact-db-row-open"
+          onClick={(e) => {
+            e.stopPropagation()
+            onOpen()
+          }}
+          title="Open in workbench"
+        >
+          <ExternalLink size={10} />
+        </button>
+        <button
+          type="button"
           className="artifact-db-row-remove"
           onClick={(e) => {
             e.stopPropagation()
             onRemove()
           }}
-          title="Remove from database"
+          title="Remove"
         >
           <Trash2 size={10} />
         </button>

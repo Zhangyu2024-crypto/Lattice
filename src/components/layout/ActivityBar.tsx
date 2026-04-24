@@ -113,8 +113,8 @@ export default function ActivityBar({
         type="button"
         className={`activity-btn ${isActiveView('artifact-db') ? 'active' : ''}`}
         onClick={() => onSelectView('artifact-db')}
-        title="Artifact Database"
-        aria-label="Artifact Database"
+        title="Bookmarks"
+        aria-label="Bookmarks"
       >
         <Bookmark {...iconProps} />
       </button>
