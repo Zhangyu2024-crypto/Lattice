@@ -91,21 +91,23 @@ export default function ActivityBar({
           <SquareTerminal {...iconProps} />
         </button>
       )}
-      <button
-        type="button"
-        className={`activity-btn ${isActiveView('writing') ? 'active' : ''}`}
-        onClick={() => {
-          if (onOpenWritingWindow) {
-            onOpenWritingWindow()
-            return
-          }
-          onSelectView('writing')
-        }}
-        title="Creator"
-        aria-label="Creator"
-      >
-        <Feather {...iconProps} />
-      </button>
+      {false && (
+        <button
+          type="button"
+          className={`activity-btn ${isActiveView('writing') ? 'active' : ''}`}
+          onClick={() => {
+            if (onOpenWritingWindow) {
+              onOpenWritingWindow()
+              return
+            }
+            onSelectView('writing')
+          }}
+          title="Creator"
+          aria-label="Creator"
+        >
+          <Feather {...iconProps} />
+        </button>
+      )}
 
       <button
         type="button"
