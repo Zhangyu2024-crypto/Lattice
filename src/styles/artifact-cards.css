@@ -3618,6 +3618,141 @@
   background: var(--color-border);
 }
 
+/* === ComputeArtifactCard · run history strip ================== */
+
+.card-compute-run-history {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-sidebar);
+  font-size: var(--text-xs);
+}
+
+.card-compute-run-history-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: transparent;
+  border: 0;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
+}
+
+.card-compute-run-history-head:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.card-compute-run-history-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--color-bg-active);
+  font-size: var(--text-xxs);
+  font-family: var(--font-mono);
+  color: var(--color-text-muted);
+}
+
+.card-compute-run-history-latest {
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+}
+
+.card-compute-run-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.card-compute-run-history-item {
+  display: grid;
+  grid-template-columns: 10px 1fr auto auto 22px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 22px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+  color: var(--color-text-secondary);
+}
+
+.card-compute-run-history-item:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.card-compute-run-history-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+}
+.card-compute-run-history-dot--running {
+  background: color-mix(in srgb, var(--color-text-primary) 70%, transparent);
+  animation: card-compute-run-history-pulse 1.4s ease-in-out infinite;
+}
+.card-compute-run-history-dot--succeeded { background: #7fb37f; }
+.card-compute-run-history-dot--failed    { background: #c07878; }
+.card-compute-run-history-dot--cancelled { background: var(--color-text-muted); }
+.card-compute-run-history-dot--idle      { background: var(--color-border); }
+
+@keyframes card-compute-run-history-pulse {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
+
+.card-compute-run-history-time {
+  color: var(--color-text-secondary);
+}
+
+.card-compute-run-history-dur,
+.card-compute-run-history-exit {
+  color: var(--color-text-muted);
+}
+
+.card-compute-run-history-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.card-compute-run-history-open:hover:not(:disabled) {
+  background: var(--color-bg-active);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
+
+.card-compute-run-history-open:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.card-compute-run-history-more {
+  padding: 4px 10px 4px 22px;
+  font-size: var(--text-xxs);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
 /* === PeakFitArtifactCard === */
 
 .card-peak-fit-root {

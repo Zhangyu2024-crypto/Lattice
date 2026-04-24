@@ -264,6 +264,12 @@ export interface ComputeRunRequestPayload {
     cpuCores?: number
     ompThreads?: number | 'auto'
   }
+  /** Optional session + artifact identifiers. When both are supplied,
+   *  the runner archives this run under
+   *  `<userData>/workspace/compute/<sid>/<aid>/run_.../` and includes
+   *  the absolute `workdir` path in the exit event. */
+  sessionId?: string
+  artifactId?: string
 }
 
 export type ComputeRunAckPayload =
@@ -303,6 +309,9 @@ export interface ComputeExitEventPayload {
   durationMs: number
   cancelled: boolean
   error?: string
+  /** Absolute path to this run's archived workdir. Absent when the run
+   *  was programmatic (no sessionId/artifactId) or archival failed. */
+  workdir?: string
 }
 
 // ─── Compute scripts (P1: ComputeProWorkbench self-contained migration) ───
@@ -783,6 +792,12 @@ declare global {
       computeTestConnection: (
         request: ComputeTestRequestPayload,
       ) => Promise<ComputeTestResultPayload>
+      /** Open an archived compute run's workdir in the host file
+       *  manager (Finder / Explorer / xdg-open). Rejects paths outside
+       *  `<userData>/workspace/compute/`. */
+      computeOpenWorkdir: (
+        workdir: string,
+      ) => Promise<{ success: boolean; error?: string }>
       computeScriptsSave: (
         request: ComputeScriptsSaveRequestPayload,
       ) => Promise<ComputeScriptsSaveResultPayload>

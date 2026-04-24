@@ -19,7 +19,10 @@ import { toast } from '../stores/toast-store'
 import type {
   ComputeArtifactPayload,
   ComputeFigure,
+  ComputeRunEntry,
 } from '../types/artifact'
+
+const RUN_HISTORY_LIMIT = 20
 import type {
   ComputeExitEventPayload,
   ComputeRunRequestPayload,
@@ -81,6 +84,16 @@ export async function runCompute(args: {
   const artifactLanguage =
     (artifact?.payload as { language?: string } | undefined)?.language ?? 'python'
 
+  // Prepend a fresh history entry so the UI can show "running…" in the
+  // history list from the moment Run is clicked. `finalizeRun` upgrades
+  // this entry in-place with exit info + the archived workdir path.
+  const startedAt = new Date().toISOString()
+  const pendingEntry: ComputeRunEntry = {
+    runId,
+    startedAt,
+    status: 'running',
+  }
+
   // Pre-patch: mark artifact as running and clear previous results.
   sessionStore.patchArtifact(args.sessionId, args.artifactId, {
     payload: mergePayload(args.sessionId, args.artifactId, {
@@ -92,6 +105,7 @@ export async function runCompute(args: {
       durationMs: undefined,
       runId,
       image: 'native',
+      runs: prependRunEntry(args.sessionId, args.artifactId, pendingEntry),
     }),
   } as never)
 
@@ -138,6 +152,11 @@ export async function runCompute(args: {
       cpuCores: config.resources.cpuCores,
       ompThreads: config.resources.ompThreads,
     },
+    // Identifiers so the main-process runner archives this execution
+    // under `<userData>/workspace/compute/<sid>/<aid>/run_.../` and
+    // includes the absolute workdir path in the exit event.
+    sessionId: args.sessionId,
+    artifactId: args.artifactId,
   }
 
   const ack = await electron.computeRun(request)
@@ -213,6 +232,14 @@ function finalizeRun(active: ActiveRun, msg: ComputeExitEventPayload): void {
       status,
       durationMs: msg.durationMs,
       runId: null,
+      runs: updateRunEntry(active.sessionId, active.artifactId, active.runId, {
+        status,
+        finishedAt: new Date().toISOString(),
+        exitCode: msg.exitCode,
+        cancelled: msg.cancelled,
+        durationMs: msg.durationMs,
+        ...(msg.workdir ? { workdir: msg.workdir } : {}),
+      }),
     }),
   } as never)
   tearDown(active)
@@ -263,6 +290,42 @@ function mergePayload(
   const artifact = session?.artifacts[artifactId]
   const current = (artifact?.payload ?? {}) as ComputeArtifactPayload
   return { ...current, ...patch }
+}
+
+/** Prepend a history entry, trimming to RUN_HISTORY_LIMIT. Caller is
+ *  responsible for writing the returned array back via patchArtifact. */
+function prependRunEntry(
+  sessionId: string,
+  artifactId: string,
+  entry: ComputeRunEntry,
+): ComputeRunEntry[] {
+  const current = mergePayload(sessionId, artifactId, {}).runs ?? []
+  return [entry, ...current].slice(0, RUN_HISTORY_LIMIT)
+}
+
+/** Merge exit-time fields onto the pending entry matched by runId (or
+ *  append a new one if somehow absent). Preserves ordering of the rest
+ *  of the array. */
+function updateRunEntry(
+  sessionId: string,
+  artifactId: string,
+  runId: string,
+  patch: Partial<ComputeRunEntry>,
+): ComputeRunEntry[] {
+  const current = mergePayload(sessionId, artifactId, {}).runs ?? []
+  const idx = current.findIndex((e) => e.runId === runId)
+  if (idx < 0) {
+    const fallback: ComputeRunEntry = {
+      runId,
+      startedAt: new Date().toISOString(),
+      status: 'idle',
+      ...patch,
+    }
+    return [fallback, ...current].slice(0, RUN_HISTORY_LIMIT)
+  }
+  const next = current.slice()
+  next[idx] = { ...next[idx], ...patch }
+  return next
 }
 
 function formatMs(ms: number): string {

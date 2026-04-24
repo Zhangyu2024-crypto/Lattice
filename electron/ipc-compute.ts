@@ -1,4 +1,6 @@
-import { ipcMain, type BrowserWindow } from 'electron'
+import fs from 'node:fs'
+import path from 'node:path'
+import { app, ipcMain, shell, type BrowserWindow } from 'electron'
 import {
   ComputeRunnerManager,
   type ComputeLanguage,
@@ -88,6 +90,12 @@ export function registerComputeIpc(getWindow: () => BrowserWindow | null): Compu
       language: raw.language,
       context: asContext(raw.context),
       resources: asResources(raw.resources),
+      ...(typeof raw.sessionId === 'string' && raw.sessionId
+        ? { sessionId: raw.sessionId }
+        : {}),
+      ...(typeof raw.artifactId === 'string' && raw.artifactId
+        ? { artifactId: raw.artifactId }
+        : {}),
     }
     return manager!.run(normalised)
   })
@@ -108,6 +116,27 @@ export function registerComputeIpc(getWindow: () => BrowserWindow | null): Compu
     }
     const raw = req as ComputeTestRequest
     return manager!.testConnection({ mode: raw.mode }, { force: true })
+  })
+
+  // Open an archived compute workdir in the host file manager (Finder
+  // / Explorer / xdg-open). Safety: reject any path that isn't under
+  // the managed `<userData>/workspace/compute/` root so the renderer
+  // can't abuse this IPC to pop up arbitrary folders.
+  ipcMain.handle('compute:open-workdir', async (_event, target: unknown) => {
+    if (typeof target !== 'string' || !target) {
+      return { success: false, error: 'missing workdir path' }
+    }
+    const resolved = path.resolve(target)
+    const root = path.resolve(app.getPath('userData'), 'workspace', 'compute')
+    if (!resolved.startsWith(root + path.sep) && resolved !== root) {
+      return { success: false, error: 'path outside compute workspace' }
+    }
+    if (!fs.existsSync(resolved)) {
+      return { success: false, error: 'workdir no longer exists (pruned?)' }
+    }
+    const err = await shell.openPath(resolved)
+    if (err) return { success: false, error: err }
+    return { success: true }
   })
 
   return manager

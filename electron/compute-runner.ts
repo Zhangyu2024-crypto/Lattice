@@ -15,7 +15,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import type { BrowserWindow } from 'electron'
+import { app, type BrowserWindow } from 'electron'
 import { execPipe } from './exec-helpers'
 import { COMPUTE_RUN_CHANNELS } from './compute-constants'
 import {
@@ -26,6 +26,87 @@ import {
   writeTempInput,
   cleanupTempInput,
 } from './conda-env-manager'
+
+// Per-artifact workdir retention. Runs older than this many are pruned
+// from disk on the next run (keeps `~/.config/lattice-app/workspace/`
+// from growing unbounded). The metadata entry stays in the artifact's
+// `runs[]` until that's explicitly trimmed UI-side.
+const KEEP_RUNS_PER_ARTIFACT = 3
+
+function sanitizePathSegment(s: string): string {
+  // Session IDs / artifact IDs can contain '/', ':', etc. Keep the shape
+  // human-readable but path-safe.
+  return s.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80) || 'unknown'
+}
+
+function formatTimestampForFilename(d: Date): string {
+  const pad = (n: number, w = 2) => String(n).padStart(w, '0')
+  return (
+    `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_` +
+    `${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
+  )
+}
+
+/** Root under Electron userData for archived compute runs. Organized as
+ *  `<root>/<sessionId>/<artifactId>/run_<ts>_<runIdTail>/`. */
+function computeWorkspaceRoot(): string {
+  return path.join(app.getPath('userData'), 'workspace', 'compute')
+}
+
+function allocateRunWorkdir(
+  sessionId: string,
+  artifactId: string,
+  runId: string,
+  startedAt: Date,
+): string {
+  const root = computeWorkspaceRoot()
+  const sid = sanitizePathSegment(sessionId)
+  const aid = sanitizePathSegment(artifactId)
+  const ts = formatTimestampForFilename(startedAt)
+  const tail = runId.slice(-6)
+  const dir = path.join(root, sid, aid, `run_${ts}_${tail}`)
+  fs.mkdirSync(dir, { recursive: true })
+  return dir
+}
+
+/** Prune older workdirs under this artifact so disk usage stays bounded.
+ *  Keeps the `KEEP_RUNS_PER_ARTIFACT` most recent; directories whose
+ *  names don't start with `run_` are left alone. Silent on errors (best
+ *  effort — a failed prune must never block a new run). */
+function pruneArtifactWorkdirs(
+  sessionId: string,
+  artifactId: string,
+): void {
+  try {
+    const base = path.join(
+      computeWorkspaceRoot(),
+      sanitizePathSegment(sessionId),
+      sanitizePathSegment(artifactId),
+    )
+    if (!fs.existsSync(base)) return
+    const entries = fs
+      .readdirSync(base, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && e.name.startsWith('run_'))
+      .map((e) => ({
+        name: e.name,
+        path: path.join(base, e.name),
+        mtimeMs: fs.statSync(path.join(base, e.name)).mtimeMs,
+      }))
+      .sort((a, b) => b.mtimeMs - a.mtimeMs)
+    for (const stale of entries.slice(KEEP_RUNS_PER_ARTIFACT)) {
+      fs.rmSync(stale.path, { recursive: true, force: true })
+    }
+  } catch {
+    /* best effort */
+  }
+}
+
+const SCRIPT_FILENAME_BY_LANG: Record<ComputeLanguage, string> = {
+  python: 'script.py',
+  cp2k: 'input.inp',
+  lammps: 'input.in',
+  shell: 'script.sh',
+}
 
 export type ComputeMode = 'native' | 'disabled'
 export type ComputeLanguage = 'python' | 'lammps' | 'cp2k' | 'shell'
@@ -51,6 +132,12 @@ export interface ComputeRunRequest {
     cpuCores?: number
     ompThreads?: number | 'auto'
   }
+  /** Session + artifact identifiers so the runner can archive this run
+   *  under `<userData>/workspace/compute/<sid>/<aid>/run_.../`. When
+   *  either is absent, falls back to os.tmpdir() and skips archival
+   *  (kept for back-compat with older call sites). */
+  sessionId?: string
+  artifactId?: string
 }
 
 export interface ComputeFigurePayload {
@@ -75,6 +162,10 @@ export interface ComputeExitEvent {
   durationMs: number
   cancelled: boolean
   error?: string
+  /** Absolute path to this run's archived workdir (script, stdout.log,
+   *  stderr.log, meta.json, plus anything the script wrote under
+   *  LATTICE_WORKDIR). Absent when archival was skipped. */
+  workdir?: string
 }
 
 export interface ComputeTestRequest {
@@ -97,9 +188,18 @@ interface ActiveRun {
   proc: ChildProcessWithoutNullStreams
   cancelled: boolean
   startedAt: number
+  startedAtIso: string
   stdoutBuf: string
   timeoutHandle: NodeJS.Timeout | null
   tempInputFile: string | null
+  /** When present, this run is archived to disk. Streams below mirror
+   *  stdout/stderr to `stdout.log` / `stderr.log` inside the workdir. */
+  workdir: string | null
+  stdoutFile: fs.WriteStream | null
+  stderrFile: fs.WriteStream | null
+  language: ComputeLanguage
+  sessionId: string | null
+  artifactId: string | null
 }
 
 const STREAM_CHANNEL_STDOUT = COMPUTE_RUN_CHANNELS.STDOUT
@@ -282,8 +382,53 @@ export class ComputeRunnerManager {
     }
 
     const ctx = req.context ?? {}
-    const workdir = (ctx.workdir && ctx.workdir.trim()) || os.tmpdir()
-    const nativeEnv = buildCondaSpawnEnv(buildNativeEnvRecord(ctx, req.resources))
+
+    // Decide between "archived" mode (sessionId + artifactId supplied →
+    // per-run workdir under userData, retained with a short history) and
+    // back-compat tmpdir mode. Archiving is the default for UI-triggered
+    // runs; programmatic back-compat callers fall through to os.tmpdir().
+    let archivedWorkdir: string | null = null
+    const startedDate = new Date()
+    if (req.sessionId && req.artifactId) {
+      try {
+        archivedWorkdir = allocateRunWorkdir(
+          req.sessionId,
+          req.artifactId,
+          req.runId,
+          startedDate,
+        )
+        // Prune older runs for the same artifact after the new one is
+        // allocated — ordering matters so we never delete the slot we
+        // just created.
+        pruneArtifactWorkdirs(req.sessionId, req.artifactId)
+      } catch (err) {
+        // Archival failure must not block the run; log and fall through.
+        const msg = err instanceof Error ? err.message : String(err)
+        this.getWindow()?.webContents.send(STREAM_CHANNEL_STDERR, {
+          runId: req.runId,
+          chunk: `[lattice] could not allocate workdir (${msg}); running without archival\n`,
+        })
+        archivedWorkdir = null
+      }
+    }
+    const workdir =
+      archivedWorkdir ?? ((ctx.workdir && ctx.workdir.trim()) || os.tmpdir())
+
+    const nativeEnv = buildCondaSpawnEnv(
+      buildNativeEnvRecord({ ...ctx, workdir }, req.resources),
+    )
+
+    // Persist the script into the workdir so a user browsing the
+    // archived directory later can re-run exactly what the subprocess
+    // saw — the agent's in-canvas copy can drift or be edited afterward.
+    if (archivedWorkdir) {
+      const scriptFilename = SCRIPT_FILENAME_BY_LANG[language] ?? 'script.txt'
+      try {
+        fs.writeFileSync(path.join(archivedWorkdir, scriptFilename), req.code, 'utf8')
+      } catch {
+        /* non-fatal */
+      }
+    }
 
     let proc: ChildProcessWithoutNullStreams
     let payload: string
@@ -356,50 +501,114 @@ export class ComputeRunnerManager {
       return { success: false, error: `Unsupported language: ${language}` }
     }
 
+    // Open log files inside the archived workdir. stdout is double-written
+    // (both streamed to renderer for live display AND persisted here for
+    // later browsing). We intentionally persist the *raw* stdout including
+    // the figure sentinel — debuggability beats prettiness.
+    let stdoutFile: fs.WriteStream | null = null
+    let stderrFile: fs.WriteStream | null = null
+    if (archivedWorkdir) {
+      try {
+        stdoutFile = fs.createWriteStream(
+          path.join(archivedWorkdir, 'stdout.log'),
+        )
+        stderrFile = fs.createWriteStream(
+          path.join(archivedWorkdir, 'stderr.log'),
+        )
+      } catch {
+        stdoutFile?.close()
+        stderrFile?.close()
+        stdoutFile = null
+        stderrFile = null
+      }
+    }
+
     const active: ActiveRun = {
       proc,
       cancelled: false,
-      startedAt: Date.now(),
+      startedAt: startedDate.getTime(),
+      startedAtIso: startedDate.toISOString(),
       stdoutBuf: '',
       timeoutHandle: null,
       tempInputFile,
+      workdir: archivedWorkdir,
+      stdoutFile,
+      stderrFile,
+      language,
+      sessionId: req.sessionId ?? null,
+      artifactId: req.artifactId ?? null,
     }
     this.runs.set(req.runId, active)
 
     // Buffer stdout so we can scan for the figure sentinel on exit,
     // but stream it to the renderer as it arrives so live `print()`
-    // output is visible in real time.
+    // output is visible in real time. When archiving, also mirror each
+    // chunk into stdout.log / stderr.log.
     proc.stdout.setEncoding('utf8')
     proc.stdout.on('data', (chunk: string) => {
       active.stdoutBuf += chunk
+      active.stdoutFile?.write(chunk)
       const msg: ComputeStreamChunk = { runId: req.runId, chunk }
       this.getWindow()?.webContents.send(STREAM_CHANNEL_STDOUT, msg)
     })
 
     proc.stderr.setEncoding('utf8')
     proc.stderr.on('data', (chunk: string) => {
+      active.stderrFile?.write(chunk)
       const msg: ComputeStreamChunk = { runId: req.runId, chunk }
       this.getWindow()?.webContents.send(STREAM_CHANNEL_STDERR, msg)
     })
 
     proc.on('error', (err) => {
-      const msg: ComputeStreamChunk = {
-        runId: req.runId,
-        chunk: `\n[spawn error] ${err.message}\n`,
-      }
+      const note = `\n[spawn error] ${err.message}\n`
+      active.stderrFile?.write(note)
+      const msg: ComputeStreamChunk = { runId: req.runId, chunk: note }
       this.getWindow()?.webContents.send(STREAM_CHANNEL_STDERR, msg)
     })
 
     proc.on('exit', (exitCode) => {
       if (active.timeoutHandle) clearTimeout(active.timeoutHandle)
       if (active.tempInputFile) cleanupTempInput(active.tempInputFile)
+      const finishedAt = Date.now()
+      const durationMs = finishedAt - active.startedAt
       const { figures } = parseFigures(active.stdoutBuf, language === 'python')
+      // Close log files before writing meta.json so readers see complete
+      // logs and the meta file as a finalization marker.
+      active.stdoutFile?.end()
+      active.stderrFile?.end()
+      active.stdoutFile = null
+      active.stderrFile = null
+      if (active.workdir) {
+        try {
+          const meta = {
+            runId: req.runId,
+            sessionId: active.sessionId,
+            artifactId: active.artifactId,
+            language: active.language,
+            startedAt: active.startedAtIso,
+            finishedAt: new Date(finishedAt).toISOString(),
+            durationMs,
+            exitCode,
+            cancelled: active.cancelled,
+            figureCount: figures.length,
+            workdir: active.workdir,
+          }
+          fs.writeFileSync(
+            path.join(active.workdir, 'meta.json'),
+            JSON.stringify(meta, null, 2),
+            'utf8',
+          )
+        } catch {
+          /* best effort */
+        }
+      }
       const exit: ComputeExitEvent = {
         runId: req.runId,
         exitCode,
         figures,
-        durationMs: Date.now() - active.startedAt,
+        durationMs,
         cancelled: active.cancelled,
+        ...(active.workdir ? { workdir: active.workdir } : {}),
       }
       this.getWindow()?.webContents.send(STREAM_CHANNEL_EXIT, exit)
       this.runs.delete(req.runId)

@@ -67,6 +67,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('compute:cancel', runId),
   computeTestConnection: (request: unknown) =>
     ipcRenderer.invoke('compute:test-connection', request),
+  computeOpenWorkdir: (workdir: string) =>
+    ipcRenderer.invoke('compute:open-workdir', workdir),
   computeScriptsSave: (request: unknown) =>
     ipcRenderer.invoke('compute-scripts:save', request),
   computeScriptsList: () => ipcRenderer.invoke('compute-scripts:list'),
