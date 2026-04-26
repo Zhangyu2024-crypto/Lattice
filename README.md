@@ -172,42 +172,81 @@ Lattice runs entirely on your machine in three coordinated processes:
 
 ## Getting Started
 
-### Prerequisites
-- Node.js ≥ 18
-- Python ≥ 3.10 (for the worker process)
-- Docker (optional, for the compute workbench)
+### 1. System requirements
 
-### Install
+| Tool | Version | Required for |
+|------|---------|--------------|
+| **Node.js** | ≥ 18 | Renderer + Electron main process |
+| **npm** | ≥ 9 | Package manager (bundled with Node) |
+| **Python** | ≥ 3.10 | Scientific worker (XRD / XPS / Raman / RAG / PDF) |
+| **pip** | latest | Python package manager |
+| **Docker** | ≥ 20.10 | *(Optional)* Compute workbench (Python / LAMMPS / CP2K) |
+| **Git LFS** | — | Not required — large data fetched via `npm run setup` |
+
+### 2. Clone & install
 
 ```bash
-# Clone
+# Clone the repository
 git clone https://github.com/Zhangyu2024-crypto/Lattice.git
 cd Lattice
 
-# Node dependencies
+# Install Node dependencies (React, Electron, ECharts, 3Dmol, etc.)
 npm install
 
-# One-time download of large data assets (~784 MB)
-npm run setup
-
-# Python worker dependencies (optional — only if running worker locally)
+# Install Python worker dependencies (numpy, scipy, scikit-learn, pdfplumber, dara-xrd)
 pip install -r worker/requirements.txt
+
+# Download large data assets (~784 MB Materials Project XRD database)
+npm run setup
 ```
 
-### Run
+> **Tip:** use a virtual environment for Python dependencies:
+> ```bash
+> python3 -m venv .venv
+> source .venv/bin/activate    # Windows: .venv\Scripts\activate
+> pip install -r worker/requirements.txt
+> ```
+
+### 3. Dependency overview
+
+**Node — runtime (`package.json` `dependencies`)**
+- `react` 19, `react-dom` — UI framework
+- `zustand` — state management
+- `echarts`, `echarts-for-react` — charts
+- `3dmol`, `three` — 3D structure visualization
+- `@anthropic-ai/sdk` — LLM client
+- `@modelcontextprotocol/sdk` — MCP integration
+- `dockerode` — Docker bridge for compute workbench
+- `webdav` — sync backend
+- `pdfjs-dist` — PDF rendering
+- `codemirror` — in-browser code editor
+
+**Node — dev (`package.json` `devDependencies`)**
+- `electron`, `electron-builder` — desktop packaging
+- `vite`, `vite-plugin-electron` — bundler
+- `vitest`, `@testing-library/react` — test runner
+- `typescript`, `tailwindcss` — build tooling
+
+**Python — worker (`worker/requirements.txt`)**
+- `numpy ≥ 1.23`, `scipy ≥ 1.10` — numerical computation
+- `scikit-learn ≥ 1.3` — TF-IDF / cosine similarity for RAG retrieval
+- `pdfplumber ≥ 0.10` — PDF full-text extraction *(optional, gracefully degrades)*
+- `dara-xrd ≥ 1.1.0` — BGMN-based Rietveld refinement
+
+### 4. Run
 
 ```bash
-npm run dev           # Vite dev server (renderer only, no Electron)
+npm run dev           # Vite dev server only (browser preview, no Electron)
 npm run electron:dev  # Full Electron app in dev mode
-npm run build         # Production build → release/
+npm run build         # Production build + electron-builder → release/
 ```
 
-### Test & verify
+### 5. Verify
 
 ```bash
-npm run typecheck     # tsc --noEmit
-npm test              # Vitest (unit + component + IPC)
-npm run check:data    # Verify bundled databases
+npm run typecheck     # tsc --noEmit (primary correctness gate)
+npm test              # Vitest (unit + component + IPC, ~5s)
+npm run check:data    # Validate bundled scientific databases
 ```
 
 ---
