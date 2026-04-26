@@ -40,6 +40,9 @@ Lattice runs entirely on your machine — no cloud backend required.
 # Install dependencies
 npm install
 
+# Download large data assets (~784 MB, one-time)
+npm run setup
+
 # Development (renderer only, no Electron shell)
 npm run dev
 
@@ -49,6 +52,8 @@ npm run electron:dev
 # Build for production
 npm run build
 ```
+
+> **Note:** `npm run setup` downloads the Materials Project XRD database from [GitHub Releases](https://github.com/Zhangyu2024-crypto/Lattice/releases/tag/v0.1.0-data) into `worker/data/`. This is required for XRD phase search functionality. The script skips files that already exist, so it's safe to run multiple times.
 
 ### Verify
 
@@ -61,10 +66,14 @@ npm test            # Unit + component + IPC tests
 
 The app packages scientific reference databases via `electron-builder.yml` `extraResources`:
 
-- XPS reference lines, Scofield RSFs
-- XRD reference patterns
-- Raman reference spectra
-- Materials Project XRD SQLite database (~784 MB, tracked with Git LFS)
+| Data | Location | Size | Source |
+|------|----------|------|--------|
+| XPS reference lines & Scofield RSFs | `worker/data/xps_*.json` | ~110 KB | In repo |
+| XRD reference patterns | `worker/data/xrd_references.json` | ~28 KB | In repo |
+| Raman reference spectra | `worker/data/raman_references.json` | ~54 KB | In repo |
+| Materials Project XRD database | `worker/data/mp_xrd_database.db` | ~784 MB | [GitHub Release](https://github.com/Zhangyu2024-crypto/Lattice/releases/tag/v0.1.0-data) |
+
+Large files (> 100 MB) are hosted as GitHub Release assets instead of being tracked in Git. Run `npm run setup` to download them automatically.
 
 ## Contributing
 
