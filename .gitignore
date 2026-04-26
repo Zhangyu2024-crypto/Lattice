@@ -49,3 +49,7 @@ china-europe-*.pdf
 /*.dat
 /*.xy
 /*.raw
+
+# Internal design notes
+/doc/
+/docs/
