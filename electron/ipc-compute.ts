@@ -1,8 +1,10 @@
+import { consumeApprovalToken } from './ipc-approval-tokens'
 import fs from 'node:fs'
 import path from 'node:path'
-import { app, ipcMain, shell, type BrowserWindow } from 'electron'
+import { ipcMain, shell, type BrowserWindow } from 'electron'
 import {
   ComputeRunnerManager,
+  computeArchiveRoots,
   type ComputeLanguage,
   type ComputeMode,
   type ComputeRunContext,
@@ -81,7 +83,15 @@ export function registerComputeIpc(getWindow: () => BrowserWindow | null): Compu
     const raw = req as ComputeRunRequest & {
       context?: unknown
       resources?: unknown
+      approvalToken?: unknown
     }
+    const tokenCheck = consumeApprovalToken(raw.approvalToken, 'compute_run', {
+      runId: raw.runId,
+      code: raw.code,
+      language: raw.language ?? '',
+      mode: raw.mode,
+    })
+    if (!tokenCheck.ok) return { success: false, error: tokenCheck.error }
     const normalised: ComputeRunRequest = {
       runId: raw.runId,
       code: raw.code,
@@ -120,15 +130,18 @@ export function registerComputeIpc(getWindow: () => BrowserWindow | null): Compu
 
   // Open an archived compute workdir in the host file manager (Finder
   // / Explorer / xdg-open). Safety: reject any path that isn't under
-  // the managed `<userData>/workspace/compute/` root so the renderer
-  // can't abuse this IPC to pop up arbitrary folders.
+  // the managed workspace compute archive or the legacy userData archive
+  // so the renderer can't abuse this IPC to pop up arbitrary folders.
   ipcMain.handle('compute:open-workdir', async (_event, target: unknown) => {
     if (typeof target !== 'string' || !target) {
       return { success: false, error: 'missing workdir path' }
     }
     const resolved = path.resolve(target)
-    const root = path.resolve(app.getPath('userData'), 'workspace', 'compute')
-    if (!resolved.startsWith(root + path.sep) && resolved !== root) {
+    const allowedRoots = computeArchiveRoots()
+    const isAllowed = allowedRoots.some((root) => (
+      resolved === root || resolved.startsWith(root + path.sep)
+    ))
+    if (!isAllowed) {
       return { success: false, error: 'path outside compute workspace' }
     }
     if (!fs.existsSync(resolved)) {

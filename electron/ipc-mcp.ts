@@ -7,10 +7,11 @@
 // `mcp:list-prompts`. Invocation goes through `mcp:get-prompt`, which
 // forwards to the SDK's `prompts/get` and returns the flattened text.
 //
-// v1 scope: prompts only. MCP tools are not exposed because mixing them
-// into our orchestrator needs a broader design pass.
+// MCP tools are exposed through explicit list/call IPC and gated in the
+// renderer as hostExec agent tools because server capabilities vary widely.
 
 import { ipcMain, type BrowserWindow as BrowserWindowType } from 'electron'
+import { consumeApprovalToken } from './ipc-approval-tokens'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 
@@ -30,12 +31,21 @@ export interface McpPromptSummary {
   arguments?: Array<{ name: string; description?: string; required?: boolean }>
 }
 
+export interface McpToolSummary {
+  serverId: string
+  serverName: string
+  name: string
+  description?: string
+  inputSchema?: unknown
+}
+
 interface RunningClient {
   id: string
   name: string
   client: Client
   transport: StdioClientTransport
   prompts: McpPromptSummary[]
+  tools: McpToolSummary[]
 }
 
 const running = new Map<string, RunningClient>()
@@ -54,6 +64,7 @@ async function startClient(spec: McpServerSpec): Promise<RunningClient> {
   await client.connect(transport)
 
   let prompts: McpPromptSummary[] = []
+  let tools: McpToolSummary[] = []
   try {
     const listed = await client.listPrompts()
     prompts = (listed.prompts ?? []).map((p) => ({
@@ -68,7 +79,21 @@ async function startClient(spec: McpServerSpec): Promise<RunningClient> {
     prompts = []
   }
 
-  return { id: spec.id, name: spec.name, client, transport, prompts }
+  try {
+    const listed = await client.listTools()
+    tools = (listed.tools ?? []).map((tool) => ({
+      serverId: spec.id,
+      serverName: spec.name,
+      name: tool.name,
+      description: tool.description,
+      inputSchema: tool.inputSchema,
+    }))
+  } catch {
+    // Some servers don't implement tools/list — treat as empty set.
+    tools = []
+  }
+
+  return { id: spec.id, name: spec.name, client, transport, prompts, tools }
 }
 
 async function shutdownClient(entry: RunningClient): Promise<void> {
@@ -144,6 +169,12 @@ export function registerMcpIpc(
     return { prompts, errors: lastErrors }
   })
 
+  ipcMain.handle('mcp:list-tools', () => {
+    const tools: McpToolSummary[] = []
+    for (const entry of running.values()) tools.push(...entry.tools)
+    return { tools, errors: lastErrors }
+  })
+
   ipcMain.handle(
     'mcp:get-prompt',
     async (
@@ -176,6 +207,34 @@ export function registerMcpIpc(
       return { text: parts.join('\n\n') }
     },
   )
+
+  ipcMain.handle(
+    'mcp:call-tool',
+    async (
+      _event,
+      payload: {
+        serverId: string
+        name: string
+        args?: Record<string, unknown>
+        approvalToken?: string
+      },
+    ) => {
+      const tokenCheck = consumeApprovalToken(payload.approvalToken, 'mcp_call_tool', {
+        serverId: payload.serverId,
+        name: payload.name,
+        args: JSON.stringify(payload.args ?? {}),
+      })
+      if (!tokenCheck.ok) throw new Error(tokenCheck.error)
+      const entry = running.get(payload.serverId)
+      if (!entry) throw new Error(`MCP server not running: ${payload.serverId}`)
+      const result = await entry.client.callTool({
+        name: payload.name,
+        arguments: payload.args,
+      })
+      return { result }
+    },
+  )
+
 }
 
 export async function shutdownAllMcpClients(): Promise<void> {

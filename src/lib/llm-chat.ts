@@ -322,9 +322,10 @@ export async function sendLlmChat(
       result = await sendLlmStream(
         request,
         { onTextDelta: req.onTextDelta },
+        req.signal,
       )
     } else {
-      result = await electron.llmInvoke(request)
+      result = await abortableInvoke(electron.llmInvoke(request), req.signal)
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
@@ -422,4 +423,24 @@ export async function sendLlmChat(
     ...(result.messages ? { messages: result.messages } : {}),
     ...(result.thinkingContent ? { thinkingContent: result.thinkingContent } : {}),
   }
+}
+
+function abortableInvoke<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return promise
+  if (signal.aborted) return Promise.reject(new Error('Cancelled'))
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(new Error('Cancelled'))
+    signal.addEventListener('abort', onAbort, { once: true })
+    promise.then(
+      (value) => {
+        signal.removeEventListener('abort', onAbort)
+        if (signal.aborted) reject(new Error('Cancelled'))
+        else resolve(value)
+      },
+      (err) => {
+        signal.removeEventListener('abort', onAbort)
+        reject(err)
+      },
+    )
+  })
 }

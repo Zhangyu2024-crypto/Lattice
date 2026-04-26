@@ -1,7 +1,6 @@
 // Chat panel header — top strip for the AgentComposer showing the session
 // title, mode hint, and a menu (export, clear chat). Research launches
-// now live as inline `@research <topic>` composer commands (see
-// src/lib/research-prompts.ts:parseResearchCommand).
+// through the `/research <topic>` slash command.
 
 import { useState, type CSSProperties, type ReactNode } from 'react'
 import { ChevronDown, MessagesSquare } from 'lucide-react'

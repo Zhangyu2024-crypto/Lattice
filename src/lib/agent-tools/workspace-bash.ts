@@ -36,6 +36,7 @@ export const workspaceBashTool: LocalTool<Input, Output> = {
   description:
     'Run a shell command in the user workspace root (cwd = workspace root). Returns stdout, stderr, exit code. Default timeout 120s, max 600s. Output capped at 4 MB. hostExec trust → the user is prompted before every run.',
   trustLevel: 'hostExec',
+  cardMode: 'info',
   inputSchema: {
     type: 'object',
     properties: {
@@ -90,11 +91,20 @@ export const workspaceBashTool: LocalTool<Input, Output> = {
     }
 
     try {
+      const issued = await window.electronAPI.issueApprovalToken({
+        toolName: 'workspace_bash',
+        scope: {
+          workspaceDir,
+          command: input.command,
+        },
+      })
+      if (!issued.ok) throw new Error(issued.error)
       const res = await window.electronAPI.workspaceBash({
         workspaceDir,
         command: input.command,
         timeoutMs: input.timeoutMs,
         invocationId,
+        approvalToken: issued.token,
       })
       if (!res.success) {
         return {

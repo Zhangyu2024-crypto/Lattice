@@ -49,7 +49,7 @@ interface Output {
     venue: string
     doi: string
     url: string
-    source: 'openalex' | 'arxiv'
+    source: 'openalex' | 'arxiv' | 'semantic_scholar'
     citedByCount?: number
     abstract: string
   }>
@@ -59,6 +59,7 @@ interface Output {
   diagnostics: {
     openalex: { ok: boolean; count: number; error?: string }
     arxiv: { ok: boolean; count: number; error?: string }
+    semanticScholar: { ok: boolean; count: number; error?: string }
   }
 }
 
@@ -82,7 +83,7 @@ function trimAbstract(text: string): string {
 export const literatureSearchTool: LocalTool<Input, Output | ErrorOutput> = {
   name: 'literature_search',
   description:
-    'Search OpenAlex + arXiv for real papers matching a query. Returns title / authors / year / DOI / URL / abstract rows the agent can cite in a research draft. Prefer a focused 3-8 keyword query; call BEFORE research_draft_section when a section needs external evidence. Runs in parallel against both sources and dedupes by DOI/title. Read-only, safe to call; cost is one HTTPS round-trip per source.',
+    'Search OpenAlex + arXiv + Semantic Scholar for real papers matching a query. Returns title / authors / year / DOI / URL / abstract rows the agent can cite in a research draft. Prefer a focused 3-8 keyword query; call BEFORE research_draft_section when a section needs external evidence. Runs in parallel against all sources and dedupes by DOI/title. Read-only, safe to call; cost is one HTTPS round-trip per source.',
   // Retrieval tool — silent by default. The rich Phase-3b preview
   // (LiteratureSearchCardPreview) still renders when the user expands
   // the audit chip.

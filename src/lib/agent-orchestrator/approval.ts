@@ -17,7 +17,10 @@ import { wsClient } from '../../stores/ws-client'
 import { useAgentDialogStore } from '../../stores/agent-dialog-store'
 import { usePrefsStore } from '../../stores/prefs-store'
 import { toast } from '../../stores/toast-store'
-import { getToolApplier } from '../../components/agent/tool-cards/applier-registry'
+import {
+  getToolApplier,
+  isProposalFirstTool,
+} from '../../components/agent/tool-cards/applier-registry'
 import {
   autoApprovesCard,
   readOnlyBlockedReason,
@@ -75,15 +78,16 @@ export async function checkApproval(
   if (modeDecision === 'deny') {
     return { allow: false, reason: readOnlyBlockedReason(tool.name) }
   }
-  // modeDecision === 'ask'. Proposal-first localWrite tools
-  // (workspace_write_file, workspace_edit_file, format_convert, latex-*,
-  // detect_peaks, …) have a cardMode:'review'|'edit' post-exec gate
-  // that IS the approval — `execute()` just builds a proposal and the
-  // real disk write happens in the applier on Approve. Surfacing the
-  // pre-exec modal on top of that gives the user two clicks for one
-  // side-effect, so we skip it for them. Host-exec tools always hit the
-  // modal (they truly run shell / python during execute()).
-  if (trust !== 'hostExec') {
+  // modeDecision === 'ask'. Only proposal-first localWrite tools may skip
+  // the pre-exec modal. For those tools, `execute()` builds a proposal and
+  // the real mutation happens via an approval-card applier on Approve.
+  //
+  // Do NOT key this off `cardMode` alone: some `review` / `edit` tools do
+  // real work during execute() and use the post-exec card only to review
+  // what the agent sees next. Those must still ask before execute().
+  // Host-exec tools also always hit the modal because they run shell /
+  // Python during execute().
+  if (trust !== 'hostExec' && isProposalFirstTool(tool.name)) {
     const card = resolveCardMode(tool)
     if (card === 'review' || card === 'edit') return { allow: true }
   }

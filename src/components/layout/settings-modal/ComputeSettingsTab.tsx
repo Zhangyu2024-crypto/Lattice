@@ -1,4 +1,5 @@
 import {
+  COMPUTE_TIMEOUT_MAX_SEC,
   useComputeConfigStore,
   type ComputeMode,
 } from '../../../stores/compute-config-store'
@@ -62,7 +63,7 @@ export default function ComputeSettingsTab({
         <input
           type="number"
           min={1}
-          max={3600}
+          max={COMPUTE_TIMEOUT_MAX_SEC}
           value={compute.timeoutSec}
           onChange={(e) => compute.setTimeoutSec(Number(e.target.value))}
           className="settings-modal-input"

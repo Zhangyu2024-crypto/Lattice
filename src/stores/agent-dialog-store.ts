@@ -92,8 +92,12 @@ export const useAgentDialogStore = create<AgentDialogState>((set, get) => ({
       id,
       createdAt: Date.now(),
     }
-    // Short-circuit if the tool is on the session allow-list.
-    if (get().sessionAllowList.has(req.toolName)) {
+    // Short-circuit localWrite tools only. hostExec must be approved per
+    // invocation because the command / cwd / plugin input can change.
+    if (
+      req.trustLevel !== 'hostExec' &&
+      get().sessionAllowList.has(req.toolName)
+    ) {
       return Promise.resolve<ApprovalDecision>({ kind: 'allow-once' })
     }
     set({ pendingApproval: request })
@@ -112,7 +116,9 @@ export const useAgentDialogStore = create<AgentDialogState>((set, get) => ({
       pendingApproval:
         s.pendingApproval?.id === id ? null : s.pendingApproval,
       sessionAllowList:
-        decision.kind === 'allow-session' && s.pendingApproval
+        decision.kind === 'allow-session' &&
+        s.pendingApproval &&
+        s.pendingApproval.trustLevel !== 'hostExec'
           ? new Set([...s.sessionAllowList, s.pendingApproval.toolName])
           : s.sessionAllowList,
     }))

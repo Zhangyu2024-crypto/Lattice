@@ -6,8 +6,10 @@ import {
   useState,
 } from 'react'
 import { useAppStore } from '../../stores/app-store'
+import { useAgentDialogStore } from '../../stores/agent-dialog-store'
 import { latticeBackendAgentPreferred } from '../../lib/lattice-backend-agent'
 import { submitAgentPrompt } from '../../lib/agent-submit'
+import { clearPendingApprovals } from '../../lib/agent-orchestrator-approvals'
 import {
   dispatchComposerPrefill,
   useComposerFocusListener,
@@ -16,10 +18,6 @@ import {
   type ComposerPrefillRequest,
   type MentionAddRequest,
 } from '../../lib/composer-bus'
-import {
-  buildInlineResearchScaffold,
-  parseResearchCommand,
-} from '../../lib/research-prompts'
 import {
   dispatchSlashCommand,
   findCommand,
@@ -31,21 +29,6 @@ import {
 import { rankCommands } from '../../lib/slash-commands/fuzzy'
 import SlashTypeahead from './SlashTypeahead'
 
-// Composer-level shortcut shown at the top of the @ picker. Selecting it
-// inserts the literal `@research ` text (not a chip); the user types a
-// topic, hits Enter, and handleSend's `parseResearchCommand` route kicks
-// off the real research flow. The `ref` stays a synthetic `file` shape
-// only to satisfy the union — `commandInsert` is the load-bearing field.
-const RESEARCH_COMMAND_MENTIONABLES: Mentionable[] = [
-  {
-    label: 'research',
-    sublabel: 'Start a research flow — planner picks depth from topic',
-    kindLabel: 'command',
-    group: 'commands',
-    commandInsert: '@research ',
-    ref: { type: 'file', sessionId: '', relPath: '__cmd:research' },
-  },
-]
 import {
   getActiveTranscript,
   getSessionChatMode,
@@ -193,6 +176,7 @@ function findActiveTrigger(
   return null
 }
 
+
 // Slash-typeahead trigger. Much simpler than mention detection: the slash
 // only counts at column 0 (the draft *begins* with `/`) and the typeahead
 // stays open only while the caret is still inside the first whitespace-free
@@ -249,7 +233,6 @@ export default function AgentComposer({
   const pdfQuotes = usePdfQuoteStore((s) => s.quotes)
   const mentionables = useMemo(
     () => [
-      ...RESEARCH_COMMAND_MENTIONABLES,
       ...mentionablesForSession(session),
       ...pdfQuoteMentionables(),
     ],
@@ -354,10 +337,19 @@ export default function AgentComposer({
   // need a 12-iteration ceiling). Consumed and cleared on the next send so
   // ordinary subsequent submits revert to the orchestrator default.
   const nextMaxIterationsRef = useRef<number | undefined>(undefined)
+  const stopCurrentRun = useCallback(() => {
+    abortRef.current?.abort()
+    abortRef.current = null
+    useAgentDialogStore.getState().reset()
+    clearPendingApprovals()
+    setIsLoading(false)
+  }, [])
   useEffect(() => {
     return () => {
       abortRef.current?.abort()
       abortRef.current = null
+      useAgentDialogStore.getState().reset()
+      clearPendingApprovals()
     }
   }, [])
 
@@ -606,7 +598,8 @@ export default function AgentComposer({
     // interim.
     if (pickerOpen && !composing) {
       const el = e.currentTarget
-      const hasTrigger = findActiveTrigger(el.value, el.selectionStart ?? el.value.length)
+      const cursor = el.selectionStart ?? el.value.length
+      const hasTrigger = findActiveTrigger(el.value, cursor)
       if (hasTrigger) {
         if (
           e.key === 'Enter' ||
@@ -672,10 +665,7 @@ export default function AgentComposer({
         setPickerOpen(false)
         return
       }
-      // Command rows (research / brief / survey shortcuts) insert literal
-      // text instead of creating a chip — the user types a topic, hits
-      // Enter, and `parseResearchCommand` in handleSend kicks off the
-      // real flow. No MentionRef, no anchor, no recent-mentions write.
+      // Command rows insert literal text instead of creating a chip.
       if (m.commandInsert) {
         const before = el.value.slice(0, trigger.start)
         const after = el.value.slice(cursor)
@@ -925,9 +915,9 @@ export default function AgentComposer({
   }, [])
   useComposerFocusListener(handleComposerFocus)
 
-  // Agent mode uses the lattice-cli Python backend when `backend.ready`
-  // (REST /api/chat/send + WS); otherwise the local TS orchestrator +
-  // Electron `llmInvoke` when available.
+  // Agent mode is self-contained by default: local TS orchestrator +
+  // Electron `llmInvoke`. The legacy lattice-cli backend bridge is
+  // available only when explicitly enabled for compatibility testing.
   const hasLlm = Boolean(window.electronAPI?.llmInvoke)
   const agentBackendPath = latticeBackendAgentPreferred()
   const connectionReady = hasLlm || agentBackendPath
@@ -1075,54 +1065,6 @@ export default function AgentComposer({
       return
     }
 
-    // Inline research command: `@research <topic>`. Deprecated alias of
-    // `/research <topic>` kept for one release so existing muscle memory
-    // still works; remove after users and any scripted callers migrate.
-    // We submit directly from here (no prefill dance) and pass the full
-    // scaffold as the LLM text while the transcript only shows the short
-    // "@research <topic>" the user typed — via `submitAgentPrompt`'s
-    // `displayText` split. Thread setup (agent mode, title, fresh session
-    // if needed) is still delegated to the host so App.tsx owns session
-    // lifecycle.
-    if (imagesSnapshot.length === 0) {
-      const command = parseResearchCommand(text)
-      if (command) {
-        console.warn('@research is deprecated — use /research instead')
-        onStartResearch?.(command.topic)
-        setInput('')
-        setPendingMentions([])
-        setPickerOpen(false)
-        setPickerQuery('')
-        if (textareaRef.current) textareaRef.current.style.height = '32px'
-        const scaffold = buildInlineResearchScaffold(command.topic)
-        const displayText = `@research ${command.topic}`
-
-        abortRef.current?.abort()
-        const controller = new AbortController()
-        abortRef.current = controller
-        setIsLoading(true)
-        const submittedSessionId = useSessionStore.getState().activeSessionId
-        void (async () => {
-          try {
-            const activeSession =
-              useSessionStore.getState().sessions[
-                submittedSessionId ?? session.id
-              ]
-            await submitAgentPrompt(scaffold, {
-              sessionId: submittedSessionId ?? session.id,
-              transcript: activeSession ? getActiveTranscript(activeSession) : [],
-              signal: controller.signal,
-              maxIterations: 12,
-              displayText,
-            })
-          } finally {
-            setIsLoading(false)
-            if (abortRef.current === controller) abortRef.current = null
-          }
-        })()
-        return
-      }
-    }
     if (imagesSnapshot.length > 0 && !hasLlm) {
       toast.error(
         'Images require the desktop app with a configured local LLM (Electron).',
@@ -1280,7 +1222,7 @@ export default function AgentComposer({
         <div
           ref={messagesRef}
           onScroll={handleMessagesScroll}
-          className="chat-messages chat-messages-fill"
+          className={`chat-messages chat-messages-fill${showJumpToLatest ? ' has-jump-to-latest' : ''}`}
           // Screen readers announce new messages as they arrive. `additions
           // text` covers both a whole new bubble and in-place content edits
           // (streaming). `aria-atomic=false` so only the changed chunk reads,
@@ -1324,16 +1266,6 @@ export default function AgentComposer({
             </div>
           )}
           <div ref={endRef} className="chat-messages-end-spacer" />
-          {showJumpToLatest && (
-            <button
-              type="button"
-              className="chat-jump-to-latest"
-              onClick={handleJumpToLatest}
-              aria-label="Jump to latest message"
-            >
-              Jump to latest
-            </button>
-          )}
         </div>
 
         <div className="chat-input-area">
@@ -1412,10 +1344,7 @@ export default function AgentComposer({
                   <button
                     type="button"
                     className="chat-send-btn is-stop"
-                    onClick={() => {
-                      abortRef.current?.abort()
-                      setIsLoading(false)
-                    }}
+                    onClick={stopCurrentRun}
                     aria-label="Stop agent"
                     title="Stop the agent run"
                   >
@@ -1441,7 +1370,7 @@ export default function AgentComposer({
                       imageSendBlocked
                         ? 'Images need the desktop app with a local LLM'
                         : !canSubmit
-                          ? 'Connect the lattice-cli backend or use Electron with a local LLM'
+                          ? 'Configure a local or remote LLM provider'
                           : 'Send message'
                     }
                   >
@@ -1483,8 +1412,7 @@ export default function AgentComposer({
                 role="status"
                 id="composer-connection-status"
               >
-                Connect the lattice-cli backend or Electron with a local LLM to
-                send messages.
+                Configure a local or remote LLM provider to send messages.
               </div>
             )}
           </div>

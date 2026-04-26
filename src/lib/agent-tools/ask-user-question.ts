@@ -32,6 +32,7 @@ export const askUserQuestionTool: LocalTool<
   description:
     'Ask the user a clarifying question and wait for their reply. Use sparingly — only when you genuinely cannot proceed without input. Provide multiple-choice `options` whenever possible to reduce friction.',
   trustLevel: 'safe',
+  cardMode: 'info',
   planModeAllowed: true,
   inputSchema: {
     type: 'object',

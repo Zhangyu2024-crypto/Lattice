@@ -23,7 +23,7 @@ interface Output {
 export const listComputeSnippetsTool: LocalTool<Input, Output> = {
   name: 'list_compute_snippets',
   description:
-    'List available compute snippet templates. Filter by language (python/lammps/cp2k) or category (Structure, Simulation, Diffraction, Analysis, Signal, DFT, MD). Use compute_from_snippet to create an artifact from a snippet.',
+    'List available compute snippet templates. Filter by language (python/lammps/cp2k) or category (Structure, Simulation, Diffraction, Analysis, Signal, DFT, MD). Includes CP2K Si bulk modulus. Use compute_from_snippet to create an artifact from a snippet.',
   trustLevel: 'safe',
   cardMode: 'silent',
   inputSchema: {

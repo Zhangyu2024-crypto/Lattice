@@ -7,7 +7,7 @@
 export const ALL_PAPERS_ID = '__all__'
 
 export type PaperCard = {
-  // Client-side id. For backend papers it's the stringified int id; for demo
+  // Client-side id. For local library papers it's the stringified int id; for demo
   // papers it's the raw demo string id. Always stable per row.
   id: string
   backendId: number | null
@@ -21,7 +21,7 @@ export type PaperCard = {
   collections: string[]
   chainCount: number
   pdfPath?: string | null
-  /** Demo / inline PDF URL when `paperId` is not a backend integer. */
+  /** Demo / inline PDF URL when `paperId` is not a local library integer. */
   pdfUrl?: string | null
 }
 

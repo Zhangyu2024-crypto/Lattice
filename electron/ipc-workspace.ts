@@ -1,11 +1,8 @@
 // IPC for `workspace_bash` — the main-chat agent's shell runner.
 //
-// The tool layer (`src/lib/agent-tools/workspace-bash.ts`) is trust-
-// level 'hostExec', so every invocation is pre-gated by the user-facing
-// ApprovalDialog; by the time a request reaches this handler, the user
-// has already confirmed the command + cwd. We therefore accept any
-// `workspaceDir` the caller supplies — typically `useWorkspaceStore()
-// .rootPath`, but legitimately anything the user approved.
+// The renderer-side tool layer prompts before host execution, but the
+// main process still enforces a one-shot approval token so direct IPC calls
+// cannot bypass the orchestrator approval gate accidentally.
 //
 // Streaming protocol matches the original coding-subagent version:
 // `workspace:bash-chunk` events fire out-of-band when an `invocationId`
@@ -14,6 +11,7 @@
 
 import { spawn } from 'child_process'
 import { ipcMain } from 'electron'
+import { consumeApprovalToken } from './ipc-approval-tokens'
 
 const MAX_BASH_OUTPUT_BYTES = 4 * 1024 * 1024
 const DEFAULT_BASH_TIMEOUT_MS = 120_000
@@ -34,10 +32,16 @@ export function registerWorkspaceIpc(): void {
         command?: unknown
         timeoutMs?: unknown
         invocationId?: unknown
+        approvalToken?: unknown
       }
       if (typeof r.workspaceDir !== 'string' || typeof r.command !== 'string') {
         return { success: false, error: 'workspaceDir and command required' }
       }
+      const tokenCheck = consumeApprovalToken(r.approvalToken, 'workspace_bash', {
+        workspaceDir: r.workspaceDir,
+        command: r.command,
+      })
+      if (!tokenCheck.ok) return { success: false, error: tokenCheck.error }
       const timeoutMs =
         typeof r.timeoutMs === 'number' && Number.isFinite(r.timeoutMs)
           ? Math.min(Math.max(1_000, Math.floor(r.timeoutMs)), 600_000)

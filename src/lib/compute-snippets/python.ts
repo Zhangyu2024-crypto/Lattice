@@ -412,6 +412,193 @@ plt.show()
 `,
   },
   {
+    id: 'cp2k_si_bulk_modulus',
+    title: 'CP2K Si Bulk Modulus',
+    name: 'CP2K Si bulk modulus',
+    description: 'Run a CP2K energy-volume scan for diamond Si and fit a quadratic equation of state to estimate the bulk modulus.',
+    category: 'DFT',
+    language: 'python',
+    code: `# CP2K energy-volume scan for diamond Si bulk modulus.
+# This is an interactive smoke/prototype workflow, not a publication setup.
+# It uses the 8-atom conventional diamond cell and fits E(V) quadratically.
+
+import os
+import re
+import shutil
+import subprocess
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+HARTREE_TO_EV = 27.211386245988
+EV_PER_A3_TO_GPA = 160.21766208
+
+cp2k = shutil.which('cp2k.psmp') or shutil.which('cp2k')
+if not cp2k:
+    raise RuntimeError('CP2K executable not found on PATH')
+
+run_root = Path(WORKDIR) / 'si_bulk_modulus_cp2k'
+run_root.mkdir(parents=True, exist_ok=True)
+
+# Conventional diamond-cubic Si basis, fractional coordinates.
+frac_coords = [
+    (0.0, 0.0, 0.0),
+    (0.0, 0.5, 0.5),
+    (0.5, 0.0, 0.5),
+    (0.5, 0.5, 0.0),
+    (0.25, 0.25, 0.25),
+    (0.25, 0.75, 0.75),
+    (0.75, 0.25, 0.75),
+    (0.75, 0.75, 0.25),
+]
+
+
+def cp2k_input(a):
+    coords = '\\n'.join(
+        f'      Si {x * a:.8f} {y * a:.8f} {z * a:.8f}'
+        for x, y, z in frac_coords
+    )
+    return f"""&GLOBAL
+  PROJECT si_bulk
+  RUN_TYPE ENERGY
+  PRINT_LEVEL LOW
+&END GLOBAL
+
+&FORCE_EVAL
+  METHOD Quickstep
+  &DFT
+    BASIS_SET_FILE_NAME BASIS_MOLOPT
+    POTENTIAL_FILE_NAME GTH_POTENTIALS
+    &MGRID
+      CUTOFF 300
+      REL_CUTOFF 40
+    &END MGRID
+    &XC
+      &XC_FUNCTIONAL PBE
+      &END XC_FUNCTIONAL
+    &END XC
+    &SCF
+      SCF_GUESS ATOMIC
+      EPS_SCF 1.0E-5
+      MAX_SCF 250
+      &OT
+        PRECONDITIONER FULL_SINGLE_INVERSE
+        MINIMIZER DIIS
+      &END OT
+      &OUTER_SCF
+        MAX_SCF 10
+      &END OUTER_SCF
+    &END SCF
+  &END DFT
+  &SUBSYS
+    &CELL
+      A {a:.8f} 0.00000000 0.00000000
+      B 0.00000000 {a:.8f} 0.00000000
+      C 0.00000000 0.00000000 {a:.8f}
+      PERIODIC XYZ
+    &END CELL
+    &COORD
+{coords}
+    &END COORD
+    &KIND Si
+      BASIS_SET DZVP-MOLOPT-SR-GTH
+      POTENTIAL GTH-PBE-q4
+    &END KIND
+  &END SUBSYS
+&END FORCE_EVAL
+"""
+
+
+def parse_energy_hartree(text):
+    matches = re.findall(r'ENERGY[|] Total FORCE_EVAL.*?(-?[0-9]+[.][0-9]+)[ \t]*$', text, re.M)
+    if matches:
+        return float(matches[-1])
+    matches = re.findall(r'Total energy:[ \t]*(-?[0-9]+[.][0-9]+)', text)
+    if matches:
+        return float(matches[-1])
+    raise RuntimeError('Could not parse CP2K total energy')
+
+
+env = os.environ.copy()
+env.setdefault('OMP_NUM_THREADS', '2')
+env.setdefault('MKL_NUM_THREADS', '2')
+env.setdefault('OPENBLAS_NUM_THREADS', '2')
+# Keep conda OpenMPI from trying unavailable host transports on desktops/WSL.
+env.setdefault('OMPI_MCA_btl', 'self')
+env.setdefault('OMPI_MCA_pml', 'ob1')
+env.setdefault('OMPI_MCA_rmaps_base_oversubscribe', '1')
+
+cp2k_path = Path(cp2k)
+cp2k_data_candidates = [
+    Path(os.environ['CP2K_DATA_DIR']) if os.environ.get('CP2K_DATA_DIR') else None,
+    Path(os.environ['CONDA_PREFIX']) / 'share' / 'cp2k' / 'data' if os.environ.get('CONDA_PREFIX') else None,
+    cp2k_path.parent.parent / 'share' / 'cp2k' / 'data',
+    cp2k_path.resolve().parent.parent / 'share' / 'cp2k' / 'data',
+]
+for candidate in cp2k_data_candidates:
+    if candidate and (candidate / 'BASIS_MOLOPT').exists():
+        env['CP2K_DATA_DIR'] = str(candidate)
+        break
+
+lattice_constants = np.linspace(5.20, 5.70, 6)
+rows = []
+for index, a in enumerate(lattice_constants, start=1):
+    point_dir = run_root / f'a_{a:.3f}'
+    point_dir.mkdir(exist_ok=True)
+    input_path = point_dir / 'si.inp'
+    output_path = point_dir / 'si.out'
+    input_path.write_text(cp2k_input(float(a)))
+
+    print(f'__LATTICE_PROGRESS__ {index}/{len(lattice_constants)} a={a:.4f}', flush=True)
+    proc = subprocess.run(
+        [cp2k, '-i', str(input_path), '-o', str(output_path)],
+        cwd=point_dir,
+        env=env,
+        text=True,
+        capture_output=True,
+        timeout=420,
+    )
+    if proc.returncode != 0:
+        tail = output_path.read_text(errors='replace')[-3000:] if output_path.exists() else proc.stderr[-3000:]
+        raise RuntimeError(f'CP2K failed at a={a:.4f} A with code {proc.returncode}\\n{tail}')
+
+    energy_ev = parse_energy_hartree(output_path.read_text(errors='replace')) * HARTREE_TO_EV
+    volume_a3 = float(a) ** 3
+    rows.append((volume_a3, energy_ev, float(a)))
+    print(f'a={a:.4f} A  V={volume_a3:.4f} A^3  E={energy_ev:.8f} eV', flush=True)
+
+volumes = np.array([row[0] for row in rows])
+energies = np.array([row[1] for row in rows])
+coef = np.polyfit(volumes, energies, 2)
+volume0 = -coef[1] / (2 * coef[0])
+energy0 = float(np.polyval(coef, volume0))
+bulk_modulus = 2 * coef[0] * volume0 * EV_PER_A3_TO_GPA
+a0 = volume0 ** (1 / 3)
+
+print('\\nFit: E(V) = c2*V^2 + c1*V + c0')
+print(f'Equilibrium a0 = {a0:.4f} A')
+print(f'Equilibrium V0 = {volume0:.4f} A^3 / conventional cell')
+print(f'Equilibrium E0 = {energy0:.8f} eV')
+print(f'Bulk modulus  = {bulk_modulus:.2f} GPa')
+print(f'Run directory = {run_root}')
+
+vfit = np.linspace(volumes.min(), volumes.max(), 200)
+efit = np.polyval(coef, vfit)
+fig, ax = plt.subplots(figsize=(6.5, 4.2))
+ax.plot(volumes, energies, 'o', label='CP2K points')
+ax.plot(vfit, efit, '-', label='quadratic fit')
+ax.axvline(volume0, color='0.4', ls='--', lw=1)
+ax.set_xlabel('Volume (A^3 / conventional cell)')
+ax.set_ylabel('Energy (eV)')
+ax.set_title(f'Diamond Si bulk modulus: {bulk_modulus:.1f} GPa')
+ax.grid(alpha=0.3)
+ax.legend()
+plt.tight_layout()
+plt.show()
+`,
+  },
+  {
     id: 'lammps_via_python',
     title: 'LAMMPS from Python',
     name: 'LAMMPS from Python',

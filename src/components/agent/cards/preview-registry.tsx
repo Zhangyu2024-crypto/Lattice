@@ -169,6 +169,7 @@ export const ARTIFACT_KIND_LABEL: Partial<Record<ArtifactKind, string>> = {
   'raman-id': 'Raman ID',
   structure: 'Structure',
   compute: 'Compute',
+  'compute-experiment': 'Experiment',
   job: 'Job',
   'research-report': 'Report',
   batch: 'Batch',

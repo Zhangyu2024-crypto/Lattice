@@ -8,6 +8,7 @@ import type {
   RamanIdArtifact,
   JobArtifact,
   ComputeArtifact,
+  ComputeExperimentArtifact,
   StructureArtifact,
   ResearchReportArtifact,
   BatchArtifact,
@@ -37,6 +38,7 @@ import { xrdAnalysisToInitialState } from '../../../lib/pro-workbench/xrd-analys
 import { cancelBatch, runBatch } from '../../../lib/batch-runner'
 import { mockBatchExecutor } from '../../../lib/batch-executors/mock'
 import { cancelCompute, runCompute } from '../../../lib/compute-run'
+import { cancelComputeExperiment, runComputeExperiment } from '../../../lib/compute-experiment-runner'
 import { toast } from '../../../stores/toast-store'
 import SpectrumArtifactCard from '../artifacts/SpectrumArtifactCard'
 import PeakFitArtifactCard from '../artifacts/PeakFitArtifactCard'
@@ -45,6 +47,7 @@ import XpsAnalysisCard from '../artifacts/XpsAnalysisCard'
 import RamanIdCard from '../artifacts/RamanIdCard'
 import JobMonitorCard from '../artifacts/JobMonitorCard'
 import ComputeArtifactCard from '../artifacts/ComputeArtifactCard'
+import ComputeExperimentCard from '../artifacts/ComputeExperimentCard'
 import StructureArtifactCard from '../artifacts/StructureArtifactCard'
 import PlotArtifactCard from '../artifacts/PlotArtifactCard'
 import ResearchReportWindowStub from '../artifacts/ResearchReportWindowStub'
@@ -278,6 +281,39 @@ export function renderCompute(
       onStop={async () => {
         const ok = await cancelCompute(artifact.id)
         if (!ok) toast.warn('No active run to cancel')
+      }}
+    />
+  )
+}
+
+
+export function renderComputeExperiment(
+  artifact: ComputeExperimentArtifact,
+  ctx: RenderContext,
+): ReactNode {
+  const { sessionId } = ctx
+  return (
+    <ComputeExperimentCard
+      artifact={artifact}
+      onRun={async () => {
+        try {
+          await runComputeExperiment({ sessionId, artifactId: artifact.id, mode: 'pending' })
+          toast.success('Compute experiment finished')
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : String(err))
+        }
+      }}
+      onStop={async () => {
+        const stopped = await cancelComputeExperiment(sessionId, artifact.id)
+        toast.info(stopped ? 'Stop requested' : 'No active experiment run')
+      }}
+      onRerunFailed={async () => {
+        try {
+          await runComputeExperiment({ sessionId, artifactId: artifact.id, mode: 'failed' })
+          toast.success('Failed points rerun finished')
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : String(err))
+        }
       }}
     />
   )

@@ -1,5 +1,5 @@
 // Literature search — ports lattice-cli's `_search_openalex` /
-// `_search_arxiv` / `_search_papers` (`tools/survey_pipeline.py`) to the
+// `_search_arxiv` / Semantic Scholar / `_search_papers` (`tools/survey_pipeline.py`) to the
 // Electron main process so the renderer-side agent runtime can ground
 // research drafts in real publication metadata instead of LLM-only
 // "knowledge". Runs in the main process to bypass the renderer CSP.
@@ -7,8 +7,7 @@
 // Intentionally narrow scope (MVP):
 //   - OpenAlex: https://api.openalex.org/works
 //   - arXiv Atom API: https://export.arxiv.org/api/query
-//   - No Semantic Scholar (rate-limited free tier) and no local FAISS
-//     RAG. Those are separate follow-ups once we have the UX loop right.
+//   - Semantic Scholar Graph API: https://api.semanticscholar.org/graph/v1/paper/search
 //
 // Both sources are queried in parallel; a failure on one side degrades
 // gracefully to whatever the other returned. Results are deduplicated by
@@ -39,7 +38,7 @@ export interface PaperSearchResult {
   url: string
   /** Source adapter that produced the row. Useful for the UI to badge
    *  results and for the agent prompt to weight recency vs peer review. */
-  source: 'openalex' | 'arxiv'
+  source: 'openalex' | 'arxiv' | 'semantic_scholar'
   /** Journal / venue name when the source reported one. */
   venue: string
   /** Absolute citation count as reported by the source (OpenAlex always
@@ -70,6 +69,7 @@ export interface LiteratureSourceDiagnostic {
 export interface LiteratureSearchDiagnostics {
   openalex: LiteratureSourceDiagnostic
   arxiv: LiteratureSourceDiagnostic
+  semanticScholar: LiteratureSourceDiagnostic
 }
 
 export type LiteratureSearchResult =
@@ -114,19 +114,22 @@ export async function searchLiterature(
     MAX_TIMEOUT_MS,
   )
 
-  const [openalex, arxiv] = await Promise.allSettled([
+  const [openalex, arxiv, semanticScholar] = await Promise.allSettled([
     searchOpenAlex(query, limit, timeoutMs, req.mailto),
     searchArxiv(query, limit, timeoutMs),
+    searchSemanticScholar(query, limit, timeoutMs),
   ])
 
   const diagnostics: LiteratureSearchDiagnostics = {
     openalex: diagnosticsFor(openalex),
     arxiv: diagnosticsFor(arxiv),
+    semanticScholar: diagnosticsFor(semanticScholar),
   }
 
   const rows: PaperSearchResult[] = []
   if (openalex.status === 'fulfilled') rows.push(...openalex.value)
   if (arxiv.status === 'fulfilled') rows.push(...arxiv.value)
+  if (semanticScholar.status === 'fulfilled') rows.push(...semanticScholar.value)
 
   const totalFetched = rows.length
   const results = dedupAndRank(rows).slice(0, limit)
@@ -264,6 +267,100 @@ function reconstructAbstract(
   if (positions.length === 0) return ''
   positions.sort((a, b) => a[0] - b[0])
   return positions.map(([, w]) => w).join(' ').trim()
+}
+
+
+// ── Semantic Scholar adapter ─────────────────────────────────────────────
+
+interface SemanticScholarAuthor {
+  name?: string
+}
+
+interface SemanticScholarPaper {
+  paperId?: string
+  title?: string
+  abstract?: string | null
+  year?: number | null
+  authors?: SemanticScholarAuthor[]
+  venue?: string | null
+  publicationVenue?: { name?: string | null } | null
+  externalIds?: { DOI?: string; ArXiv?: string } | null
+  url?: string | null
+  citationCount?: number | null
+  openAccessPdf?: { url?: string | null } | null
+}
+
+async function searchSemanticScholar(
+  query: string,
+  limit: number,
+  timeoutMs: number,
+): Promise<PaperSearchResult[]> {
+  const params = new URLSearchParams({
+    query,
+    limit: String(limit),
+    fields:
+      'title,abstract,year,authors,venue,publicationVenue,externalIds,url,citationCount,openAccessPdf',
+  })
+  const headers: Record<string, string> = {
+    accept: 'application/json',
+    'user-agent': 'Lattice-app/1.0 (literature-search)',
+  }
+  const apiKey = (process.env.SEMANTIC_SCHOLAR_API_KEY || '').trim()
+  if (apiKey) headers['x-api-key'] = apiKey
+  const res = await fetchWithTimeout(
+    `https://api.semanticscholar.org/graph/v1/paper/search?${params.toString()}`,
+    { headers, timeoutMs },
+  )
+  if (!res.ok) {
+    throw new Error(
+      `Semantic Scholar HTTP ${res.status}${res.statusText ? `: ${res.statusText}` : ''}`,
+    )
+  }
+  const json = (await res.json()) as { data?: SemanticScholarPaper[] }
+  const items = Array.isArray(json.data) ? json.data : []
+  const rows: PaperSearchResult[] = []
+  for (const item of items) {
+    const title = (item.title || '').trim()
+    if (!title) continue
+    const doi = (item.externalIds?.DOI || '').trim()
+    const arxiv = (item.externalIds?.ArXiv || '').trim()
+    const url = doi
+      ? `https://doi.org/${doi}`
+      : item.url || (arxiv ? `https://arxiv.org/abs/${arxiv}` : '')
+    const venue =
+      (item.publicationVenue?.name || item.venue || '').trim()
+    const authors = Array.isArray(item.authors)
+      ? item.authors
+          .slice(0, 5)
+          .map((author) => (author.name || '').trim())
+          .filter(Boolean)
+          .join(', ')
+      : ''
+    rows.push({
+      id: doi
+        ? `doi:${doi}`
+        : item.paperId
+          ? `s2:${item.paperId}`
+          : `s2:${title.slice(0, 80)}`,
+      title,
+      abstract: (item.abstract || '').trim(),
+      authors,
+      year: item.year ? String(item.year) : '',
+      doi,
+      url,
+      source: 'semantic_scholar',
+      venue,
+      citedByCount:
+        typeof item.citationCount === 'number'
+          ? item.citationCount
+          : undefined,
+      oaPdfUrl:
+        typeof item.openAccessPdf?.url === 'string' && item.openAccessPdf.url.trim()
+          ? item.openAccessPdf.url.trim()
+          : undefined,
+    })
+  }
+  return rows
 }
 
 // ── arXiv adapter ─────────────────────────────────────────────────────────
@@ -407,9 +504,8 @@ function dedupAndRank(rows: PaperSearchResult[]): PaperSearchResult[] {
       seen.set(key, row)
       continue
     }
-    // Prefer OpenAlex rows (richer metadata: DOI, citations, venue) when
-    // deduplication finds the same paper on both sides.
-    if (existing.source !== 'openalex' && row.source === 'openalex') {
+    // Prefer richer metadata when deduplication finds the same paper.
+    if (preferredSource(row.source) > preferredSource(existing.source)) {
       seen.set(key, row)
     }
   }
@@ -423,6 +519,12 @@ function dedupAndRank(rows: PaperSearchResult[]): PaperSearchResult[] {
     return yB - yA
   })
   return merged
+}
+
+function preferredSource(source: PaperSearchResult['source']): number {
+  if (source === 'openalex') return 3
+  if (source === 'semantic_scholar') return 2
+  return 1
 }
 
 function normaliseTitle(title: string): string {

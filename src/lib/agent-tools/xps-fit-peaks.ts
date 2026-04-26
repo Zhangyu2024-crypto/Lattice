@@ -36,6 +36,7 @@ export const xpsFitPeaksTool: LocalTool<Input, Output> = {
   name: 'xps_fit_peaks',
   description:
     'Fit peaks on an xps-pro workbench using the Voigt/pseudo-Voigt + Shirley/linear/Tougaard background. Consumes payload.peakDefinitions — add peaks in the UI or let the model build the list via the workbench first. Writes payload.fitResult.',
+  trustLevel: 'localWrite',
   cardMode: 'edit',
   inputSchema: {
     type: 'object',

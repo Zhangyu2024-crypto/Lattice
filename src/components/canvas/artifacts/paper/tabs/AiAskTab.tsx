@@ -108,7 +108,7 @@ export default function AiAskTab({
           placeholder={
             ready
               ? 'Ask about this paper...'
-              : 'Connect backend for RAG'
+              : 'Paper chat unavailable'
           }
           disabled={loading || !ready}
           className="card-paper-ai-input"

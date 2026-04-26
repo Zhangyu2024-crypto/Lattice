@@ -115,18 +115,6 @@ function GenerationDrawer({
           </select>
         </DrawerFieldset>
       </div>
-
-      <DrawerFieldset
-        label="System prompt"
-        description="Injected at the start of each call."
-      >
-        <textarea
-          value={config.systemPrompt}
-          onChange={(e) => onChange({ systemPrompt: e.target.value })}
-          rows={4}
-          className="llm-input llm-models-system-textarea"
-        />
-      </DrawerFieldset>
     </div>
   )
 }

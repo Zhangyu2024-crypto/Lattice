@@ -123,7 +123,7 @@ export const openSpectrumWorkbenchTool: LocalTool<Input, Output> = {
   name: 'open_spectrum_workbench',
   description:
     'Open a workspace spectrum file (.vms / .vamas / .xrdml / .chi / .csv / .xy / .dat / .jdx / .spc / .wdf / .rruf / ...) as a focused Pro workbench artifact. Call this BEFORE detect_peaks, xps_fit_peaks, raman_identify, xrd_refine, or any other workbench-scoped analysis tool when the user references a workspace file that does not yet have an associated workbench. The technique is auto-detected from the file extension + content; pass `technique` (xrd | xps | raman | ftir | curve) to override. Returns the new artifactId so subsequent analysis calls can reference it explicitly.',
-  trustLevel: 'safe',
+  trustLevel: 'localWrite',
   cardMode: 'info',
   inputSchema: {
     type: 'object',

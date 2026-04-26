@@ -55,6 +55,15 @@ let currentRoot: string | null = null
 const watchers = new Map<string, WatcherRecord>()
 let getMainWindowRef: (() => BrowserWindow | null) | null = null
 
+export function getCurrentWorkspaceRoot(): string | null {
+  return currentRoot
+}
+
+export async function getCurrentWorkspaceRootLoaded(): Promise<string | null> {
+  if (currentRoot == null) currentRoot = await loadRootFromDisk()
+  return currentRoot
+}
+
 function rootConfigPath(): string {
   return path.join(app.getPath('userData'), ROOT_CONFIG_FILE)
 }

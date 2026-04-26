@@ -44,6 +44,10 @@ import ResearchExportButton from '../../research/ResearchExportButton'
 import OutlinePane from './research-report/OutlinePane'
 import BodyPane from './research-report/BodyPane'
 import ReferencesPane from './research-report/ReferencesPane'
+import {
+  buildCitationIndexByFirstUse,
+  orderCitationsByIndex,
+} from './research-report/helpers'
 import { MD_STYLE } from './research-report/styles'
 import Resizer from '../../common/Resizer'
 import type {
@@ -89,12 +93,17 @@ export default function ResearchReportArtifactCard({
     [citations],
   )
 
-  // Citation id → user-facing number (1-based, in payload order).
+  // Citation id → user-facing number (1-based, by first use in the body).
+  // Retrieval order can contain hundreds of papers; first-use numbering
+  // keeps the visible report reading like a paper instead of showing
+  // first-section citations such as [94] or [120].
   const citationIndex = useMemo(() => {
-    const m = new Map<string, number>()
-    citations.forEach((c, i) => m.set(c.id, i + 1))
-    return m
-  }, [citations])
+    return buildCitationIndexByFirstUse({ sections, citations })
+  }, [sections, citations])
+  const orderedCitations = useMemo(
+    () => orderCitationsByIndex(citations, citationIndex),
+    [citationIndex, citations],
+  )
 
   // Pane widths, persisted per-installation via localStorage. We keep this
   // state local (not in prefs-store) because the widths only matter to
@@ -376,7 +385,7 @@ export default function ResearchReportArtifactCard({
         />
         <BodyPane
           sections={sections}
-          citations={citations}
+          citations={orderedCitations}
           citationIndex={citationIndex}
           onCiteClick={scrollToCitation}
           scrollRef={bodyScrollRef}
@@ -397,7 +406,7 @@ export default function ResearchReportArtifactCard({
           }}
         />
         <ReferencesPane
-          citations={citations}
+          citations={orderedCitations}
           citationIndex={citationIndex}
           citedInBySection={citedInBySection}
           isPlanning={isPlanning}

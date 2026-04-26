@@ -5,24 +5,24 @@ import type { LatticeFileKind } from '../../../lib/workspace/fs/types'
 import type { ParsedSpectrum } from '../../../lib/parsers/types'
 import {
   needsBinaryRead,
-  needsBackendParse,
+  needsLocalParserSupport,
 } from '../../../lib/parsers/parse-spectrum-file'
 import { useWorkspaceStore } from '../../../stores/workspace-store'
-import { useAppStore } from '../../../stores/app-store'
-import { useApi } from '../../../hooks/useApi'
 import { useEditableText } from './useEditableText'
 import EditorLoading from './EditorLoading'
 import EditorError from './EditorError'
 import EditorToolbar from './EditorToolbar'
 import CodeMirrorEditor from './CodeMirrorEditor'
 import {
-  backendResponseToSpectrum,
   extensionOf,
   toArrayBuffer,
 } from './spectral-data/helpers'
 import { ModeButton } from './spectral-data/ModeButton'
 import { MetadataBar } from './spectral-data/MetadataBar'
-import { BackendRequired, ParseFailure } from './spectral-data/Placeholders'
+import {
+  LocalParserUnsupported,
+  ParseFailure,
+} from './spectral-data/Placeholders'
 import { SpectrumPlot } from './spectral-data/SpectrumPlot'
 import EditorSplitPane from './EditorSplitPane'
 
@@ -39,8 +39,8 @@ export default function SpectralDataEditor({ relPath, kind }: Props) {
     [relPath],
   )
 
-  if (needsBackendParse(relPath)) {
-    return <BackendSpectralEditor relPath={relPath} ext={ext} />
+  if (needsLocalParserSupport(relPath)) {
+    return <UnsupportedSpectralEditor relPath={relPath} ext={ext} />
   }
 
   const isBinary = needsBinaryRead(relPath)
@@ -61,8 +61,6 @@ function BinarySpectralEditor({
 }) {
   const readBinary = useWorkspaceStore((s) => s.readBinary)
   const readFile = useWorkspaceStore((s) => s.readFile)
-  const backendReady = useAppStore((s) => s.backend.ready)
-  const { previewSpectrumFile } = useApi()
   const [spectrum, setSpectrum] = useState<ParsedSpectrum | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -100,12 +98,6 @@ function BinarySpectralEditor({
           }
         }
 
-        if (!result && backendReady) {
-          const data = await previewSpectrumFile(relPath)
-          if (cancelled) return
-          result = backendResponseToSpectrum(data, relPath)
-        }
-
         if (cancelled) return
         setSpectrum(result)
       } catch (err) {
@@ -119,7 +111,7 @@ function BinarySpectralEditor({
     return () => {
       cancelled = true
     }
-  }, [readBinary, readFile, relPath, backendReady, previewSpectrumFile])
+  }, [readBinary, readFile, relPath])
 
   if (loading) return <EditorLoading relPath={relPath} />
   if (error) return <EditorError relPath={relPath} message={error} />
@@ -164,8 +156,6 @@ function TextSpectralEditor({
   kind: LatticeFileKind
 }) {
   const { text, status, error, dirty, setText, save } = useEditableText(relPath)
-  const backendReady = useAppStore((s) => s.backend.ready)
-  const { previewSpectrumFile } = useApi()
   const [viewMode, setViewMode] = useState<ViewMode>('chart')
   const [lang, setLang] = useState<Extension | undefined>(undefined)
 
@@ -176,22 +166,16 @@ function TextSpectralEditor({
   }, [ext])
 
   const [spectrum, setSpectrum] = useState<ParsedSpectrum | null>(null)
-  const [localParseDone, setLocalParseDone] = useState(false)
 
-  // Debounce the parse chain. Without this every keystroke re-enters
-  // the async parse → backend-fallback pipeline; on a 10 MB CSV each
-  // cycle is ~100ms of main-thread work and still fires an abortable
-  // HTTP request. 250 ms keeps the preview feeling live while coalescing
-  // typing bursts. The `cancelled` flag also drops late-arriving parse
-  // results when the text has since advanced — otherwise a slow parse
-  // of an older string can stomp a newer successful parse.
+  // Debounce the local parse chain. On a 10 MB CSV each cycle can be
+  // ~100ms of main-thread work, so 250 ms keeps the preview feeling live
+  // while coalescing typing bursts. The `cancelled` flag also drops
+  // late-arriving parse results when the text has since advanced.
   useEffect(() => {
     if (!text) {
       setSpectrum(null)
-      setLocalParseDone(false)
       return
     }
-    setLocalParseDone(false)
     let cancelled = false
     const timer = setTimeout(() => {
       void import('../../../lib/parsers/parse-spectrum-file').then(
@@ -199,7 +183,6 @@ function TextSpectralEditor({
           parseSpectrumText(text, relPath).then((result) => {
             if (cancelled) return
             setSpectrum(result)
-            setLocalParseDone(true)
           }),
       )
     }, 250)
@@ -208,21 +191,6 @@ function TextSpectralEditor({
       clearTimeout(timer)
     }
   }, [text, relPath])
-
-  useEffect(() => {
-    if (!localParseDone || spectrum || !backendReady) return
-    let cancelled = false
-    previewSpectrumFile(relPath)
-      .then((data) => {
-        if (cancelled) return
-        const parsed = backendResponseToSpectrum(data, relPath)
-        if (parsed) setSpectrum(parsed)
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [localParseDone, spectrum, backendReady, relPath, previewSpectrumFile])
 
   if (status === 'loading' || text == null) {
     return <EditorLoading relPath={relPath} />
@@ -327,63 +295,15 @@ function TextSpectralEditor({
   )
 }
 
-// ── Backend-delegated editor (for formats without a frontend parser) ─
+// ── Unsupported local parser editor ─────────────────────────────────
 
-function BackendSpectralEditor({
+function UnsupportedSpectralEditor({
   relPath,
   ext,
 }: {
   relPath: string
   ext: string
 }) {
-  const backendReady = useAppStore((s) => s.backend.ready)
-  const { previewSpectrumFile } = useApi()
-  const [spectrum, setSpectrum] = useState<ParsedSpectrum | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!backendReady) {
-      setLoading(false)
-      setError(null)
-      setSpectrum(null)
-      return
-    }
-
-    let cancelled = false
-    setLoading(true)
-    setError(null)
-    setSpectrum(null)
-
-    previewSpectrumFile(relPath)
-      .then((data) => {
-        if (cancelled) return
-        const parsed = backendResponseToSpectrum(data, relPath)
-        if (parsed) {
-          setSpectrum(parsed)
-        } else {
-          setError('Backend returned empty data')
-        }
-      })
-      .catch((err) => {
-        if (cancelled) return
-        setError(err instanceof Error ? err.message : String(err))
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [relPath, backendReady, previewSpectrumFile])
-
-  if (!backendReady) {
-    return <BackendRequired ext={ext} />
-  }
-  if (loading) return <EditorLoading relPath={relPath} />
-  if (error) return <EditorError relPath={relPath} message={error} />
-
   return (
     <div
       style={{
@@ -401,13 +321,8 @@ function BackendSpectralEditor({
         onSave={() => {}}
         icon={Activity}
       />
-      {spectrum && <MetadataBar spectrum={spectrum} />}
       <div style={{ flex: 1, minHeight: 0 }}>
-        {spectrum ? (
-          <SpectrumPlot spectrum={spectrum} />
-        ) : (
-          <ParseFailure ext={ext} />
-        )}
+        <LocalParserUnsupported ext={ext} />
       </div>
     </div>
   )

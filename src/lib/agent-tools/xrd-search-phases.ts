@@ -39,6 +39,7 @@ export const xrdSearchPhasesTool: LocalTool<Input, Output> = {
   name: 'xrd_search_phases',
   description:
     'Identify crystalline phases in an xrd-pro workbench by combining the element list + detected peaks. Pipeline: worker-side element subset expansion (Fe+Ti+O → also queries {Fe,O}, {Ti,O}, {Fe,Ti,O}, …) against the Materials Project DB, then LLM adjudication over the top candidates. Writes `candidates` + `identification` to payload. REQUIRES `elements` — ALWAYS ask the user which elements are present in the sample before calling this tool. Do NOT guess or infer elements from the filename. The user must explicitly confirm the element list.',
+  trustLevel: 'localWrite',
   cardMode: 'review',
   inputSchema: {
     type: 'object',

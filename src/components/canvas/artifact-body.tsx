@@ -13,6 +13,7 @@ import { forwardMention } from './artifact-body/helpers'
 import {
   renderBatch,
   renderCompute,
+  renderComputeExperiment,
   renderComputePro,
   renderCurveAnalysis,
   renderHypothesis,
@@ -86,6 +87,8 @@ export function renderArtifactBody(
       return renderJob(artifact)
     case 'compute':
       return renderCompute(artifact, ctx)
+    case 'compute-experiment':
+      return renderComputeExperiment(artifact, ctx)
     case 'structure':
       return renderStructure(artifact, ctx)
     case 'research-report':

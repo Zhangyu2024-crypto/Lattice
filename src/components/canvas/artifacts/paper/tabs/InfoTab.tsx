@@ -8,7 +8,7 @@ export default function InfoTab({
   metadata,
   paperId,
   annotationCount,
-  backendAvailable,
+  localTextAvailable,
   fullText,
   fullTextLoading,
   fullTextError,
@@ -18,7 +18,7 @@ export default function InfoTab({
   metadata: PaperArtifactPayload['metadata']
   paperId: number | null
   annotationCount: number
-  backendAvailable: boolean
+  localTextAvailable: boolean
   fullText: string | null
   fullTextLoading: boolean
   fullTextError: string | null
@@ -41,12 +41,12 @@ export default function InfoTab({
 
       <Disclosure
         title="Full text"
-        summary={!backendAvailable ? 'offline' : undefined}
-        open={showFullText && backendAvailable}
+        summary={!localTextAvailable ? 'unavailable' : undefined}
+        open={showFullText && localTextAvailable}
         onOpenChange={() => {
-          // Only fire the load/toggle when the backend is available; a
+          // Only fire the load/toggle when the local paper record is available; a
           // disabled row must not trigger a request or flip state.
-          if (backendAvailable) onToggleFullText()
+          if (localTextAvailable) onToggleFullText()
         }}
       >
         {fullTextLoading ? (

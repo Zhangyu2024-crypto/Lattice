@@ -683,6 +683,7 @@ const ARTIFACT_KIND_LABEL: Readonly<Record<ArtifactKind, string>> = {
   'raman-id': 'raman',
   structure: 'structure',
   compute: 'compute',
+  'compute-experiment': 'experiment',
   job: 'job',
   'research-report': 'report',
   batch: 'batch',

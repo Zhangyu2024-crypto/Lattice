@@ -1,8 +1,10 @@
-// Lock-in: /research <topic> must expand to the exact same bytes as the
-// existing @research inline command so the migration is behaviour-preserving.
+// Lock-in: /research <topic> expands through the shared research scaffold.
 import { describe, expect, it } from 'vitest'
-import { researchCommand } from './research'
-import { buildInlineResearchScaffold } from '../../research-prompts'
+import {
+  RESEARCH_COMMAND_MAX_ITERATIONS,
+  researchCommand,
+} from './research'
+import { buildResearchScaffold } from '../../research-prompts'
 
 function ctx() {
   return {
@@ -14,18 +16,19 @@ function ctx() {
 }
 
 describe('researchCommand', () => {
-  it('matches buildInlineResearchScaffold byte-for-byte', async () => {
+  it('matches buildResearchScaffold byte-for-byte', async () => {
     const expanded = await researchCommand.getPrompt('BaTiO3 ferroelectrics', ctx())
-    expect(expanded).toBe(buildInlineResearchScaffold('BaTiO3 ferroelectrics'))
+    expect(expanded).toBe(buildResearchScaffold('BaTiO3 ferroelectrics'))
   })
 
   it('passes empty args through unchanged (scaffold handles the fallback)', async () => {
     const expanded = await researchCommand.getPrompt('', ctx())
-    expect(expanded).toBe(buildInlineResearchScaffold(''))
+    expect(expanded).toBe(buildResearchScaffold(''))
   })
 
-  it('declares a 12-iteration ceiling and a paletteGroup', () => {
-    expect(researchCommand.maxIterations).toBe(12)
+  it('declares a research-sized iteration ceiling and a paletteGroup', () => {
+    expect(researchCommand.maxIterations).toBe(RESEARCH_COMMAND_MAX_ITERATIONS)
+    expect(researchCommand.maxIterations).toBeGreaterThanOrEqual(60)
     expect(researchCommand.paletteGroup).toBeTruthy()
   })
 })

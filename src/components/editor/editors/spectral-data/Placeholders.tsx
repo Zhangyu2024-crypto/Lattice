@@ -1,11 +1,11 @@
-import { Activity, Server } from 'lucide-react'
+import { Activity, FileWarning } from 'lucide-react'
 
 /**
- * Fallback placeholders shown when a backend-only format is requested without
- * a running backend, or when local parsing fails. Pure presentation.
+ * Fallback placeholders shown when a spectrum format lacks a local parser or
+ * when local parsing fails. Pure presentation.
  */
 
-export function BackendRequired({ ext }: { ext: string }) {
+export function LocalParserUnsupported({ ext }: { ext: string }) {
   return (
     <div
       style={{
@@ -19,10 +19,10 @@ export function BackendRequired({ ext }: { ext: string }) {
         fontSize: 'var(--text-sm)',
       }}
     >
-      <Server size={28} strokeWidth={1.2} style={{ opacity: 0.4 }} />
-      <div>{ext} files require the lattice-cli backend to preview</div>
+      <FileWarning size={28} strokeWidth={1.2} style={{ opacity: 0.4 }} />
+      <div>{ext} preview is not supported by the local parser yet</div>
       <div style={{ fontSize: 'var(--text-xs)', opacity: 0.7 }}>
-        Start the backend or use Electron mode to enable spectrum parsing
+        Open the source view or convert the file to a supported spectrum format
       </div>
     </div>
   )

@@ -60,10 +60,14 @@ describe('tool registration', () => {
   it.each([
     'compute_check_health',
     'compute_from_snippet',
+    'compute_status',
+    'compute_experiment_create',
+    'compute_experiment_run',
+    'compute_experiment_stop',
+    'compute_experiment_rerun_points',
     'simulate_structure',
     'structure_tweak',
     'export_for_engine',
-    'compute_run_native',
     'list_compute_snippets',
   ])('%s is registered', (name) => {
     expect(names).toContain(name)
@@ -149,6 +153,15 @@ describe('snippet catalog integration', () => {
     expect(cp2k.length).toBeGreaterThan(0)
   })
 
+  it('has a CP2K-driven Si bulk modulus snippet', () => {
+    const snippets = getComputeSnippets('python')
+    const snippet = snippets.find((s) => s.id === 'cp2k_si_bulk_modulus')
+    expect(snippet).toBeDefined()
+    expect(snippet?.description?.toLowerCase()).toContain('bulk modulus')
+    expect(snippet?.code).toContain('__LATTICE_PROGRESS__')
+    expect(snippet?.code).toContain('diamond')
+  })
+
   it('all snippets have id and code', () => {
     const all = getComputeSnippets()
     for (const s of all) {
@@ -190,7 +203,84 @@ describe('simulate template integration', () => {
   })
 })
 
+describe('compute experiment tools', () => {
+  it('creates a CP2K Si bulk modulus experiment artifact', async () => {
+    const sid = makeSession()
+    const tool = LOCAL_TOOL_CATALOG.find((t) => t.name === 'compute_experiment_create')
+    expect(tool).toBeDefined()
+
+    const output = await tool!.execute(
+      { templateId: 'cp2k_si_bulk_modulus' } as never,
+      { sessionId: sid, signal: new AbortController().signal },
+    ) as { artifactId: string; pointCount: number }
+
+    const artifact = useRuntimeStore.getState().sessions[sid].artifacts[output.artifactId]
+    expect(artifact?.kind).toBe('compute-experiment')
+    expect(output.pointCount).toBeGreaterThanOrEqual(3)
+    expect((artifact as any).payload.points[0].params.a).toBeDefined()
+  })
+
+
+  it('creates a generic parameter-sweep experiment artifact', async () => {
+    const sid = makeSession()
+    const tool = LOCAL_TOOL_CATALOG.find((t) => t.name === 'compute_experiment_create')
+    expect(tool).toBeDefined()
+
+    const output = await tool!.execute(
+      {
+        templateId: 'custom_parameter_sweep',
+        title: 'Generic Sweep',
+        points: [{ x: 1 }, { x: 2 }],
+        pointScriptTemplate: 'import json\nprint("__LATTICE_METRICS__ " + json.dumps({"x": {{param:x}}))',
+      } as never,
+      { sessionId: sid, signal: new AbortController().signal },
+    ) as { artifactId: string; pointCount: number }
+
+    const artifact = useRuntimeStore.getState().sessions[sid].artifacts[output.artifactId]
+    expect(artifact?.kind).toBe('compute-experiment')
+    expect(output.pointCount).toBe(2)
+    expect((artifact as any).payload.pointScriptTemplate).toContain('__LATTICE_METRICS__')
+    expect((artifact as any).payload.parameters[0].name).toBe('x')
+  })
+})
+
 describe('end-to-end: structure → compute artifact', () => {
+  it('compute artifact tools create drafts even when autoRun is requested', async () => {
+    const sid = makeSession()
+    const tool = LOCAL_TOOL_CATALOG.find((t) => t.name === 'compute_from_snippet')
+    expect(tool).toBeDefined()
+
+    const output = await tool!.execute(
+      { snippetId: 'xrd_simulate', autoRun: true } as never,
+      { sessionId: sid, signal: new AbortController().signal },
+    ) as { artifactId: string; summary: string }
+
+    const artifact = useRuntimeStore.getState().sessions[sid].artifacts[output.artifactId]
+    expect(artifact?.kind).toBe('compute')
+    expect((artifact as ComputeArtifact).payload.status).toBe('idle')
+    expect(output.summary).toMatch(/Run it with compute_run/)
+  })
+
+  it('structure tweak no longer auto-runs by default', async () => {
+    const sid = makeSession()
+    makeRealisticStructure(sid, 'st-no-auto')
+    const tool = LOCAL_TOOL_CATALOG.find((t) => t.name === 'structure_tweak')
+    expect(tool).toBeDefined()
+
+    const output = await tool!.execute(
+      {
+        tweakKind: 'supercell',
+        params: { nx: 2, ny: 2, nz: 1 },
+      } as never,
+      { sessionId: sid, signal: new AbortController().signal },
+    ) as { artifactId: string; summary: string }
+
+    const artifact = useRuntimeStore.getState().sessions[sid].artifacts[output.artifactId]
+    expect(artifact?.kind).toBe('compute')
+    expect((artifact as ComputeArtifact).payload.status).toBe('idle')
+    expect(output.summary).toMatch(/Run it with compute_run/)
+  })
+
   it('creates a simulation compute artifact from a structure', () => {
     const sid = makeSession()
     const struct = makeStructure(sid, 'st-e2e')

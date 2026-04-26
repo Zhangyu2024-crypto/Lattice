@@ -35,7 +35,7 @@ interface DraftInput {
   /** Extra notes from the user or the orchestrator for just this section.
    *  Optional; omit for normal flow. */
   notes?: string
-  /** Approximate word budget for this section body. Clamped [60, 600]. */
+  /** Approximate word budget for this section body. Clamped [120, 1400]. */
   targetWords?: number
 }
 
@@ -52,13 +52,15 @@ interface DraftOutput {
   nextSectionId: string | null
 }
 
-const MIN_WORDS = 60
-const MAX_WORDS = 600
+const MIN_WORDS = 120
+const MAX_WORDS = 1400
 
 export const researchDraftSectionTool: LocalTool<DraftInput, DraftOutput> = {
   name: 'research_draft_section',
   description:
     "Step 2 of a research flow. Drafts the body of a single outlined section on an existing research-report artifact (created by research_plan_outline). Call once per section in outline order. The tool returns the NEXT section id that still needs drafting (or null when the last one is done) — use it to sequence subsequent calls. When null is returned, call research_finalize_report.",
+  trustLevel: 'localWrite',
+  cardMode: 'info',
   inputSchema: schema(
     {
       artifactId: {
@@ -79,7 +81,7 @@ export const researchDraftSectionTool: LocalTool<DraftInput, DraftOutput> = {
       targetWords: {
         type: 'number',
         description:
-          `Target body length for this section. Clamped to [${MIN_WORDS}, ${MAX_WORDS}]. Defaults by style: concise → 150, comprehensive → 300.`,
+          `Target body length for this section. Clamped to [${MIN_WORDS}, ${MAX_WORDS}]. Defaults by style: concise → 300, comprehensive → 850.`,
       },
     },
     ['artifactId', 'sectionId'],
@@ -114,8 +116,8 @@ export const researchDraftSectionTool: LocalTool<DraftInput, DraftOutput> = {
       typeof input.targetWords === 'number'
         ? input.targetWords
         : payload.style === 'comprehensive'
-          ? 300
-          : 150,
+          ? defaultDeepWordBudget(section)
+          : 300,
       MIN_WORDS,
       MAX_WORDS,
     )
@@ -123,6 +125,7 @@ export const researchDraftSectionTool: LocalTool<DraftInput, DraftOutput> = {
     // Mark section as drafting BEFORE the LLM call so the card immediately
     // shows the pulse. If the LLM call fails we revert; see the catch below.
     patchSection(ctx.sessionId, artifactId, sectionIdx, { status: 'drafting' }, {
+      stage: 'Writing',
       status: 'drafting',
       currentSectionId: sectionId,
     })
@@ -216,6 +219,7 @@ export const researchDraftSectionTool: LocalTool<DraftInput, DraftOutput> = {
         ...payload,
         sections: nextSections,
         citations: mergedCitations,
+        stage: 'Writing',
         status: 'drafting',
         currentSectionId: nextSectionId,
       }
@@ -269,6 +273,12 @@ export const researchDraftSectionTool: LocalTool<DraftInput, DraftOutput> = {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
+
+function defaultDeepWordBudget(section: ReportSection): number {
+  if (section.level >= 2) return 650
+  return 900
+}
+
 function findNextSectionId(
   sections: ReportSection[],
   justDraftedIdx: number,
@@ -316,7 +326,7 @@ function patchSection(
 function selectRelevantCitations(
   citations: Citation[],
   sectionHeading: string,
-  limit = 8,
+  limit = 14,
 ): Citation[] {
   if (citations.length === 0) return []
   const keywords = extractKeywords(sectionHeading)
@@ -391,10 +401,15 @@ function buildPrompt(args: {
     'Already-drafted sections (for continuity — do not repeat):',
     priorSummary,
     '',
-    'Grounded references available for this section (prefer these; their metadata is verified against OpenAlex / arXiv):',
+    'Grounded references available for this section (prefer these; their metadata is verified against OpenAlex / arXiv / Semantic Scholar / local Library):',
     groundedBlock,
     '',
     `Write about ${args.targetWords} words for this section only. Use [@cite:<id>] tokens inline for any claim that deserves a citation. Every token must have a matching entry in the "citations" array you return OR appear in the grounded list above (in which case it's already in the artifact — still list its id in citationIds, but you may omit it from the citations array you return).`,
+    'Depth requirements:',
+    '- Synthesize sources instead of listing them: compare assumptions, methods, datasets, and conclusions.',
+    '- Include at least one concrete example, benchmark, mechanism, or case when the topic allows it.',
+    '- Explicitly note uncertainty, limitations, or competing interpretations when evidence is mixed.',
+    '- Avoid generic filler; every paragraph should add a distinct analytical point.',
     '',
     'Return ONE JSON object, no prose, no code fences:',
     '{',

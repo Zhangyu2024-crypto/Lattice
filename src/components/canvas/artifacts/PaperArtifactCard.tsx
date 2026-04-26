@@ -119,7 +119,7 @@ export default function PaperArtifactCard({
   const [tab, setTab] = useState<SideTab>('annotations')
   const [resolvedMetadata, setResolvedMetadata] = useState(metadata)
 
-  // Annotations from backend
+  // Annotations from the local library store.
   const [annotations, setAnnotations] = useState<PaperAnnotation[]>([])
   const [annotationsLoading, setAnnotationsLoading] = useState(false)
 
@@ -158,7 +158,7 @@ export default function PaperArtifactCard({
   const [editDraftColor, setEditDraftColor] = useState('#D4D4D4')
   const [editSaving, setEditSaving] = useState(false)
 
-  // Derive the paperId (backend integer ID) from the artifact. Demo papers use
+  // Derive the paperId (local library integer ID) from the artifact. Demo papers use
   // string ids like "pap-001" which must NOT be coerced — parseInt would yield
   // NaN, but a permissive regex like /^\d/ would match "123abc". Require pure
   // digits so demo ids fall through to the demo payload path.
@@ -396,7 +396,7 @@ export default function PaperArtifactCard({
       const list = await libApi.listAnnotations(paperId)
       setAnnotations(Array.isArray(list) ? list : [])
     } catch {
-      // Backend may not have annotations.
+      // Local annotation storage may be unavailable in pure-Vite mode.
     } finally {
       setAnnotationsLoading(false)
     }
@@ -459,7 +459,7 @@ export default function PaperArtifactCard({
       switch (action.type) {
         case 'highlight': {
           if (paperId == null || !libApi.ready) {
-            toast.warn('Backend needed for annotations')
+            toast.warn('Annotations require a local library paper')
             return
           }
           try {
@@ -502,7 +502,7 @@ export default function PaperArtifactCard({
         case 'strike':
         case 'todo': {
           if (paperId == null || !libApi.ready) {
-            toast.warn('Backend needed for annotations')
+            toast.warn('Annotations require a local library paper')
             return
           }
           try {
@@ -698,7 +698,7 @@ export default function PaperArtifactCard({
   const handleEditSave = useCallback(
     async (ann: PaperAnnotation) => {
       if (!libApi.ready) {
-        toast.warn('Backend needed for annotations')
+        toast.warn('Annotations require local library storage')
         return
       }
       // UpdateAnnotationRequest has no `type` field — annotations can only
@@ -948,7 +948,7 @@ export default function PaperArtifactCard({
                 metadata={resolvedMetadata}
                 paperId={paperId}
                 annotationCount={annotations.length}
-                backendAvailable={libApi.ready && paperId != null}
+                localTextAvailable={libApi.ready && paperId != null}
                 fullText={fullText}
                 fullTextLoading={fullTextLoading}
                 fullTextError={fullTextError}

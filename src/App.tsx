@@ -133,9 +133,9 @@ export default function App() {
   const paperReaderLauncher = useModalStore((s) => s.paperReader)
   const setPaperReaderLauncher = useModalStore((s) => s.setPaperReader)
 
-  // Research is an agent-mode flow (lattice-cli style): same session
-  // thread, research_* tools, raised iteration budget. Start a new
-  // session when the current one already has chat history.
+  // Research is an agent-mode flow: same session thread, local research_*
+  // tools, raised iteration budget. Start a new session when the current
+  // one already has chat history.
   const ensureAgentThreadForResearchFlow = useCallback(() => {
     const store = useRuntimeStore.getState()
     const sid =
@@ -437,7 +437,7 @@ export default function App() {
     return () => cleanup?.()
   }, [])
 
-  // Wire Electron backend status to app-store + toast
+  // Wire optional legacy bridge status to app-store + toast.
   useEffect(() => {
     const cleanup = window.electronAPI?.onBackendStatus((status) => {
       const wasReady = useAppStore.getState().backend.ready
@@ -448,9 +448,9 @@ export default function App() {
         baseUrl: status.port ? `http://localhost:${status.port}` : '',
       })
       if (wasReady && !status.ready) {
-        toast.warn('Backend disconnected — agent paused')
+        toast.warn('Legacy bridge disconnected; continuing in local mode')
       } else if (!wasReady && status.ready) {
-        toast.success(`Backend connected on port ${status.port}`)
+        toast.success(`Legacy bridge connected on port ${status.port}`)
       }
     })
     window.electronAPI
@@ -818,9 +818,8 @@ export default function App() {
     (topic?: string) => {
       ensureAgentThreadForResearchFlow()
       const trimmed = topic?.trim()
-      // Inline `@research <topic>` path: the composer submits the
-      // scaffold itself (with a short `displayText`) so we only need to
-      // prepare the thread here — no prefill, no autoSubmit.
+      // Slash-command path with an explicit topic submits the scaffold
+      // itself, so this hook only prepares the research thread.
       if (trimmed) return
       dispatchComposerPrefill({
         text: buildAutoResearchScaffold(),

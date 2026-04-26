@@ -23,6 +23,7 @@ export const xpsChargeCorrectTool: LocalTool<Input, Output> = {
   name: 'xps_charge_correct',
   description:
     'Apply XPS charge correction to an xps-pro workbench. Auto mode finds the C 1s adventitious peak near 284.8 eV; manual mode applies the explicit shift. Writes payload.chargeCorrection.',
+  trustLevel: 'localWrite',
   cardMode: 'review',
   inputSchema: {
     type: 'object',

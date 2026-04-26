@@ -35,10 +35,8 @@ export interface Mentionable {
   /**
    * When set, selecting this row inserts the literal text verbatim
    * (replacing the `@…` trigger) instead of creating a @-mention chip.
-   * Used by the research / survey command shortcuts — they need the
-   * next-typed chars to be a plain topic the composer will route
-   * through `parseResearchCommand` on send, not an anchored MentionRef.
-   * `ref` is ignored by the composer when this field is present.
+   * Reserved for literal command shortcuts; these rows are not anchored
+   * MentionRefs and `ref` is ignored when this field is present.
    */
   commandInsert?: string
 }

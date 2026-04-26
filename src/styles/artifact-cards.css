@@ -2139,26 +2139,32 @@
   border: 1px solid var(--color-border);
 }
 
-/* Citation pill in body text. Click scrolls + flashes the matching
-   entry in the right-pane references list. Kept small so inline flow
-   isn't disrupted. */
+/* Lightweight citation marker in body text. Click scrolls + flashes the
+   matching entry in the right-pane references list. Keep this closer to
+   paper-style superscript refs than to an in-text UI badge. */
 .research-card-cite-pill {
-  color: var(--color-accent-text);
+  color: color-mix(in srgb, var(--color-text-secondary) 82%, var(--color-accent));
   cursor: pointer;
   font-family: var(--font-sans);
   font-weight: 600;
-  font-size: var(--text-xxs);
-  padding: 0 4px;
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
-  margin-left: 2px;
-  vertical-align: super;
+  font-size: 0.72em;
+  padding: 0 1px;
+  border-radius: 2px;
+  background: transparent;
+  margin-left: 1px;
   line-height: 1;
+  vertical-align: super;
   user-select: none;
-  transition: background 120ms ease;
+  white-space: nowrap;
+  transition:
+    color 120ms ease,
+    background 120ms ease;
 }
-.research-card-cite-pill:hover {
-  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+.research-card-cite-pill:hover,
+.research-card-cite-pill:focus-visible {
+  color: var(--color-accent-text);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  outline: none;
 }
 
 /* Right-pane references list. Compact card per citation: number (click
@@ -3721,6 +3727,116 @@
   flex-shrink: 0;
   min-width: 72px;
   text-align: right;
+  color: var(--color-text-muted);
+}
+
+.card-compute-process {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-sidebar) 78%, var(--color-bg-panel));
+}
+
+.card-compute-process-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.card-compute-process-title {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.card-compute-process-runid {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 1px 5px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  background: var(--color-bg-panel);
+}
+
+.card-compute-process-spacer {
+  flex: 1;
+  min-width: 8px;
+}
+
+.card-compute-process-progress-label {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xxs);
+  color: var(--color-text-muted);
+}
+
+.card-compute-process-track {
+  position: relative;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-bg-active);
+}
+
+.card-compute-process-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text-primary) 58%, transparent);
+  transition: width 260ms ease;
+}
+
+.card-compute-process-fill.is-indeterminate {
+  position: absolute;
+  width: 38%;
+  min-width: 72px;
+  animation: card-compute-process-indeterminate 1.25s ease-in-out infinite;
+}
+
+@keyframes card-compute-process-indeterminate {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(280%); }
+}
+
+.card-compute-process-log {
+  max-height: 148px;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-panel);
+}
+
+.card-compute-process-pre {
+  margin: 0;
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--color-text-primary);
+}
+
+.card-compute-process-pre + .card-compute-process-pre {
+  border-top: 1px solid var(--color-border);
+}
+
+.card-compute-process-pre--error {
+  color: var(--color-red);
+  background: color-mix(in srgb, var(--color-red) 7%, transparent);
+}
+
+.card-compute-process-empty {
+  display: block;
+  padding: 9px 10px;
+  font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
 

@@ -352,7 +352,22 @@ export const localProCompute = {
       })
 
       void electron
-        .computeRun(ipcReq)
+        .issueApprovalToken({
+          toolName: 'compute_run',
+          scope: {
+            runId: ipcReq.runId,
+            code: ipcReq.code,
+            language: ipcReq.language ?? '',
+            mode: ipcReq.mode,
+          },
+        })
+        .then((issued) => {
+          if (!issued.ok) throw new Error(issued.error)
+          return electron.computeRun({
+            ...ipcReq,
+            approvalToken: issued.token,
+          })
+        })
         .then((ack) => {
           if (!ack.success) finish(failure(ack.error, stdout, stderr))
         })

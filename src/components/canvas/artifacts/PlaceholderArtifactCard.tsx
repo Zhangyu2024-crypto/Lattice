@@ -12,6 +12,7 @@ const KIND_LABEL: Record<Artifact['kind'], string> = {
   'raman-id': 'Raman Identification',
   structure: 'Structure',
   compute: 'Compute',
+  'compute-experiment': 'Compute Experiment',
   job: 'Job Monitor',
   'research-report': 'Research Report',
   batch: 'Batch Workflow',

@@ -510,15 +510,6 @@
   width: 100%;
 }
 
-.llm-models-system-textarea {
-  /* ModelsTab.tsx:483 — resize:vertical lets the user expand only Y. */
-  width: 100%;
-  min-height: 72px;
-  max-height: 220px;
-  resize: vertical;
-  font-family: var(--font-sans);
-}
-
 /* Providers list */
 
 .llm-models-list {

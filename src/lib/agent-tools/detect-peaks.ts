@@ -2,7 +2,6 @@ import { localProSpectrum } from '../local-pro-spectrum'
 import type { LocalTool } from '../../types/agent-tool'
 import type { XrdProPeak } from '../../types/artifact'
 import {
-  patchWorkbenchPayload,
   requireSpectrum,
   resolveWorkbench,
   summarizePeaks,
@@ -25,7 +24,8 @@ interface Output {
 export const detectPeaksTool: LocalTool<Input, Output> = {
   name: 'detect_peaks',
   description:
-    'Detect peaks on a Pro workbench spectrum (XRD / XPS / Raman) using prominence + topK heuristics. Writes peaks into the workbench payload (field is `peaks` for XRD/Raman, `detectedPeaks` for XPS). Uses focused artifact by default.',
+    'Detect peaks on a Pro workbench spectrum (XRD / XPS / Raman) using prominence + topK heuristics. Returns editable peak proposals; approved peaks are written into the workbench payload (`peaks` for XRD/Raman, `detectedPeaks` for XPS). Uses focused artifact by default.',
+  trustLevel: 'localWrite',
   // Phase α pilot — pause the loop after detection so the user can trim
   // spurious peaks / edit positions before the next LLM turn sees them.
   approvalPolicy: 'require',
@@ -62,11 +62,7 @@ export const detectPeaksTool: LocalTool<Input, Output> = {
       fwhm: p.fwhm != null ? Number(p.fwhm) : undefined,
       snr: p.snr != null ? Number(p.snr) : undefined,
     }))
-    if (kind === 'xps') {
-      patchWorkbenchPayload(ctx.sessionId, artifact, { detectedPeaks: peaks })
-    } else {
-      patchWorkbenchPayload(ctx.sessionId, artifact, { peaks })
-    }
+    void kind
     return { artifactId: artifact.id, peaks, summary: summarizePeaks(peaks) }
   },
 }

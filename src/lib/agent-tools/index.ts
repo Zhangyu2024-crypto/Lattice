@@ -12,7 +12,9 @@ import { getArtifactTool } from './get-artifact'
 import { listArtifactsTool } from './list-artifacts'
 import { literatureSearchTool } from './literature-search'
 import { researchDraftSectionTool } from './research-draft-section'
+import { researchContinueReportTool } from './research-continue-report'
 import { researchFinalizeReportTool } from './research-finalize-report'
+import { researchRefineReportTool } from './research-refine-report'
 import { researchPlanOutlineTool } from './research-plan-outline'
 // Phase A Tier S — spectrum analysis + paper / knowledge RAG.
 import { assessSpectrumQualityTool } from './assess-spectrum-quality'
@@ -34,6 +36,12 @@ import {
   taskUpdateTool,
 } from './agent-tasks'
 import { toolSearchTool } from './tool-search'
+import { mcpCallToolTool, mcpListToolsTool } from './mcp-tools'
+import { pluginCallToolTool, pluginListToolsTool } from './plugin-tools'
+import {
+  workspaceContextReadTool,
+  workspaceContextRefreshTool,
+} from './workspace-context'
 import { spawnAgentTool, listAgentsTool } from './spawn-agent'
 import { sendMessageTool } from './send-message'
 import {
@@ -56,10 +64,10 @@ import { compareSpectraTool } from './compare-spectra'
 // Phase 0 — Compute (Python script author / run / edit) + Structure (3D modeling).
 import { computeCreateScriptTool } from './compute-create-script'
 import { computeRunTool } from './compute-run'
+import { computeStatusTool } from './compute-status'
 import { computeEditScriptTool } from './compute-edit-script'
 import { structureFromCifTool } from './structure-from-cif'
 import { buildStructureTool } from './build-structure'
-import { structureFetchTool } from './structure-fetch'
 import { structureAnalyzeTool } from './structure-analyze'
 import { structureModifyTool } from './structure-modify'
 // Phase A2/A3 — LaTeX-aware agent tools (selection edit, compile-error fix,
@@ -78,8 +86,13 @@ import { computeFromSnippetTool } from './compute-from-snippet'
 import { simulateStructureTool } from './simulate-structure'
 import { structureTweakTool } from './structure-tweak'
 import { exportForEngineTool } from './export-for-engine'
-import { computeRunNativeTool } from './compute-run-native'
 import { listComputeSnippetsTool } from './list-compute-snippets'
+import {
+  computeExperimentCreateTool,
+  computeExperimentRerunTool,
+  computeExperimentRunTool,
+  computeExperimentStopTool,
+} from './compute-experiment'
 // Hypothesis workflow — create → gather evidence → evaluate.
 import { hypothesisCreateTool } from './hypothesis-create'
 import { hypothesisGatherEvidenceTool } from './hypothesis-gather-evidence'
@@ -97,11 +110,16 @@ export const LOCAL_TOOL_CATALOG: LocalTool[] = [
   //   1. research_plan_outline (creates skeleton, returns sectionIds)
   //   2. literature_search (optional, before drafting; grounds citations
   //      in real OpenAlex/arXiv metadata)
-  //   3. research_draft_section (one per outline item, in order)
-  //   4. research_finalize_report (consolidate + close out)
+  //   3. research_continue_report (preferred long-run path: draft all
+  //      remaining sections, refine, finalize) OR research_draft_section
+  //      for manual one-section-at-a-time control
+  //   4. research_refine_report (continuity + self-audit)
+  //   5. research_finalize_report (consolidate + close out)
   researchPlanOutlineTool,
   literatureSearchTool,
+  researchContinueReportTool,
   researchDraftSectionTool,
+  researchRefineReportTool,
   researchFinalizeReportTool,
   // Spectrum analysis — operate on a focused XRD/XPS/Raman Pro workbench
   // artifact unless an explicit `artifactId` is provided. When the user
@@ -140,6 +158,12 @@ export const LOCAL_TOOL_CATALOG: LocalTool[] = [
   taskListTool,
   taskUpdateTool,
   toolSearchTool,
+  workspaceContextReadTool,
+  workspaceContextRefreshTool,
+  pluginListToolsTool,
+  pluginCallToolTool,
+  mcpListToolsTool,
+  mcpCallToolTool,
   // Sub-agent system — spawn child agents for parallel / delegated work.
   // spawn_agent creates a new LLM loop; send_message retrieves results;
   // list_agents shows all spawned agents and their status.
@@ -182,18 +206,22 @@ export const LOCAL_TOOL_CATALOG: LocalTool[] = [
   // script. compute_run is trust:hostExec so the approval framework gates it.
   computeCreateScriptTool,
   computeRunTool,
+  computeStatusTool,
   computeEditScriptTool,
+  computeExperimentCreateTool,
+  computeExperimentRunTool,
+  computeExperimentStopTool,
+  computeExperimentRerunTool,
   // Phase 0 — Structure / 3D modeling. `structure_from_cif` upserts a
-  // structure artifact from a pasted CIF; `structure_fetch` pulls a structure
-  // from Materials Project (needs MP_API_KEY — graceful fallback); analyze
-  // computes bond lengths / density / cell volume purely in-JS; modify
-  // supports supercell + element replacement as a new child artifact.
+  // structure artifact from a pasted/local CIF; `cif_lookup` / `cif_search`
+  // below read the bundled local Materials Project CIF database. Do not expose
+  // online MP fetching here: users select local structures in-app and should
+  // not need MP_API_KEY for normal structure workflows.
   structureFromCifTool,
   // Natural-language → pymatgen → structure artifact. Primary path for
   // "give me a BaTiO3" style intents; pairs with the notebook's "Add
   // Structure" modal so agent and UI share the same builder.
   buildStructureTool,
-  structureFetchTool,
   structureAnalyzeTool,
   structureModifyTool,
   // LaTeX-aware tools.
@@ -206,14 +234,14 @@ export const LOCAL_TOOL_CATALOG: LocalTool[] = [
   // Literature fetch — search + download + import to Library for RAG.
   literatureFetchTool,
   // Phase 1 — Domain-aware compute. Health check, snippet-based creation,
-  // simulation launch, structure tweaks (surface/vacancy/dope), engine
-  // export (LAMMPS/CP2K), native-language execution, snippet catalog.
+  // simulation draft, structure tweaks (surface/vacancy/dope), engine
+  // export (LAMMPS/CP2K), snippet catalog. Execution is centralized in
+  // compute_run so hostExec approval is consistent for every language.
   computeCheckHealthTool,
   computeFromSnippetTool,
   simulateStructureTool,
   structureTweakTool,
   exportForEngineTool,
-  computeRunNativeTool,
   listComputeSnippetsTool,
   // Hypothesis workflow — create hypotheses, gather evidence from multiple
   // sources (artifacts, papers, web), then evaluate and resolve statuses.
@@ -236,7 +264,7 @@ export function findLocalTool(name: string): LocalTool | null {
 //
 // Instead of sending all ~60 tools to the LLM every turn, filter by
 // session context. Core tools always load; domain tools load only when
-// relevant artifacts or files exist in the session.
+// relevant artifacts or the user's message make them likely useful.
 
 type ToolGroup =
   | 'core'          // always loaded
@@ -256,10 +284,17 @@ const TOOL_GROUP: Record<string, ToolGroup> = {
   enter_plan_mode: 'core',
   exit_plan_mode: 'core',
   ask_user_question: 'core',
+  invoke_slash_command: 'core',
   task_create: 'core',
   task_list: 'core',
   task_update: 'core',
   tool_search: 'core',
+  workspace_context_read: 'core',
+  workspace_context_refresh: 'core',
+  plugin_list_tools: 'core',
+  plugin_call_tool: 'core',
+  mcp_list_tools: 'core',
+  mcp_call_tool: 'core',
   workspace_read_file: 'core',
   workspace_write_file: 'core',
   workspace_edit_file: 'core',
@@ -292,7 +327,6 @@ const TOOL_GROUP: Record<string, ToolGroup> = {
   // Structure modeling
   structure_from_cif: 'structure',
   build_structure: 'structure',
-  structure_fetch: 'structure',
   structure_analyze: 'structure',
   structure_modify: 'structure',
   structure_tweak: 'structure',
@@ -303,15 +337,21 @@ const TOOL_GROUP: Record<string, ToolGroup> = {
   compute_check_health: 'compute',
   compute_create_script: 'compute',
   compute_run: 'compute',
+  compute_status: 'compute',
+  compute_experiment_create: 'compute',
+  compute_experiment_run: 'compute',
+  compute_experiment_stop: 'compute',
+  compute_experiment_rerun_points: 'compute',
   compute_edit_script: 'compute',
   compute_from_snippet: 'compute',
-  compute_run_native: 'compute',
   list_compute_snippets: 'compute',
 
   // Research
   research_plan_outline: 'research',
   literature_search: 'research',
+  research_continue_report: 'research',
   research_draft_section: 'research',
+  research_refine_report: 'research',
   research_finalize_report: 'research',
 
   // Literature
@@ -365,9 +405,6 @@ export function resolveToolsForContext(
   ctx: SessionContext,
 ): LocalTool[] {
   const activeGroups = new Set<ToolGroup>(['core'])
-
-  // Always include spectrum (most common use case) and open_spectrum_workbench
-  activeGroups.add('spectrum')
 
   if (ctx.hasStructureArtifacts || STRUCTURE_KEYWORDS.test(ctx.userMessage)) {
     activeGroups.add('structure')

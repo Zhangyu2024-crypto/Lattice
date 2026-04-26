@@ -61,6 +61,7 @@ export default function StatusBar({
   usage,
   context,
 }: Props) {
+  const backend = useAppStore((s) => s.backend)
   const isConnected = useAppStore((s) => s.isConnected)
   const model = useAppStore((s) => s.model)
   const session = useRuntimeStore(selectActiveSession)
@@ -80,7 +81,16 @@ export default function StatusBar({
   const toggleLog = useLogStore((s) => s.toggle)
 
   const connectionIcon = isConnected ? <Wifi size={14} /> : <WifiOff size={14} />
-  const connectionLabel = isConnected ? 'Connected' : 'Offline'
+  const connectionLabel = isConnected
+    ? 'Legacy bridge live'
+    : backend.ready
+      ? 'Legacy bridge ready'
+      : 'Local mode'
+  const connectionTitle = isConnected
+    ? `Optional legacy bridge WebSocket connected on port ${backend.port}`
+    : backend.ready
+      ? 'Optional legacy bridge process is ready, but the WebSocket is not connected. Local Electron tools still work.'
+      : 'Running in local mode. Local Electron tools, local agent tools, and configured LLM providers can still work.'
 
   return (
     <div className="status-bar">
@@ -92,7 +102,7 @@ export default function StatusBar({
 
       <div className="status-spacer" />
 
-      <StatusChip icon={connectionIcon} title="Backend status">
+      <StatusChip icon={connectionIcon} title={connectionTitle}>
         {connectionLabel}
       </StatusChip>
 
