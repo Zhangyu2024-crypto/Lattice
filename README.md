@@ -269,14 +269,6 @@ Files larger than 100 MB are hosted as GitHub Release assets and downloaded via 
 
 ## Contributing
 
-Pull requests are welcome. To get started:
-
-1. Fork the repository and create a feature branch
-2. Make your changes, run `npm run typecheck` and `npm test`
-3. Open a pull request describing the change
-
-To add a collaborator, the repository owner can invite contributors via **Settings → Collaborators** on GitHub.
-
 Areas where contributions are especially welcome:
 - New agent tools for materials characterization workflows
 - Expanding the bundled reference databases
