@@ -43,3 +43,9 @@ china-europe-*.pdf
 .idea/
 .vscode/
 .DS_Store
+
+# Experimental / scratch data — keep test data in fixtures, not repo root
+/*.csv
+/*.dat
+/*.xy
+/*.raw
