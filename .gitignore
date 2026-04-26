@@ -30,6 +30,8 @@ public/busytex/*.wasm
 .claude/
 .codex
 .codex/
+CLAUDE.md
+AGENTS.md
 
 # Session logs and unrelated documents
 *.zip:Zone.Identifier
