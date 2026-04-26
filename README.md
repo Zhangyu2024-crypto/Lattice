@@ -1,104 +1,245 @@
 # Lattice
 
-AI-assisted materials-science spectroscopy and crystal structure modeling — a self-contained desktop application.
+> AI-powered desktop workspace for materials science — spectroscopy, crystal structure modeling, and computational research, all running locally.
 
-## What is Lattice?
+Lattice is an Electron + React + TypeScript application that brings together AI agents, scientific computing, and rich visualization in a single self-contained workspace. Designed for researchers working with XRD / XPS / Raman / FTIR data and crystal structures, it combines an LLM-driven agent orchestrator with a Python scientific worker and an optional Docker compute backend.
 
-Lattice is an Electron + React + TypeScript desktop app designed for researchers and engineers working with spectroscopic data (XRD, XPS, Raman, FTIR) and crystal structures. It combines an intelligent agent orchestrator with scientific computing tools to streamline materials characterization workflows.
+---
 
-### Key capabilities
+## Features
 
-- **Spectral analysis** — peak detection, fitting, phase identification, and refinement for XRD, XPS, Raman, and FTIR data
-- **Crystal structure modeling** — interactive 3D visualization and property calculation powered by 3Dmol.js
-- **AI agent** — multi-turn LLM orchestrator with 60+ local tools for automated analysis pipelines
-- **Compute workbench** — run Python, LAMMPS, and CP2K scripts via a local Docker container or remote SSH target
-- **Research assistant** — PDF reading, literature search, RAG-based retrieval, and research report generation
+### Spectroscopy & analysis
+- **XRD** — peak detection, phase identification against the Materials Project database, Rietveld-style refinement, multi-phase fitting
+- **XPS** — Shirley/Tougaard background subtraction, peak fitting (Voigt / Gaussian / Lorentzian), charge correction, quantification with Scofield RSFs
+- **Raman** — peak detection, baseline correction, library identification
+- **FTIR & generic spectra** — parsing, plotting, peak detection, baseline operations
+
+### Crystal structure & computation
+- **Interactive 3D viewer** — 3Dmol.js-based structure visualization with editing tools
+- **Compute workbench** — author and run Python / LAMMPS / CP2K scripts in a managed Docker container, or via SSH to a remote host
+- **Materials Project integration** — bundled XRD database (~784 MB) for phase search
+
+### Research & writing
+- **AI agent** — multi-turn conversational orchestrator with 60+ local tools, native function-calling via Anthropic SDK
+- **Literature** — Crossref / arXiv search, PDF ingestion, RAG-based retrieval over your library
+- **Research report** — guided pipeline (outline → draft → refine → cite) producing publication-ready reports
+- **LaTeX editor** — in-browser TeX compilation via `busytex` (WASM TeXLive)
+
+### Workspace & sync
+- **Virtual filesystem** — project-scoped artifact storage with JSON envelopes, persisted to IndexedDB or disk
+- **Sync backends** — WebDAV and rclone for cross-device sharing
+- **Bookmarks & sessions** — durable conversation/artifact history
+
+---
+
+## Project Structure
+
+```
+Lattice-app/
+├── electron/              # Main process: window lifecycle, IPC, native bridges
+│   ├── main.ts                 # Entry point — window + handler registration
+│   ├── preload.ts              # Exposes window.electronAPI to renderer
+│   ├── ipc-compute.ts          # Docker / SSH compute container bridge
+│   ├── ipc-llm.ts              # LLM proxy + streaming
+│   ├── ipc-library.ts          # Paper library
+│   ├── ipc-literature.ts       # Crossref / arXiv search
+│   ├── ipc-research.ts         # Research pipeline orchestration
+│   ├── ipc-mcp.ts              # Model Context Protocol bridge
+│   ├── ipc-worker.ts           # Python worker process management
+│   ├── ipc-workspace*.ts       # Virtual filesystem IPC
+│   ├── ipc-sync.ts             # WebDAV / rclone sync
+│   ├── sync/                   # Sync backend implementations
+│   ├── compute-runner.ts       # Compute job execution
+│   ├── conda-env-manager.ts    # Python environment management
+│   ├── python-manager.ts       # Worker bootstrap
+│   ├── literature-search.ts    # Crossref/arXiv clients
+│   └── crossref-metadata.ts    # Citation metadata
+│
+├── worker/                # Python JSON-RPC subprocess
+│   ├── main.py                 # stdio loop, dispatches tool calls
+│   ├── requirements.txt        # numpy, scipy, pymatgen, etc.
+│   ├── tools/
+│   │   ├── spectrum.py         # Generic spectrum operations
+│   │   ├── xrd.py              # XRD analysis & refinement
+│   │   ├── xrd_mp_db.py        # Materials Project DB queries
+│   │   ├── xps.py              # XPS fitting & quantification
+│   │   ├── raman.py            # Raman analysis
+│   │   ├── paper.py            # PDF parsing
+│   │   ├── rag.py              # RAG retrieval
+│   │   ├── library.py          # Local paper library
+│   │   ├── cif_db.py           # CIF structure handling
+│   │   ├── web.py              # Web fetching
+│   │   └── dara_bridge.py      # DARA spectroscopy bridge
+│   └── data/                   # Reference databases (JSON + SQLite)
+│
+├── src/                   # React 19 renderer
+│   ├── App.tsx                 # VSCode-style shell layout
+│   ├── main.tsx                # Renderer entry
+│   │
+│   ├── components/             # UI components
+│   │   ├── agent/              # Chat panel, composer, tool cards, approvals
+│   │   ├── canvas/             # Artifact rendering (30+ kinds)
+│   │   │   ├── artifacts/          # Per-kind artifact cards
+│   │   │   │   ├── pro/                # Pro workbenches (XRD/XPS/Raman/curve)
+│   │   │   │   ├── paper/              # Paper reader tabs
+│   │   │   │   └── research-report/    # Research report renderer
+│   │   │   └── artifact-body/      # Kind-renderer dispatch
+│   │   ├── compute/            # Compute notebook UI
+│   │   ├── editor/             # CodeMirror-based file editors
+│   │   ├── explorer/           # Workspace file tree
+│   │   ├── inspector/          # Property panels
+│   │   ├── layout/             # Activity bar, sidebar, status bar, settings modal
+│   │   ├── library/            # Paper library modals
+│   │   ├── llm/                # Model configuration
+│   │   ├── pdf/                # PDF reader
+│   │   ├── research/           # Research pipeline UI
+│   │   └── ui/                 # Shared primitives
+│   │
+│   ├── stores/                 # Zustand state (persisted to IndexedDB)
+│   │   ├── runtime-store.ts        # Sessions, artifacts, transcript, tasks
+│   │   ├── workspace-store.ts      # Virtual filesystem index
+│   │   ├── modal-store.ts          # Overlay/modal state
+│   │   ├── compute-config-store.ts # Docker/SSH compute config
+│   │   ├── llm-config-store.ts     # LLM provider settings
+│   │   └── …                       # session, library, prefs, etc.
+│   │
+│   ├── lib/                    # Business logic
+│   │   ├── agent-orchestrator.ts   # Multi-turn LLM loop
+│   │   ├── agent-orchestrator/     # Approval flow, envelope, helpers
+│   │   ├── agent-tools/            # 60+ local tools (LOCAL_TOOL_CATALOG)
+│   │   ├── slash-commands/         # /research, /help, /resume, …
+│   │   ├── batch-executors/        # Parallel batch jobs
+│   │   ├── compute-snippets/       # Built-in compute templates
+│   │   ├── workspace/              # Virtual filesystem (memory + Electron)
+│   │   ├── parsers/                # Spectrum file format parsers
+│   │   └── llm-chat/               # Streaming LLM chat
+│   │
+│   ├── hooks/                  # Custom React hooks
+│   ├── styles/                 # CSS (grayscale design system)
+│   └── types/                  # TypeScript declarations
+│
+├── public/                # Static assets
+│   ├── busytex/                # WASM TeXLive for in-browser LaTeX
+│   └── fonts/                  # Inter font family
+│
+├── scripts/               # Tooling & data fetch
+│   ├── download-data.sh        # Download large data assets from Releases
+│   ├── fetch_mp_cifs.py        # Materials Project CIF fetcher
+│   ├── pack-conda-env.sh       # Conda env packaging
+│   └── check-bundled-data.mjs  # Bundled data validator
+│
+├── docs/                  # Architecture & design notes
+├── electron-builder.yml   # Electron packaging config
+├── vite.config.ts         # Vite + Electron plugin config
+├── vitest.config.ts       # Test runner config
+└── package.json
+```
+
+---
 
 ## Architecture
 
-Lattice runs entirely on your machine — no cloud backend required.
+Lattice runs entirely on your machine in three coordinated processes:
 
-| Layer | Description |
-|-------|-------------|
-| **Electron main** | Window lifecycle, IPC handlers, compute bridge, worker process management |
-| **React renderer** | React 19 + Zustand + ECharts + 3Dmol.js — also works in plain Vite mode |
-| **Agent orchestrator** | Multi-turn LLM loop that invokes local tools and dispatches events to the UI |
-| **Python worker** | Standalone process with ~17 scientific tools, communicating via JSON over stdio |
-| **Compute container** | Docker-based execution for Python/LAMMPS/CP2K with session context injection |
+```
+┌───────────────────────────┐    IPC     ┌──────────────────────────┐
+│  Renderer (React + Vite)  │ ◀────────▶ │  Electron main process   │
+│  • UI / Zustand stores    │            │  • Window & lifecycle    │
+│  • Agent orchestrator     │            │  • IPC handlers          │
+│  • Artifact rendering     │            │  • Worker manager        │
+└───────────────────────────┘            │  • Compute bridge        │
+                                         └────────────┬─────────────┘
+                                                      │
+                                  ┌───────────────────┼───────────────────┐
+                                  │ stdio JSON-RPC    │ docker exec / SSH │
+                                  ▼                   ▼                   ▼
+                    ┌──────────────────────┐  ┌────────────────────────────┐
+                    │  Python worker       │  │  Compute container         │
+                    │  • spectrum, xps,    │  │  • Python / LAMMPS / CP2K  │
+                    │    xrd, raman tools  │  │  • Session context inject  │
+                    │  • paper, rag, lib   │  │  • Local Docker or SSH     │
+                    └──────────────────────┘  └────────────────────────────┘
+```
+
+### Key abstractions
+
+- **Agent tools** (`src/lib/agent-tools/`) — pluggable tool registry. Each tool declares `trustLevel` (`safe` / `sandboxed` / `localWrite` / `hostExec`), `cardMode` (`silent` / `info` / `review` / `edit`), and an optional approval policy.
+- **Artifacts** (`src/types/artifact.ts`) — 30+ typed payloads (spectrum, structure, compute, research-report, paper, etc.) rendered through a kind-dispatch in `kind-renderers.tsx`.
+- **Slash commands** (`src/lib/slash-commands/`) — `/research`, `/help`, `/resume` and friends; auto-registered into the command palette.
+- **Modal stack** (`src/stores/modal-store.ts`) — single source of truth for all overlays, no prop drilling.
+
+---
 
 ## Getting Started
 
 ### Prerequisites
+- Node.js ≥ 18
+- Python ≥ 3.10 (for the worker process)
+- Docker (optional, for the compute workbench)
 
-- Node.js >= 18
-- Python >= 3.10 (for the worker process)
-- Docker (optional, for compute workbench)
-
-### Install & Run
+### Install
 
 ```bash
-# Install dependencies
+# Clone
+git clone https://github.com/Zhangyu2024-crypto/Lattice.git
+cd Lattice
+
+# Node dependencies
 npm install
 
-# Download large data assets (~784 MB, one-time)
+# One-time download of large data assets (~784 MB)
 npm run setup
 
-# Development (renderer only, no Electron shell)
-npm run dev
-
-# Development with Electron
-npm run electron:dev
-
-# Build for production
-npm run build
+# Python worker dependencies (optional — only if running worker locally)
+pip install -r worker/requirements.txt
 ```
 
-> **Note:** `npm run setup` downloads the Materials Project XRD database from [GitHub Releases](https://github.com/Zhangyu2024-crypto/Lattice/releases/tag/v0.1.0-data) into `worker/data/`. This is required for XRD phase search functionality. The script skips files that already exist, so it's safe to run multiple times.
-
-### Verify
+### Run
 
 ```bash
-npm run typecheck   # TypeScript type checking
-npm test            # Unit + component + IPC tests
+npm run dev           # Vite dev server (renderer only, no Electron)
+npm run electron:dev  # Full Electron app in dev mode
+npm run build         # Production build → release/
 ```
+
+### Test & verify
+
+```bash
+npm run typecheck     # tsc --noEmit
+npm test              # Vitest (unit + component + IPC)
+npm run check:data    # Verify bundled databases
+```
+
+---
 
 ## Bundled Data
 
-The app packages scientific reference databases via `electron-builder.yml` `extraResources`:
-
 | Data | Location | Size | Source |
 |------|----------|------|--------|
-| XPS reference lines & Scofield RSFs | `worker/data/xps_*.json` | ~110 KB | In repo |
+| XPS reference lines + Scofield RSFs | `worker/data/xps_*.json` | ~110 KB | In repo |
 | XRD reference patterns | `worker/data/xrd_references.json` | ~28 KB | In repo |
 | Raman reference spectra | `worker/data/raman_references.json` | ~54 KB | In repo |
-| Materials Project XRD database | `worker/data/mp_xrd_database.db` | ~784 MB | [GitHub Release](https://github.com/Zhangyu2024-crypto/Lattice/releases/tag/v0.1.0-data) |
+| Materials Project XRD database | `worker/data/mp_xrd_database.db` | ~784 MB | [Release v0.1.0-data](https://github.com/Zhangyu2024-crypto/Lattice/releases/tag/v0.1.0-data) |
 
-Large files (> 100 MB) are hosted as GitHub Release assets instead of being tracked in Git. Run `npm run setup` to download them automatically.
+Files larger than 100 MB are hosted as GitHub Release assets and downloaded via `npm run setup`.
+
+---
 
 ## Contributing
 
-We welcome contributions! To get started:
+Pull requests are welcome. To get started:
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes
-4. Push to the branch and open a Pull Request
+1. Fork the repository and create a feature branch
+2. Make your changes, run `npm run typecheck` and `npm test`
+3. Open a pull request describing the change
 
-### Adding collaborators
-
-Repository owner can invite collaborators via **Settings > Collaborators** on GitHub.
+To add a collaborator, the repository owner can invite contributors via **Settings → Collaborators** on GitHub.
 
 Areas where contributions are especially welcome:
-
-- Expanding scientific reference databases
-- Improving XPS / XRD / Raman analysis workflows
-- Adding tests and smoke checks
-- Building new agent tools for materials characterization
-- Improving packaged Python environment support
-
-## Authors
-
-- **Zhangyu2024-crypto** — creator and maintainer
+- New agent tools for materials characterization workflows
+- Expanding the bundled reference databases
+- Pro-mode workbenches for additional spectroscopy techniques
+- Tests, smoke checks, and documentation
 
 ## License
 
