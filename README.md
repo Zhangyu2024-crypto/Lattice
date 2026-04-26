@@ -2,7 +2,7 @@
 
 > AI-powered desktop workspace for materials science — spectroscopy, crystal structure modeling, and computational research, all running locally.
 
-Lattice is an Electron + React + TypeScript application that brings together AI agents, scientific computing, and rich visualization in a single self-contained workspace. Designed for researchers working with XRD / XPS / Raman / FTIR data and crystal structures, it combines an LLM-driven agent orchestrator with a Python scientific worker and an optional Docker compute backend.
+Lattice is an Electron + React + TypeScript application that brings together AI agents, scientific computing, and rich visualization in a single self-contained workspace. Designed for researchers working with XRD / XPS / Raman / FTIR data and crystal structures, it combines an LLM-driven agent orchestrator with a Python scientific worker and a bundled native compute environment (Python + LAMMPS + CP2K + phonopy + BGMN).
 
 ---
 
@@ -16,7 +16,7 @@ Lattice is an Electron + React + TypeScript application that brings together AI 
 
 ### Crystal structure & computation
 - **Interactive 3D viewer** — 3Dmol.js-based structure visualization with editing tools
-- **Compute workbench** — author and run Python / LAMMPS / CP2K scripts in a managed Docker container, or via SSH to a remote host
+- **Compute workbench** — author and run Python / LAMMPS / CP2K scripts directly on the host using a bundled conda environment (no Docker required)
 - **Materials Project integration** — bundled XRD database (~784 MB) for phase search
 
 ### Research & writing
@@ -39,7 +39,7 @@ Lattice-app/
 ├── electron/              # Main process: window lifecycle, IPC, native bridges
 │   ├── main.ts                 # Entry point — window + handler registration
 │   ├── preload.ts              # Exposes window.electronAPI to renderer
-│   ├── ipc-compute.ts          # Docker / SSH compute container bridge
+│   ├── ipc-compute.ts          # Native compute job bridge (spawn-based)
 │   ├── ipc-llm.ts              # LLM proxy + streaming
 │   ├── ipc-library.ts          # Paper library
 │   ├── ipc-literature.ts       # Crossref / arXiv search
@@ -99,7 +99,7 @@ Lattice-app/
 │   │   ├── runtime-store.ts        # Sessions, artifacts, transcript, tasks
 │   │   ├── workspace-store.ts      # Virtual filesystem index
 │   │   ├── modal-store.ts          # Overlay/modal state
-│   │   ├── compute-config-store.ts # Docker/SSH compute config
+│   │   ├── compute-config-store.ts # Native compute settings (mode, resources, env)
 │   │   ├── llm-config-store.ts     # LLM provider settings
 │   │   └── …                       # session, library, prefs, etc.
 │   │
@@ -147,19 +147,21 @@ Lattice runs entirely on your machine in three coordinated processes:
 │  • UI / Zustand stores    │            │  • Window & lifecycle    │
 │  • Agent orchestrator     │            │  • IPC handlers          │
 │  • Artifact rendering     │            │  • Worker manager        │
-└───────────────────────────┘            │  • Compute bridge        │
+└───────────────────────────┘            │  • Compute runner        │
                                          └────────────┬─────────────┘
                                                       │
-                                  ┌───────────────────┼───────────────────┐
-                                  │ stdio JSON-RPC    │ docker exec / SSH │
-                                  ▼                   ▼                   ▼
-                    ┌──────────────────────┐  ┌────────────────────────────┐
-                    │  Python worker       │  │  Compute container         │
-                    │  • spectrum, xps,    │  │  • Python / LAMMPS / CP2K  │
-                    │    xrd, raman tools  │  │  • Session context inject  │
-                    │  • paper, rag, lib   │  │  • Local Docker or SSH     │
-                    └──────────────────────┘  └────────────────────────────┘
+                              ┌───────────────────────┴───────────────────────┐
+                              │ stdio JSON-RPC                                │ child_process.spawn
+                              ▼                                               ▼
+              ┌────────────────────────────┐              ┌──────────────────────────────────┐
+              │  Python worker             │              │  Native compute env              │
+              │  • spectrum, xps, xrd      │              │  • Bundled conda: Python + LAMMPS│
+              │  • raman, paper, rag       │              │    + CP2K + phonopy + BGMN       │
+              │  • library, cif, web       │              │  • User scripts run on host      │
+              └────────────────────────────┘              └──────────────────────────────────┘
 ```
+
+> Earlier versions (≤ v4) routed compute jobs through a Docker container or SSH-to-remote-Docker. This was removed in v5 in favor of a bundled host-native conda environment, simplifying setup and eliminating the Docker dependency.
 
 ### Key abstractions
 
@@ -180,8 +182,10 @@ Lattice runs entirely on your machine in three coordinated processes:
 | **npm** | ≥ 9 | Package manager (bundled with Node) |
 | **Python** | ≥ 3.10 | Scientific worker (XRD / XPS / Raman / RAG / PDF) |
 | **pip** | latest | Python package manager |
-| **Docker** | ≥ 20.10 | *(Optional)* Compute workbench (Python / LAMMPS / CP2K) |
+| **conda / mamba** | latest | *(Optional)* Bundle the compute env with LAMMPS / CP2K / phonopy / BGMN |
 | **Git LFS** | — | Not required — large data fetched via `npm run setup` |
+
+> **No Docker required.** The compute workbench runs user scripts directly on the host through a bundled conda environment. Docker / SSH execution paths from earlier versions have been removed.
 
 ### 2. Clone & install
 
@@ -216,7 +220,6 @@ npm run setup
 - `3dmol`, `three` — 3D structure visualization
 - `@anthropic-ai/sdk` — LLM client
 - `@modelcontextprotocol/sdk` — MCP integration
-- `dockerode` — Docker bridge for compute workbench
 - `webdav` — sync backend
 - `pdfjs-dist` — PDF rendering
 - `codemirror` — in-browser code editor
