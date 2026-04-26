@@ -12,6 +12,7 @@ import {
   Package,
   Play,
   Square,
+  Terminal,
 } from 'lucide-react'
 import { EditorView, keymap, lineNumbers } from '@codemirror/view'
 import { EditorState } from '@codemirror/state'
@@ -125,6 +126,7 @@ export default function ComputeArtifactCard({
       {(payload.status === 'cancelled' || payload.status === 'failed') && (
         <StaleResultBanner
           status={payload.status}
+          timedOut={payload.timedOut}
           durationMs={payload.durationMs}
           exitCode={payload.exitCode}
           workdir={payload.runs?.[0]?.workdir}
@@ -137,6 +139,14 @@ export default function ComputeArtifactCard({
         <ComputeProgressBar
           current={payload.progress.current}
           total={payload.progress.total}
+        />
+      )}
+      {isRunning && (
+        <ComputeProcessPanel
+          progress={payload.progress}
+          stdout={payload.stdout}
+          stderr={payload.stderr}
+          runId={payload.runId}
         />
       )}
       <div className="card-compute-main-split">
@@ -215,19 +225,27 @@ function TopBar({
  *  so the user can inspect meta.json / stdout.log directly. */
 function StaleResultBanner({
   status,
+  timedOut,
   durationMs,
   exitCode,
   workdir,
 }: {
   status: 'cancelled' | 'failed'
+  timedOut?: boolean
   durationMs?: number
   exitCode: number | null
   workdir?: string
 }) {
   const label =
-    status === 'cancelled' ? 'Last run cancelled' : 'Last run failed'
+    timedOut
+      ? 'Last run timed out'
+      : status === 'cancelled'
+        ? 'Last run cancelled'
+        : 'Last run failed'
   const detail =
-    status === 'cancelled'
+    timedOut
+      ? `timed out after ${formatDuration(durationMs)}`
+      : status === 'cancelled'
       ? `cancelled after ${formatDuration(durationMs)}`
       : `exit=${exitCode ?? '?'} after ${formatDuration(durationMs)}`
 
@@ -255,7 +273,7 @@ function StaleResultBanner({
       <div className="card-compute-stale-banner-body">
         <div className="card-compute-stale-banner-title">{label}</div>
         <div className="card-compute-stale-banner-detail">
-          {detail}. Any numeric results the chat mentions may be from an earlier run — verify against the run log before trusting them.
+          {detail}. The run did not complete, so any partial output should not be treated as a final result. Verify against the run log before trusting chat summaries.
         </div>
       </div>
       <button
@@ -324,7 +342,9 @@ function RunHistoryBar({ runs }: { runs: ComputeRunEntry[] }) {
                 {formatDuration(r.durationMs)}
               </span>
               <span className="card-compute-run-history-exit">
-                exit {r.exitCode ?? (r.status === 'running' ? '—' : r.cancelled ? 'cancel' : '?')}
+                {r.timedOut
+                  ? 'timeout'
+                  : `exit ${r.exitCode ?? (r.status === 'running' ? '—' : r.cancelled ? 'cancel' : '?')}`}
               </span>
               <button
                 type="button"
@@ -350,6 +370,7 @@ function RunHistoryBar({ runs }: { runs: ComputeRunEntry[] }) {
 
 function formatRunSummary(r: ComputeRunEntry): string {
   if (r.status === 'running') return 'running…'
+  if (r.timedOut) return `timeout · ${formatDuration(r.durationMs)}`
   const exit = r.exitCode ?? (r.cancelled ? 'cancel' : '?')
   return `exit ${exit} · ${formatDuration(r.durationMs)}`
 }
@@ -385,6 +406,79 @@ function ComputeProgressBar({
       <span className="card-compute-progress-label">
         {current}/{total} ({pct}%)
       </span>
+    </div>
+  )
+}
+
+const PROCESS_TAIL_LINES = 10
+
+function tailLines(text: string, maxLines: number): string {
+  const cleaned = text.replace(FIGURE_SENTINEL_RE, '').trimEnd()
+  if (!cleaned) return ''
+  return cleaned.split('\n').slice(-maxLines).join('\n')
+}
+
+function ComputeProcessPanel({
+  progress,
+  stdout,
+  stderr,
+  runId,
+}: {
+  progress?: ComputeArtifactPayload['progress']
+  stdout: string
+  stderr: string
+  runId?: string | null
+}) {
+  const stdoutTail = useMemo(
+    () => tailLines(stdout, PROCESS_TAIL_LINES),
+    [stdout],
+  )
+  const stderrTail = useMemo(
+    () => tailLines(stderr, Math.max(4, Math.floor(PROCESS_TAIL_LINES / 2))),
+    [stderr],
+  )
+  const hasOutput = Boolean(stdoutTail || stderrTail)
+  const pct = progress && progress.total > 0
+    ? Math.min(100, Math.round((progress.current / progress.total) * 100))
+    : null
+
+  return (
+    <div className="card-compute-process" role="status" aria-live="polite">
+      <div className="card-compute-process-head">
+        <Terminal size={13} aria-hidden />
+        <span className="card-compute-process-title">Running process</span>
+        {runId ? (
+          <code className="card-compute-process-runid">{runId}</code>
+        ) : null}
+        <span className="card-compute-process-spacer" />
+        <span className="card-compute-process-progress-label">
+          {progress ? `${progress.current}/${progress.total} · ${pct}%` : 'waiting for progress'}
+        </span>
+      </div>
+      <div className="card-compute-process-track">
+        <div
+          className={`card-compute-process-fill${pct == null ? ' is-indeterminate' : ''}`}
+          style={pct == null ? undefined : { width: `${pct}%` }}
+        />
+      </div>
+      <div className="card-compute-process-log">
+        {hasOutput ? (
+          <>
+            {stdoutTail ? (
+              <pre className="card-compute-process-pre">{stdoutTail}</pre>
+            ) : null}
+            {stderrTail ? (
+              <pre className="card-compute-process-pre card-compute-process-pre--error">
+                {stderrTail}
+              </pre>
+            ) : null}
+          </>
+        ) : (
+          <span className="card-compute-process-empty">
+            Process started. Waiting for stdout/stderr…
+          </span>
+        )}
+      </div>
     </div>
   )
 }

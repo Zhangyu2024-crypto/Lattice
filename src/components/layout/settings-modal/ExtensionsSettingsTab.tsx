@@ -14,8 +14,13 @@ import { toast } from '../../../stores/toast-store'
 
 interface DiscoveredPlugin {
   name: string
-  description?: string
-  version?: string
+  manifest?: {
+    name?: string
+    description?: string
+    version?: string
+  }
+  skills?: Array<{ fileName: string; source: string }>
+  tools?: Array<{ name: string; description?: string; inputSchema?: unknown }>
   error?: string
 }
 
@@ -70,10 +75,8 @@ export default function ExtensionsSettingsTab() {
         <p className="settings-modal-section-description">
           Drop a plugin folder in{' '}
           <code>&lt;userData&gt;/plugins/&lt;name&gt;/</code> with a{' '}
-          <code>plugin.json</code> manifest. Markdown skills inside the folder
-          register as <code>/commands</code>. See{' '}
-          <code>src/lib/slash-commands/loaders/plugins.ts</code> for the
-          manifest shape.
+          <code>plugin.json</code> manifest. Markdown skills register as{' '}
+          <code>/commands</code>; manifest tools run as reviewed Agent tools.
         </p>
         <div className="settings-modal-button-row">
           <button
@@ -149,20 +152,42 @@ function PluginRow({
   onRemove: () => void
 }) {
   const enabled = config?.enabled ?? false
+  const title = discovered.manifest?.name ?? discovered.name
+  const description = discovered.manifest?.description
+  const version = discovered.manifest?.version
+  const skills = discovered.skills ?? []
+  const tools = discovered.tools ?? []
   return (
     <li className="settings-modal-list-row">
       <div className="settings-modal-list-row-main">
         <div className="settings-modal-list-row-title">
-          {discovered.name}
-          {discovered.version ? (
+          {title}
+          {title !== discovered.name ? (
             <span className="settings-modal-list-row-badge">
-              v{discovered.version}
+              {discovered.name}
+            </span>
+          ) : null}
+          {version ? (
+            <span className="settings-modal-list-row-badge">
+              v{version}
             </span>
           ) : null}
         </div>
-        {discovered.description ? (
+        {description ? (
           <div className="settings-modal-list-row-sub">
-            {discovered.description}
+            {description}
+          </div>
+        ) : null}
+        <div className="settings-modal-list-row-sub">
+          {skills.length} skill{skills.length === 1 ? '' : 's'} · {tools.length}{' '}
+          executable tool{tools.length === 1 ? '' : 's'}
+        </div>
+        {tools.length > 0 ? (
+          <div className="settings-modal-list-row-sub">
+            Agent tools:{' '}
+            {tools.map((tool) => (
+              <code key={tool.name}>{tool.name}</code>
+            ))}
           </div>
         ) : null}
         {discovered.error ? (

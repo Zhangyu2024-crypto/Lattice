@@ -115,7 +115,7 @@ export default function ProWorkbenchStandaloneView({
     //
     // We deliberately DO NOT guard on `resolvedRef.current` here — a
     // resolved window still needs the rehydrate on every subsequent
-    // write, otherwise long-running flows like @research appear frozen
+    // write, otherwise long-running flows like /research appear frozen
     // in the satellite while the main window's agent is actively
     // patching the artifact.
     const onStorage = (e: StorageEvent) => {

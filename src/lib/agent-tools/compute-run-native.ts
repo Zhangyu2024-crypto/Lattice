@@ -26,7 +26,7 @@ export const computeRunNativeTool: LocalTool<Input, Output> = {
     'Unlike compute_run (Python-only), this tool reads the artifact\'s language field ' +
     'and dispatches to the correct engine. Use for running native LAMMPS/CP2K input decks.',
   trustLevel: 'hostExec',
-  cardMode: 'review',
+  cardMode: 'info',
   inputSchema: {
     type: 'object',
     properties: {

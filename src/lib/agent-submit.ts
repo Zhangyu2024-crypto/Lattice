@@ -3,11 +3,12 @@
 // Dialog mode: Electron IPC (`llm-chat.ts` → `llm:invoke`).
 //
 // Agent mode (two transports):
-//   • **lattice-cli backend** (`backend.ready`): `POST /api/chat/send` with
-//     `mode: 'agent'` — server runs the Python tool loop; the renderer follows
-//     progress via WebSocket (`useWebSocket.ts`). Matches lattice-cli pro path.
-//   • **Self-contained**: local `runAgentTurn` + `LOCAL_TOOL_CATALOG` when no
-//     backend is connected (or `VITE_LATTICE_BACKEND_AGENT=0`).
+//   • **Self-contained** (default): local `runAgentTurn` +
+//     `LOCAL_TOOL_CATALOG`, with LLM calls through Electron IPC. This is the
+//     normal Lattice-app path and does not require lattice-cli.
+//   • **Legacy lattice-cli backend** (opt-in): when
+//     `VITE_LATTICE_BACKEND_AGENT=1` and `backend.ready`, POST
+//     `/api/chat/send` and follow progress via WebSocket.
 //
 // MP-2 (docs/CHAT_PANEL_REDESIGN.md §6.4): the caller may attach an
 // `AgentSubmitCtx.mentions` list; it flows into both the user transcript
@@ -53,23 +54,21 @@ export interface AgentSubmitCtx {
   signal?: AbortSignal
   /**
    * Raise the agent-loop iteration ceiling for this submit only. Default
-   * behaviour (omitted) uses the orchestrator's built-in 5-iteration
-   * cap. Research flows that chain plan → per-section drafts → finalize
-   * set this to ~12. Clamped to a hard ceiling inside the orchestrator.
+   * behaviour (omitted) uses the orchestrator's built-in absolute ceiling.
+   * Long workflows can set a higher per-request budget, but should still
+   * prefer resumable tools over one outer agent turn per work item.
    */
   maxIterations?: number
   /**
    * Optional pasted / picked images (base64 without `data:` prefix). Only
-   * honored when `window.electronAPI.llmInvoke` is available; lattice-cli
-   * backend agent path skips vision and is not used for these turns.
+   * honored when `window.electronAPI.llmInvoke` is available; the optional
+   * legacy backend agent path skips vision and is not used for these turns.
    */
   images?: ReadonlyArray<{ base64: string; mediaType: string }>
   /**
    * When set, this is the text shown in the transcript as the user's
    * message instead of the full `text` argument. The LLM still receives
-   * `text`. Used by the inline `@research <topic>` command so the user
-   * sees a concise "@research ..." line rather than the multi-paragraph
-   * scaffold that actually drives the tool chain.
+   * `text`, which may be a longer scaffold or expanded command prompt.
    */
   displayText?: string
   /**
@@ -170,8 +169,7 @@ export async function submitAgentPrompt(
 
   // ── Append user message ──────────────────────────────────────
   // `displayText` is the short label the user typed / sees; `trimmed`
-  // is the full text fed to the LLM. They only diverge for the inline
-  // `@research` command where the transcript should stay concise.
+  // is the full text fed to the LLM. They diverge for expanded prompts.
   const visibleUserText = ctx.displayText?.trim() || trimmed
   store.appendTranscript(ctx.sessionId, {
     id: `user_${now}`,
@@ -264,10 +262,11 @@ export async function submitAgentPrompt(
     }
     const err = agentResult.error ?? 'Agent orchestration failed.'
     store.updateTranscriptMessage(ctx.sessionId, assistantPlaceholderId!, {
-      content: `Error: ${err}`,
+      content: ctx.signal?.aborted ? (streamed || 'Cancelled.') : `Error: ${err}`,
       timestamp: Date.now(),
+      status: 'complete',
     })
-    toast.error(err)
+    if (!ctx.signal?.aborted) toast.error(err)
     return false
   }
 
@@ -281,6 +280,7 @@ export async function submitAgentPrompt(
     mentions,
     images: hasImages ? ctx.images : undefined,
     modelBindingOverride: ctx.modelBindingOverride,
+    signal: ctx.signal,
     onTextDelta: (delta) => {
       dialogStreamed += delta
       store.updateTranscriptMessage(ctx.sessionId, assistantPlaceholderId!, {
@@ -307,10 +307,11 @@ export async function submitAgentPrompt(
   // Replace the thinking placeholder with an error message.
   const errMsg = result.error ?? 'LLM call failed with no error message.'
   store.updateTranscriptMessage(ctx.sessionId, assistantPlaceholderId!, {
-    content: `Error: ${errMsg}`,
+    content: ctx.signal?.aborted ? (dialogStreamed || 'Cancelled.') : `Error: ${errMsg}`,
     timestamp: Date.now(),
+    status: 'complete',
   })
-  toast.error(errMsg)
+  if (!ctx.signal?.aborted) toast.error(errMsg)
   return false
 }
 

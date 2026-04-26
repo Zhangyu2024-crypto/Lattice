@@ -24,6 +24,21 @@ import { useRuntimeStore } from '../../../stores/runtime-store'
 
 export type ToolApplier = (sessionId: string, output: unknown) => void
 
+const PROPOSAL_FIRST_TOOLS = new Set([
+  'detect_peaks',
+  'format_convert',
+  'latex_add_citation',
+  'latex_edit_selection',
+  'latex_fix_compile_error',
+  'latex_insert_figure_from_artifact',
+  'workspace_edit_file',
+  'workspace_write_file',
+])
+
+export function isProposalFirstTool(toolName: string | undefined): boolean {
+  return typeof toolName === 'string' && PROPOSAL_FIRST_TOOLS.has(toolName)
+}
+
 // Type-narrowing guards. Each applier re-validates the output shape so
 // AgentCard's unknown `editedOutput` is never dereferenced without a check.
 function asEditSelection(output: unknown): LatexEditSelectionOutput | null {
@@ -62,6 +77,38 @@ function asWorkspaceEditProposal(
     if (typeof patch.newString !== 'string') return null
   }
   return output as WorkspaceEditProposal
+}
+
+function asComputeScriptEdit(
+  output: unknown,
+): { artifactId: string; code: string } | null {
+  if (!output || typeof output !== 'object') return null
+  const c = output as { artifactId?: unknown; code?: unknown }
+  if (typeof c.artifactId !== 'string') return null
+  if (typeof c.code !== 'string') return null
+  return { artifactId: c.artifactId, code: c.code }
+}
+
+function applyComputeScriptEdit(sessionId: string, output: unknown): void {
+  const parsed = asComputeScriptEdit(output)
+  if (!parsed) return
+  const store = useRuntimeStore.getState()
+  const session = store.sessions[sessionId]
+  const artifact = session?.artifacts[parsed.artifactId]
+  if (!artifact || artifact.kind !== 'compute') return
+  store.patchArtifact(sessionId, parsed.artifactId, {
+    payload: {
+      ...artifact.payload,
+      code: parsed.code,
+      stdout: '',
+      stderr: '',
+      figures: [],
+      exitCode: null,
+      status: 'idle',
+      runId: null,
+      durationMs: undefined,
+    },
+  } as never)
 }
 
 /** Write via the root-scoped IPC. Shared between the write + edit
@@ -109,6 +156,11 @@ const REGISTRY: Record<string, ToolApplier> = {
       payload: { ...artifact.payload, [field]: o.peaks },
     } as never)
   },
+  compute_create_script: applyComputeScriptEdit,
+  compute_from_snippet: applyComputeScriptEdit,
+  export_for_engine: applyComputeScriptEdit,
+  simulate_structure: applyComputeScriptEdit,
+  structure_tweak: applyComputeScriptEdit,
   latex_edit_selection: (sessionId, output) => {
     const parsed = asEditSelection(output)
     if (!parsed) return

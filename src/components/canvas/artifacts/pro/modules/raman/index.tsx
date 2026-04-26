@@ -22,24 +22,22 @@ import type {
 } from '@/types/artifact'
 import type {
   AssessQualityResponse,
-  BaselineResponse,
   DetectPeaksResponse,
   ProPeak,
   RamanIdentifyResponse,
   RamanMatch,
-  SmoothResponse,
 } from '@/types/pro-api'
 import { localProRaman } from '@/lib/local-pro-raman'
-import { localProSpectrum } from '@/lib/local-pro-spectrum'
+import {
+  localProSpectrum,
+  type BaselineResponse,
+  type SmoothResponse,
+} from '@/lib/local-pro-spectrum'
 import { toast } from '@/stores/toast-store'
 import { defaultRamanProPayload } from '@/lib/pro-workbench'
 import { appendRunRecord } from '@/lib/pro-run-history'
 import { useChartExporter } from '@/hooks/useChartExporter'
 import { useFocusedPeak } from '@/hooks/useFocusedPeak'
-import {
-  useProApi,
-  ProBackendNotReadyError,
-} from '@/hooks/useProApi'
 import RamanParameterPanel from '@/components/canvas/artifacts/RamanProWorkbench.panel'
 import type {
   ModuleCtx,
@@ -63,7 +61,6 @@ function useRamanActions(ctx: ModuleCtx<RamanSubState>): RamanActions {
   const spectrum = ctx.payload.spectrum
   const params = sub.params
   const isFtir = params.mode === 'ftir'
-  const pro = useProApi()
 
   const [busy, setBusy] = useState<string | null>(null)
   const chartExporter = useChartExporter()
@@ -82,12 +79,8 @@ function useRamanActions(ctx: ModuleCtx<RamanSubState>): RamanActions {
       const res = await fn()
       onSuccess(res)
     } catch (err) {
-      if (err instanceof ProBackendNotReadyError) {
-        toast.warn('Backend not ready')
-      } else {
-        const message = err instanceof Error ? err.message : String(err)
-        toast.error(`${key} failed: ${message}`)
-      }
+      const message = err instanceof Error ? err.message : String(err)
+      toast.error(`${key} failed: ${message}`)
     } finally {
       setBusy(null)
     }
@@ -120,23 +113,31 @@ function useRamanActions(ctx: ModuleCtx<RamanSubState>): RamanActions {
       },
     )
 
-  // Smooth / baseline still go through REST — the backend owns an
-  // undo stack for these; migrating stateful history to the local
-  // worker is out of scope for the UI-completeness sweep.
   const handleSmooth = () => {
+    if (!spectrum) {
+      toast.warn('Load a spectrum first')
+      return
+    }
+    const currentSpectrum = spectrum
     const t0 = Date.now()
     const snapshot = { smooth: { ...params.smooth } }
     return run(
       'smooth',
       () =>
-        pro.smooth({
-          algorithm: 'savitzky-golay',
-          window_length: params.smooth.sgWindow,
-          polyorder: params.smooth.sgOrder,
+        localProSpectrum.smooth(currentSpectrum, {
+          method: 'savgol',
+          window: params.smooth.sgWindow,
+          order: params.smooth.sgOrder,
         }),
       (r: SmoothResponse) => {
         const durationMs = Date.now() - t0
         if (r.success) {
+          patchShared({
+            spectrum: {
+              ...currentSpectrum,
+              y: r.y,
+            },
+          })
           toast.success('Smoothed')
           appendRunRecord(ctx, {
             command: `${isFtir ? 'ftir' : 'raman'}.smooth`,
@@ -161,17 +162,28 @@ function useRamanActions(ctx: ModuleCtx<RamanSubState>): RamanActions {
   }
 
   const handleBaseline = () => {
+    if (!spectrum) {
+      toast.warn('Load a spectrum first')
+      return
+    }
+    const currentSpectrum = spectrum
     const t0 = Date.now()
     const snapshot = { baseline: { ...params.baseline } }
     return run(
       'baseline',
       () =>
-        pro.baseline({
+        localProSpectrum.baseline(currentSpectrum, {
           method: params.baseline.method,
         }),
       (r: BaselineResponse) => {
         const durationMs = Date.now() - t0
         if (r.success) {
+          patchShared({
+            spectrum: {
+              ...currentSpectrum,
+              y: r.y,
+            },
+          })
           toast.success('Baseline corrected')
           appendRunRecord(ctx, {
             command: `${isFtir ? 'ftir' : 'raman'}.baseline`,

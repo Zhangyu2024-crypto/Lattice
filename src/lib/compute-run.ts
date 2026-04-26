@@ -23,6 +23,7 @@ import type {
 } from '../types/artifact'
 
 const RUN_HISTORY_LIMIT = 20
+const MAX_TIMEOUT_SEC = 24 * 60 * 60
 import type {
   ComputeExitEventPayload,
   ComputeRunRequestPayload,
@@ -57,7 +58,8 @@ export async function runCompute(args: {
   sessionId: string
   artifactId: string
   code: string
-}): Promise<{ success: boolean; error?: string }> {
+  timeoutSec?: number
+}): Promise<{ success: boolean; error?: string; runId?: string; workdir?: string }> {
   const electron = window.electronAPI
   if (!electron?.computeRun) {
     return { success: false, error: 'Compute IPC not available — restart the app' }
@@ -104,6 +106,7 @@ export async function runCompute(args: {
       status: 'running',
       durationMs: undefined,
       runId,
+      timedOut: false,
       image: 'native',
       runs: prependRunEntry(args.sessionId, args.artifactId, pendingEntry),
     }),
@@ -147,7 +150,7 @@ export async function runCompute(args: {
     code: args.code,
     language: (artifactLanguage as ComputeRunRequestPayload['language']) ?? 'python',
     mode: config.mode,
-    timeoutSec: config.timeoutSec,
+    timeoutSec: normaliseTimeoutSec(args.timeoutSec ?? config.timeoutSec),
     resources: {
       cpuCores: config.resources.cpuCores,
       ompThreads: config.resources.ompThreads,
@@ -159,7 +162,34 @@ export async function runCompute(args: {
     artifactId: args.artifactId,
   }
 
-  const ack = await electron.computeRun(request)
+  const issued = await electron.issueApprovalToken({
+    toolName: 'compute_run',
+    scope: {
+      runId: request.runId,
+      code: request.code,
+      language: request.language ?? '',
+      mode: request.mode,
+    },
+  })
+  if (!issued.ok) {
+    tearDown(active)
+    activeByArtifact.delete(args.artifactId)
+    activeByRun.delete(runId)
+    sessionStore.patchArtifact(args.sessionId, args.artifactId, {
+      payload: mergePayload(args.sessionId, args.artifactId, {
+        status: 'failed',
+        stderr: issued.error,
+        runId: null,
+        durationMs: 0,
+        exitCode: null,
+      }),
+    } as never)
+    return { success: false, error: issued.error }
+  }
+  const ack = await electron.computeRun({
+    ...request,
+    approvalToken: issued.token,
+  })
   if (!ack.success) {
     tearDown(active)
     activeByArtifact.delete(args.artifactId)
@@ -175,7 +205,20 @@ export async function runCompute(args: {
     } as never)
     return { success: false, error: ack.error }
   }
-  return { success: true }
+  if (ack.workdir) {
+    sessionStore.patchArtifact(args.sessionId, args.artifactId, {
+      payload: mergePayload(args.sessionId, args.artifactId, {
+        runs: updateRunEntry(args.sessionId, args.artifactId, runId, {
+          workdir: ack.workdir,
+        }),
+      }),
+    } as never)
+  }
+  return { success: true, runId: ack.runId, workdir: ack.workdir }
+}
+
+function normaliseTimeoutSec(value: number): number {
+  return Math.min(MAX_TIMEOUT_SEC, Math.max(1, Math.ceil(value)))
 }
 
 export async function cancelCompute(artifactId: string): Promise<boolean> {
@@ -248,13 +291,16 @@ function stripFigureSentinel(raw: string): string {
 
 function finalizeRun(active: ActiveRun, msg: ComputeExitEventPayload): void {
   const sessionStore = useRuntimeStore.getState()
-  const status: ComputeArtifactPayload['status'] = msg.cancelled
+  const status: ComputeArtifactPayload['status'] = msg.timedOut
+    ? 'failed'
+    : msg.cancelled
     ? 'cancelled'
     : msg.exitCode === 0 && !msg.error
     ? 'succeeded'
     : 'failed'
-  const stderrWithError = msg.error
-    ? active.stderr + (active.stderr ? '\n' : '') + `[runtime error] ${msg.error}`
+  const runtimeError = msg.error ?? (msg.timedOut ? 'Run timed out before completion.' : null)
+  const stderrWithError = runtimeError
+    ? active.stderr + (active.stderr ? '\n' : '') + `[runtime error] ${runtimeError}`
     : active.stderr
   const figures: ComputeFigure[] = msg.figures.map((f) => ({
     format: f.format,
@@ -269,6 +315,7 @@ function finalizeRun(active: ActiveRun, msg: ComputeExitEventPayload): void {
       exitCode: msg.exitCode,
       status,
       durationMs: msg.durationMs,
+      timedOut: Boolean(msg.timedOut),
       runId: null,
       progress: undefined,
       runs: updateRunEntry(active.sessionId, active.artifactId, active.runId, {
@@ -276,6 +323,7 @@ function finalizeRun(active: ActiveRun, msg: ComputeExitEventPayload): void {
         finishedAt: new Date().toISOString(),
         exitCode: msg.exitCode,
         cancelled: msg.cancelled,
+        timedOut: Boolean(msg.timedOut),
         durationMs: msg.durationMs,
         ...(msg.workdir ? { workdir: msg.workdir } : {}),
       }),
@@ -287,6 +335,8 @@ function finalizeRun(active: ActiveRun, msg: ComputeExitEventPayload): void {
 
   if (status === 'succeeded') {
     toast.success(`Compute finished in ${formatMs(msg.durationMs)}`)
+  } else if (msg.timedOut) {
+    toast.error(`Compute timed out after ${formatMs(msg.durationMs)}`)
   } else if (status === 'cancelled') {
     toast.info('Compute cancelled')
   } else {

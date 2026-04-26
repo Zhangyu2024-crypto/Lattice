@@ -4,8 +4,46 @@
 // and do not pull the whole three-pane shell into other contexts.
 
 import type { Components } from 'react-markdown'
-import type { Citation, ResearchReportPayload } from './types'
+import type {
+  Citation,
+  ReportSection,
+  ResearchReportPayload,
+} from './types'
 import { CITE_TOKEN_RE } from './types'
+
+export function buildCitationIndexByFirstUse(payload: {
+  sections: ReportSection[]
+  citations: Citation[]
+}): Map<string, number> {
+  const knownIds = new Set(payload.citations.map((citation) => citation.id))
+  const citationIndex = new Map<string, number>()
+  const add = (id: string) => {
+    if (!knownIds.has(id) || citationIndex.has(id)) return
+    citationIndex.set(id, citationIndex.size + 1)
+  }
+
+  for (const section of payload.sections) {
+    CITE_TOKEN_RE.lastIndex = 0
+    let match: RegExpExecArray | null
+    while ((match = CITE_TOKEN_RE.exec(section.markdown)) !== null) {
+      add(match[1])
+    }
+    for (const id of section.citationIds) add(id)
+  }
+  for (const citation of payload.citations) add(citation.id)
+  return citationIndex
+}
+
+export function orderCitationsByIndex(
+  citations: Citation[],
+  citationIndex: Map<string, number>,
+): Citation[] {
+  return [...citations].sort(
+    (a, b) =>
+      (citationIndex.get(a.id) ?? Number.MAX_SAFE_INTEGER) -
+      (citationIndex.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+  )
+}
 
 export function buildMarkdownComponents(
   citationIndex: Map<string, number>,
@@ -18,18 +56,26 @@ export function buildMarkdownComponents(
     if (!n) return <span key={key}>[?]</span>
     const cite = byId.get(id)
     const tooltip = cite ? citationTooltip(cite, n) : `Reference ${n}`
+    const handleClick = (e: React.SyntheticEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      onCiteClick(id)
+    }
     return (
       <sup
         key={key}
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          onCiteClick(id)
+        role="button"
+        tabIndex={0}
+        aria-label={`Reference ${n}`}
+        onClick={handleClick}
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter' && e.key !== ' ') return
+          handleClick(e)
         }}
         className="research-card-cite-pill"
         title={tooltip}
       >
-        [{n}]
+        {n}
       </sup>
     )
   }
@@ -89,6 +135,20 @@ export function buildFullMarkdown(
       '',
     )
   }
+  if (payload.interview?.assumptions?.length) {
+    lines.push('## Pre-interview Assumptions', '')
+    for (const item of payload.interview.assumptions) lines.push(`- ${item}`)
+    lines.push('')
+  }
+  if (payload.assembly?.abstract) {
+    lines.push('## Abstract', '', payload.assembly.abstract, '')
+  }
+  if (payload.assembly?.keywords?.length) {
+    lines.push(`**Keywords:** ${payload.assembly.keywords.join('; ')}`, '')
+  }
+  if (payload.assembly?.methodology) {
+    lines.push('## Methodology', '', payload.assembly.methodology, '')
+  }
   lines.push('## Outline', '')
   for (const sec of payload.sections)
     lines.push(`${'  '.repeat(sec.level - 1)}- ${sec.heading}`)
@@ -103,7 +163,7 @@ export function buildFullMarkdown(
   }
   if (payload.citations.length > 0) {
     lines.push('## References', '')
-    for (const c of payload.citations) {
+    for (const c of orderCitationsByIndex(payload.citations, citationIndex)) {
       const n = citationIndex.get(c.id) ?? 0
       const venue = c.venue ? `. ${c.venue}` : ''
       const doi = c.doi ? `. doi:${c.doi}` : ''
@@ -111,6 +171,27 @@ export function buildFullMarkdown(
       lines.push(
         `[${n}] ${c.authors.join(', ')} (${c.year}). ${c.title}${venue}${doi}${url}`,
       )
+    }
+    lines.push('')
+  }
+  if (payload.refinement) {
+    lines.push('## Refinement Pass', '')
+    for (const change of payload.refinement.changes) lines.push(`- ${change}`)
+    for (const issue of payload.refinement.unresolvedIssues) lines.push(`- Unresolved: ${issue}`)
+    lines.push('')
+  }
+  if (payload.export) {
+    lines.push('## Export Readiness', '')
+    lines.push(`- Markdown ready: ${payload.export.markdownReady ? 'yes' : 'no'}`)
+    lines.push(`- LaTeX/PDF ready: ${payload.export.latexReady ? 'yes' : 'no'}`)
+    if (payload.export.pdfPipeline) lines.push(`- Pipeline: ${payload.export.pdfPipeline}`)
+    for (const note of payload.export.notes) lines.push(`- ${note}`)
+    lines.push('')
+  }
+  if (payload.assembly?.qualityAudit) {
+    lines.push('## Quality Audit', '', payload.assembly.qualityAudit.summary, '')
+    for (const warning of payload.assembly.qualityAudit.warnings) {
+      lines.push(`- ${warning}`)
     }
     lines.push('')
   }

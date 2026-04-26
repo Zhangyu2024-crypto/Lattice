@@ -4,30 +4,24 @@ import { buildExportTemplate } from '../compute-export-templates'
 import { parseCif } from '../cif/parser'
 import {
   createComputeArtifact,
-  ensureComputeReady,
   resolveStructureArtifact,
-  runAndWait,
   structureSlug,
 } from './compute-helpers'
 
 interface Input {
   artifactId?: string
   engine: ExportKind
-  autoRun?: boolean
 }
 
 interface Output {
   artifactId: string
   summary: string
-  exitCode?: number | null
-  stdoutTail?: string
-  figureCount?: number
 }
 
 export const exportForEngineTool: LocalTool<Input, Output> = {
   name: 'export_for_engine',
   description:
-    'Export a structure artifact to native LAMMPS or CP2K input format. Creates a compute artifact with the engine-specific input deck. LAMMPS exports typically need pair_style edits before running; CP2K exports are ready to run with default PBE settings. Use autoRun=false (default) for review.',
+    'Export a structure artifact to native LAMMPS or CP2K input format. Creates an idle compute artifact with the engine-specific input deck. LAMMPS exports typically need pair_style edits before running; CP2K exports are ready to run with default PBE settings. Run the created artifact with compute_run.',
   trustLevel: 'localWrite',
   cardMode: 'edit',
   inputSchema: {
@@ -40,10 +34,6 @@ export const exportForEngineTool: LocalTool<Input, Output> = {
       engine: {
         type: 'string',
         description: '"lammps" or "cp2k".',
-      },
-      autoRun: {
-        type: 'boolean',
-        description: 'Execute immediately. Default false.',
       },
     },
     required: ['engine'],
@@ -79,19 +69,9 @@ export const exportForEngineTool: LocalTool<Input, Output> = {
       language: tmpl.cellKind === 'cp2k' ? 'cp2k' : 'python',
     })
 
-    if (input?.autoRun) {
-      await ensureComputeReady()
-      const result = await runAndWait(ctx.sessionId, artifact.id, ctx.signal)
-      return {
-        artifactId: artifact.id,
-        summary: `${tmpl.title} — exit ${result.exitCode}`,
-        ...result,
-      }
-    }
-
     return {
       artifactId: artifact.id,
-      summary: `Created "${tmpl.title}" (${engine}, idle)`,
+      summary: `Created "${tmpl.title}" (${engine}, idle). Run it with compute_run.`,
     }
   },
 }

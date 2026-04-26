@@ -9,6 +9,8 @@ Electron-side IPC bridge.
 |---|---|---|---|
 | `data/xrd_references.json` | curated common phases | ~28 KB | 41 entries; bundled for zero-config use |
 | `data/xps_lines.json` | lattice-cli `xps_binding_energies.json` (NIST SRD 20) | 79 KB | 502 BE entries for `xps.lookup` |
+| `data/xps_reference_lines.json` | lattice-cli XPS validation export | 31 KB | element-keyed reference DB for `xps.validate` |
+| `data/xps_rsf_scofield.json` | Scofield RSF table | 2 KB | relative sensitivity factors for `xps.quantify` |
 | `data/raman_references.json` | lattice-cli `raman_mineral_db.json` (RRUFF-derived) | 54 KB | 95 minerals with `characteristic_peaks` + `is_primary` weighting |
 
 ## Materials Project XRD database (bundled)

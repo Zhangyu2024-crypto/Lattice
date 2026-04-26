@@ -44,6 +44,26 @@ const DEFAULT_AGENT_CONFIG: GenerationConfig = {
   reasoningEffort: 'medium',
 }
 
+function withDefaultSystemPrompt(
+  mode: ComposerMode,
+  config: GenerationConfig,
+): GenerationConfig {
+  return {
+    ...config,
+    systemPrompt:
+      mode === 'dialog'
+        ? DEFAULT_DIALOG_SYSTEM_PROMPT
+        : DEFAULT_AGENT_SYSTEM_PROMPT,
+  }
+}
+
+function omitSystemPromptPatch(
+  patch: Partial<GenerationConfig>,
+): Partial<GenerationConfig> {
+  const { systemPrompt: _systemPrompt, ...rest } = patch
+  return rest
+}
+
 const DEFAULT_BUDGET: BudgetConfig = {
   daily: {
     tokenLimit: 500_000,
@@ -336,16 +356,30 @@ export const useLLMConfigStore = create<LLMConfigState>()(
 
       updateDialogConfig: (patch) => {
         set((s) => {
-          const dialog = { ...s.dialog, ...patch }
-          const agent = { ...s.agent, ...patch }
+          const safePatch = omitSystemPromptPatch(patch)
+          const dialog = withDefaultSystemPrompt('dialog', {
+            ...s.dialog,
+            ...safePatch,
+          })
+          const agent = withDefaultSystemPrompt('agent', {
+            ...s.agent,
+            ...safePatch,
+          })
           return { dialog, agent }
         })
       },
 
       updateAgentConfig: (patch) => {
         set((s) => {
-          const agent = { ...s.agent, ...patch }
-          const dialog = { ...s.dialog, ...patch }
+          const safePatch = omitSystemPromptPatch(patch)
+          const agent = withDefaultSystemPrompt('agent', {
+            ...s.agent,
+            ...safePatch,
+          })
+          const dialog = withDefaultSystemPrompt('dialog', {
+            ...s.dialog,
+            ...safePatch,
+          })
           return { dialog, agent }
         })
       },
@@ -408,7 +442,7 @@ export const useLLMConfigStore = create<LLMConfigState>()(
     }),
     {
       name: 'lattice.llm-config',
-      version: 4,
+      version: 5,
       storage: createJSONStorage(() => localStorage),
       // All fields are small and meant to survive restarts — no partialize
       // needed. The only large-ish field (`providers[].models`) caps at a
@@ -488,6 +522,9 @@ export const useLLMConfigStore = create<LLMConfigState>()(
             agent = { ...agent, ...binding }
           }
         }
+
+        dialog = withDefaultSystemPrompt('dialog', dialog)
+        agent = withDefaultSystemPrompt('agent', agent)
 
         return {
           ...state,

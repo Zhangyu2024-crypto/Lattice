@@ -76,6 +76,7 @@ const KIND_BADGE_LABEL: Record<ArtifactKind, string> = {
   'raman-id': 'Raman',
   structure: 'Struct',
   compute: 'Code',
+  'compute-experiment': 'Experiment',
   job: 'Job',
   'research-report': 'Report',
   batch: 'Batch',

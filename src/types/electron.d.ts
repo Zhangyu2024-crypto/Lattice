@@ -200,7 +200,7 @@ export interface PaperSearchResultPayload {
   year: string
   doi: string
   url: string
-  source: 'openalex' | 'arxiv'
+  source: 'openalex' | 'arxiv' | 'semantic_scholar'
   venue: string
   citedByCount?: number
   /** Open-access PDF URL (OpenAlex `open_access.oa_url` or arXiv-derived). */
@@ -223,6 +223,7 @@ export interface LiteratureSourceDiagnosticPayload {
 export interface LiteratureSearchDiagnosticsPayload {
   openalex: LiteratureSourceDiagnosticPayload
   arxiv: LiteratureSourceDiagnosticPayload
+  semanticScholar: LiteratureSourceDiagnosticPayload
 }
 
 export type LiteratureSearchResultPayload =
@@ -270,10 +271,11 @@ export interface ComputeRunRequestPayload {
    *  the absolute `workdir` path in the exit event. */
   sessionId?: string
   artifactId?: string
+  approvalToken?: string
 }
 
 export type ComputeRunAckPayload =
-  | { success: true; runId: string }
+  | { success: true; runId: string; workdir?: string }
   | { success: false; error: string }
 
 export interface ComputeTestRequestPayload {
@@ -308,6 +310,7 @@ export interface ComputeExitEventPayload {
   figures: ComputeFigurePayloadShape[]
   durationMs: number
   cancelled: boolean
+  timedOut?: boolean
   error?: string
   /** Absolute path to this run's archived workdir. Absent when the run
    *  was programmatic (no sessionId/artifactId) or archival failed. */
@@ -691,10 +694,32 @@ declare global {
             version?: string
           }
           skills: Array<{ fileName: string; source: string }>
+          tools: Array<{
+            name: string
+            description?: string
+            inputSchema?: unknown
+          }>
           error?: string
         }>
         error?: string
       }>
+      /** List executable tools declared in enabled/installed plugin manifests. */
+      pluginListTools: () => Promise<{
+        tools: Array<{
+          plugin: string
+          name: string
+          description?: string
+          inputSchema?: unknown
+        }>
+        errors: Array<{ plugin: string; message: string }>
+      }>
+      /** Execute a plugin tool declared in plugin.json. */
+      pluginCallTool: (payload: {
+        plugin: string
+        name: string
+        input?: Record<string, unknown>
+        approvalToken: string
+      }) => Promise<{ output: unknown; stdout: string; stderr: string }>
       /** Fires on any change under `<userData>/plugins/`. */
       onPluginsChanged: (callback: () => void) => () => void
       /**
@@ -730,6 +755,24 @@ declare global {
         }>
         errors: Array<{ serverId: string; name: string; message: string }>
       }>
+      /** Cached `tools/list` output from every running MCP client. */
+      mcpListTools: () => Promise<{
+        tools: Array<{
+          serverId: string
+          serverName: string
+          name: string
+          description?: string
+          inputSchema?: unknown
+        }>
+        errors: Array<{ serverId: string; name: string; message: string }>
+      }>
+      /** Invoke `tools/call` on a running server. */
+      mcpCallTool: (payload: {
+        serverId: string
+        name: string
+        args?: Record<string, unknown>
+        approvalToken: string
+      }) => Promise<{ result: unknown }>
       /** Invoke `prompts/get` on a running server; returns flattened text. */
       mcpGetPrompt: (payload: {
         serverId: string
@@ -891,6 +934,9 @@ declare global {
       onComputeExit: (
         callback: (msg: ComputeExitEventPayload) => void,
       ) => () => void
+      issueApprovalToken: (
+        req: ApprovalTokenIssueRequest,
+      ) => Promise<ApprovalTokenIssueResult>
       // ─── Workspace bash ──────────────────────────────────────────
       workspaceBash: (
         req: WorkspaceBashRequest,
@@ -1121,6 +1167,16 @@ export type SyncFolderStatsResult =
 
 // ─── Workspace bash payload ────────────────────────────────────────
 
+export interface ApprovalTokenIssueRequest {
+  toolName: string
+  ttlMs?: number
+  scope?: Record<string, unknown>
+}
+
+export type ApprovalTokenIssueResult =
+  | { ok: true; token: string; expiresAt: number }
+  | { ok: false; error: string }
+
 export interface WorkspaceBashRequest {
   workspaceDir: string
   command: string
@@ -1130,6 +1186,7 @@ export interface WorkspaceBashRequest {
    *  `workspace:bash-done` carrying the same id. The Promise result is
    *  unchanged — streaming is purely a side-channel for progress UI. */
   invocationId?: string
+  approvalToken: string
 }
 
 export type WorkspaceBashResult =
@@ -1160,4 +1217,3 @@ export interface WorkspaceBashDoneEvent {
   status: 'ok' | 'error' | 'timeout'
   exitCode: number | null
 }
-

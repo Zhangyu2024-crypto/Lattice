@@ -28,7 +28,7 @@ const BINARY_PARSEABLE: ReadonlySet<string> = new Set([
   '.cha',
 ])
 
-const BACKEND_ONLY: ReadonlySet<string> = new Set([
+const UNSUPPORTED_LOCAL: ReadonlySet<string> = new Set([
   '.ngs',
 ])
 
@@ -145,8 +145,8 @@ export async function parseSpectrumBinary(
   }
 }
 
-export function needsBackendParse(fileName: string): boolean {
-  return BACKEND_ONLY.has(extOf(fileName))
+export function needsLocalParserSupport(fileName: string): boolean {
+  return UNSUPPORTED_LOCAL.has(extOf(fileName))
 }
 
 /**

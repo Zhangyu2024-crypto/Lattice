@@ -63,4 +63,15 @@ describe('buildSummary — hallucination-defense anchors', () => {
     expect(s).not.toContain(INTEGRITY_ANCHOR)
     expect(s).toContain('idle')
   })
+
+  it('running runs include the integrity anchor until completion', () => {
+    const s = buildSummary({
+      status: 'running',
+      exitCode: null,
+      figureCount: 0,
+      durationMs: 125000,
+    })
+    expect(s.startsWith('RUNNING')).toBe(true)
+    expect(s).toContain(INTEGRITY_ANCHOR)
+  })
 })

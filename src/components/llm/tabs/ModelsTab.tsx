@@ -147,8 +147,7 @@ function ActiveModelSection() {
         <div>
           <div className="llm-models-heading">Active model</div>
           <div className="llm-models-subheading">
-            One model drives all requests. Generation parameters
-            (temperature, system prompt) are below.
+            One model drives all requests. Generation parameters are below.
           </div>
         </div>
       </header>

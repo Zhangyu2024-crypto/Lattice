@@ -67,12 +67,14 @@ export default function ApprovalDialog() {
           >
             Allow once
           </button>
-          <button
-            onClick={onAllowSession}
-            className="agent-dialog-btn agent-dialog-btn-muted"
-          >
-            Allow for this session
-          </button>
+          {!isHostExec ? (
+            <button
+              onClick={onAllowSession}
+              className="agent-dialog-btn agent-dialog-btn-muted"
+            >
+              Allow for this session
+            </button>
+          ) : null}
         </div>
       </div>
     </div>

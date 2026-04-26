@@ -2127,6 +2127,71 @@
   overflow: auto;
 }
 
+.agent-card-code-block {
+  margin: 0;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 160px;
+  overflow: auto;
+}
+
+.agent-card-compute-process {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.agent-card-compute-process-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.agent-card-compute-process-track {
+  position: relative;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-bg-active);
+}
+
+.agent-card-compute-process-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text-primary) 58%, transparent);
+  transition: width 260ms ease;
+}
+
+.agent-card-compute-process-fill.is-indeterminate {
+  position: absolute;
+  width: 42%;
+  min-width: 64px;
+  animation: agent-card-compute-process-indeterminate 1.2s ease-in-out infinite;
+}
+
+@keyframes agent-card-compute-process-indeterminate {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(260%); }
+}
+
+.agent-card-compute-process-log {
+  max-height: 130px;
+}
+
+.agent-card-compute-process-empty {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
 .agent-card-preview-compact,
 .agent-card-preview-expanded {
   display: flex;

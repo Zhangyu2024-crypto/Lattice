@@ -84,6 +84,7 @@ export const xrdRefineTool: LocalTool<Input, Output> = {
   name: 'xrd_refine',
   description:
     'Run the offline XRD whole-pattern refinement (approximate isotropic fit — not full Rietveld). Uses candidate phases already selected on the xrd-pro workbench unless materialIds is supplied. Writes payload.refineResult and creates a plot artifact showing the Rietveld-style overlay (observed + calculated + difference).',
+  trustLevel: 'localWrite',
   cardMode: 'review',
   inputSchema: {
     type: 'object',

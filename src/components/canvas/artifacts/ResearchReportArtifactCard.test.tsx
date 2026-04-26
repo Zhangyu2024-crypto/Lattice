@@ -211,6 +211,43 @@ describe('ResearchReportArtifactCard — three-pane redesign', () => {
     expect(within(refs).getByText('§1 · §2')).toBeInTheDocument()
   })
 
+  it('numbers citations by first body use and sorts the references pane accordingly', () => {
+    const artifact = makeArtifact({
+      topic: 'Test',
+      mode: 'research',
+      style: 'concise',
+      sections: [
+        {
+          id: 's1',
+          heading: 'First',
+          level: 2,
+          markdown: 'first cited [@cite:c2], then another [@cite:c1]',
+          citationIds: ['c2', 'c1'],
+          status: 'done',
+        },
+      ],
+      citations: [
+        { id: 'c1', title: 'Paper A', authors: ['Smith'], year: 2023 },
+        { id: 'c2', title: 'Paper B', authors: ['Jones'], year: 2024 },
+      ],
+      generatedAt: Date.now(),
+      status: 'complete',
+    })
+    const { container } = render(<ResearchReportArtifactCard artifact={artifact} />)
+
+    const bodyRefs = Array.from(
+      container.querySelectorAll('.research-card-cite-pill'),
+    ).map((el) => el.textContent)
+    expect(bodyRefs).toEqual(['1', '2'])
+
+    const refs = screen.getByLabelText(/References/i)
+    const refItems = within(refs).getAllByRole('listitem')
+    expect(refItems[0]).toHaveTextContent('[1]')
+    expect(refItems[0]).toHaveTextContent('Paper B')
+    expect(refItems[1]).toHaveTextContent('[2]')
+    expect(refItems[1]).toHaveTextContent('Paper A')
+  })
+
   it('renders empty placeholder text when refs list is empty', () => {
     const artifact = makeArtifact({
       topic: 'Test',

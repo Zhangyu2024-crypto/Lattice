@@ -13,7 +13,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "smoke:agent-tools": "node --experimental-strip-types src/__smoke__/agent-tool-audit-smoke.ts",
+    "check:data": "node scripts/check-bundled-data.mjs"
   },
   "keywords": [
     "materials-science",

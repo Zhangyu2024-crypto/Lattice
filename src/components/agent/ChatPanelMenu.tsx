@@ -1,11 +1,7 @@
 // Dropdown menu hanging off ChatPanelHeader's ··· button.
 //
-// Research / survey are no longer surfaced here — they moved to the
-// inline `@research <topic>` / `@survey <topic>` / `@brief <topic>`
-// composer commands (src/lib/research-prompts.ts:parseResearchCommand),
-// which bake the topic into the prompt and auto-submit. Leaving them as
-// menu items would double-surface the same flow with worse ergonomics
-// (menu → prefill → user types topic → send) vs. inline (one send).
+// Research is launched through `/research <topic>` rather than duplicated
+// in this menu. Keeping one entry point avoids split command semantics.
 
 import { useRef } from 'react'
 import { useEscapeKey } from '../../hooks/useEscapeKey'

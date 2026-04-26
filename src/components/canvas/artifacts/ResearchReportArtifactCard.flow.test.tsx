@@ -34,7 +34,10 @@ vi.mock('../../../lib/llm-chat', async () => {
     sendLlmChat: vi.fn(async (args?: { userMessage?: string }) => {
       const prompt =
         args && typeof args.userMessage === 'string' ? args.userMessage : ''
-      if (prompt.includes('{ "headings": string[] }')) {
+      if (
+        prompt.includes('{ "headings": string[] }') ||
+        prompt.includes('{ "sections": [{ "heading": string')
+      ) {
         return {
           success: true,
           content: outlineResponse,

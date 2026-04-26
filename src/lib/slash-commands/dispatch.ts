@@ -32,8 +32,7 @@ export interface DispatchHooks {
   appendSystemMessage: (text: string) => void
   /**
    * Submit an LLM turn. `displayText` lets the transcript show a short
-   * human-readable line while the model sees the full scaffold (matches the
-   * existing `@research` behaviour in `submitAgentPrompt`).
+   * human-readable line while the model sees the full expanded scaffold.
    */
   submitAgentPrompt: (
     text: string,

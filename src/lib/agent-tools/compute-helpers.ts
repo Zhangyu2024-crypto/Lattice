@@ -86,7 +86,7 @@ export function createComputeArtifact(
 }
 
 const POLL_MS = 100
-const DEFAULT_TIMEOUT_MS = 5 * 60_000
+const DEFAULT_TIMEOUT_MS = 30 * 60_000
 const STDOUT_TAIL = 1200
 
 export async function runAndWait(
@@ -103,6 +103,7 @@ export async function runAndWait(
     sessionId,
     artifactId,
     code: art.payload.code,
+    timeoutSec: Math.ceil(timeoutMs / 1000),
   })
   if (!ack.success) throw new Error(ack.error ?? 'compute run rejected')
 

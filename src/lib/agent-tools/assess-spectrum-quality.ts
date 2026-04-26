@@ -20,6 +20,7 @@ export const assessSpectrumQualityTool: LocalTool<Input, Output> = {
   name: 'assess_spectrum_quality',
   description:
     'Assess SNR, noise and quality grade (good/fair/poor) of the spectrum on a Pro workbench artifact (XRD / XPS / Raman). Writes the result to payload.quality. If artifactId is omitted, uses the focused artifact.',
+  trustLevel: 'localWrite',
   cardMode: 'info',
   inputSchema: {
     type: 'object',

@@ -73,6 +73,9 @@ export interface LlmChatRequest {
    * `src/lib/model-routing/` for the full precedence ladder.
    */
   modelBindingOverride?: import('../model-routing').ModelBinding
+  /** Optional cancellation signal. Streaming calls are aborted at the IPC
+   *  layer; one-shot calls return early on abort and ignore the late result. */
+  signal?: AbortSignal
 }
 
 export interface LlmChatResult {

@@ -90,7 +90,7 @@ export default function MiddlePane({
             placeholder={
               canEdit
                 ? 'Import by DOI…'
-                : 'DOI import requires backend'
+                : 'DOI import requires the desktop app'
             }
             disabled={doiDisabled}
             className="library-modal-doi-input"
@@ -128,8 +128,8 @@ export default function MiddlePane({
             <EmptyState
               variant="disconnected"
               size="sm"
-              title="Backend not connected"
-              description="Showing demo papers only. Connect lattice-cli to search your library."
+              title="Local library unavailable"
+              description="Showing demo papers only. Open the Electron desktop app to use your library."
             />
           )
         ) : (

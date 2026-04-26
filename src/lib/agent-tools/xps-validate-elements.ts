@@ -32,6 +32,7 @@ export const xpsValidateElementsTool: LocalTool<Input, Output> = {
     + '(common/uncommon/rare/very_rare) with close-doublet element handling. '
     + 'MUST be called after element identification (lookup) to verify predictions before proceeding to chemical state analysis. '
     + 'Elements with status "rejected" should be removed; "weak_match" should be marked as tentative.',
+  trustLevel: 'localWrite',
   cardMode: 'review',
   inputSchema: {
     type: 'object',

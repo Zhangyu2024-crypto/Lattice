@@ -33,6 +33,42 @@ export interface ResearchReportPayload {
   generatedAt: number
   status?: 'planning' | 'drafting' | 'complete'
   currentSectionId?: string | null
+  stage?: 'Interview' | 'Retrieval' | 'Outline' | 'Writing' | 'Refinement' | 'Assembly' | 'Complete'
+  interview?: {
+    questions: string[]
+    answers: string[]
+    assumptions: string[]
+  }
+  retrieval?: {
+    queries: string[]
+    localLibraryQueries?: string[]
+    totalRetrieved: number
+    papersUsed: number
+    yearRange: string | null
+    yearDistribution: Record<string, number>
+    sourceDistribution: Record<string, number>
+    sourcesUsed: string[]
+  }
+  refinement?: {
+    passCount: number
+    changes: string[]
+    unresolvedIssues: string[]
+  }
+  assembly?: {
+    abstract?: string
+    keywords?: string[]
+    methodology?: string
+    qualityAudit?: {
+      summary: string
+      warnings: string[]
+    }
+  }
+  export?: {
+    markdownReady: boolean
+    latexReady: boolean
+    pdfPipeline: string
+    notes: string[]
+  }
 }
 
 export type ReportStatus = 'planning' | 'drafting' | 'complete'

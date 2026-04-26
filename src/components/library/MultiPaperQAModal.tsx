@@ -143,7 +143,7 @@ export default function MultiPaperQAModal({
             <div className="multipaper-qa-list">
               {papers.length === 0 ? (
                 <div className="multipaper-qa-empty-hint">
-                  No backend papers in the current filter.
+                  No local library papers in the current filter.
                 </div>
               ) : (
                 papers.map((paper) => {
@@ -220,7 +220,7 @@ export default function MultiPaperQAModal({
               </button>
               {!api.ready && (
                 <span className="multipaper-qa-help-text">
-                  Backend required
+                  Desktop library required
                 </span>
               )}
               {api.ready && selectedIds.length < 2 && (
@@ -294,4 +294,3 @@ export default function MultiPaperQAModal({
     </div>
   )
 }
-

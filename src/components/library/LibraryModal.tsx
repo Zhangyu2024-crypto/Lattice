@@ -62,7 +62,7 @@ import { ALL_PAPERS_ID, type Collection, type PaperCard } from './modal/types'
 interface LibraryModalProps {
   open: boolean
   onClose: () => void
-  /** Demo data used only when the backend isn't ready. */
+  /** Demo data used only when the local desktop library is unavailable. */
   data: LibraryData
   /** Called when the user clicks "Open" on a paper row — the caller
    *  decides whether to surface a PaperArtifact or a PDF viewer. */
@@ -118,7 +118,7 @@ export default function LibraryModal({
   // Single gate for all write actions (DOI import, scan, BibTeX/RIS, tags,
   // collections, export, multi-paper Q&A, refresh). Verified: every handler
   // / disabled / title gate in this file checks only `api.ready`; the
-  // `usingBackend` predicate below is a separate data-source selector.
+  // `usingLocalLibrary` predicate below is a separate data-source selector.
   const canEdit = api.ready
   const [collectionId, setCollectionId] = useState<string>(ALL_PAPERS_ID)
   const [selectedPaperId, setSelectedPaperId] = useState<string | null>(null)
@@ -126,10 +126,10 @@ export default function LibraryModal({
   const [activeTags, setActiveTags] = useState<Set<string>>(() => new Set())
   const [doiInput, setDoiInput] = useState('')
 
-  // Backend-fetched data (null when backend is not ready).
-  const [backendPapers, setBackendPapers] = useState<PaperCard[] | null>(null)
-  const [backendTags, setBackendTags] = useState<LibraryTag[] | null>(null)
-  const [backendCollections, setBackendCollections] = useState<
+  // Local library data (null in pure-Vite mode, where Electron IPC is absent).
+  const [libraryPapers, setLibraryPapers] = useState<PaperCard[] | null>(null)
+  const [libraryTags, setLibraryTags] = useState<LibraryTag[] | null>(null)
+  const [libraryCollections, setLibraryCollections] = useState<
     Collection[] | null
   >(null)
   const [stats, setStats] = useState<LibraryStats | null>(null)
@@ -160,7 +160,7 @@ export default function LibraryModal({
 
   // ── Data source ──────────────────────────────────────────────
 
-  const usingBackend = api.ready && backendPapers != null
+  const usingLocalLibrary = api.ready && libraryPapers != null
   const demoPapers = useMemo<PaperCard[]>(
     () => data.papers.map(demoPaperToCard),
     [data.papers],
@@ -175,23 +175,23 @@ export default function LibraryModal({
     [data.collections],
   )
 
-  const papers = usingBackend
-    ? (backendPapers as PaperCard[])
+  const papers = usingLocalLibrary
+    ? (libraryPapers as PaperCard[])
     : demoPapers
-  const collections = usingBackend
-    ? (backendCollections ?? [])
+  const collections = usingLocalLibrary
+    ? (libraryCollections ?? [])
     : demoCollections
-  const tags = usingBackend
-    ? (backendTags ?? []).map((t) => t.name)
+  const tags = usingLocalLibrary
+    ? (libraryTags ?? []).map((t) => t.name)
     : data.tags
 
   // ── Load effect ─────────────────────────────────────────────
 
   const refreshAll = useCallback(async () => {
     if (!api.ready) {
-      setBackendPapers(null)
-      setBackendTags(null)
-      setBackendCollections(null)
+      setLibraryPapers(null)
+      setLibraryTags(null)
+      setLibraryCollections(null)
       setStats(null)
       return
     }
@@ -204,11 +204,11 @@ export default function LibraryModal({
         api.listCollections(),
         api.stats().catch(() => null),
       ])
-      setBackendPapers(papersRes.papers.map(backendRowToCard))
-      setBackendTags(tagsRes)
-      setBackendCollections(
+      setLibraryPapers(papersRes.papers.map(libraryRowToCard))
+      setLibraryTags(tagsRes)
+      setLibraryCollections(
         collRes.map((c: LibraryCollectionRow) => ({
-          id: c.name, // collections are keyed by name in the REST API
+          id: c.name, // collections are keyed by name in the local store
           name: c.name,
           description: c.description,
           paperCount: c.count,
@@ -219,7 +219,7 @@ export default function LibraryModal({
       // `localProLibrary` always resolves (backed by JSON file on disk),
       // so any error here means the IPC itself failed — rare, usually
       // pure-Vite dev mode. Fall back to the bundled demo data.
-      setBackendPapers(null)
+      setLibraryPapers(null)
       const message = err instanceof Error ? err.message : String(err)
       setErrorMsg(message)
       toast.error(`Library load failed: ${message}`)
@@ -362,7 +362,7 @@ export default function LibraryModal({
       return
     }
     if (!canEdit) {
-      toast.warn('Connect the backend to import by DOI')
+      toast.warn('Open the desktop app to import by DOI')
       return
     }
     void run(
@@ -480,10 +480,10 @@ export default function LibraryModal({
 
   const handleAddPaperToCollection = (paper: PaperCard, name: string) => {
     if (paper.backendId == null) return
-    const backendId = paper.backendId
+    const paperId = paper.backendId
     void run(
       'add-to-coll',
-      () => api.addToCollection(name, backendId),
+      () => api.addToCollection(name, paperId),
       (r) => {
         if (r.success) {
           toast.success(`Added to ${name}`)
@@ -497,10 +497,10 @@ export default function LibraryModal({
 
   const handleRemovePaperFromCollection = (paper: PaperCard, name: string) => {
     if (paper.backendId == null) return
-    const backendId = paper.backendId
+    const paperId = paper.backendId
     void run(
       'remove-from-coll',
-      () => api.removeFromCollection(name, backendId),
+      () => api.removeFromCollection(name, paperId),
       (r) => {
         if (r.success) {
           toast.success(`Removed from ${name}`)
@@ -546,7 +546,7 @@ export default function LibraryModal({
 
   const handleExportBibtex = async () => {
     if (!canEdit) {
-      toast.warn('Backend not ready')
+      toast.warn('Local library storage is unavailable in this session')
       return
     }
     void run(
@@ -564,7 +564,7 @@ export default function LibraryModal({
 
   const handleUploadPdf = async () => {
     if (!canEdit) {
-      toast.warn('Backend not ready')
+      toast.warn('Open the desktop app to upload a PDF')
       return
     }
     const picker = window.electronAPI?.openFile
@@ -597,7 +597,7 @@ export default function LibraryModal({
 
   const handleScanDirectory = async () => {
     if (!canEdit) {
-      toast.warn('Backend not ready')
+      toast.warn('Open the desktop app to scan a directory')
       return
     }
     let directory: string | undefined
@@ -614,7 +614,7 @@ export default function LibraryModal({
     }
     void run(
       'scan',
-      // Match the backend/CLI default. The toast below already expects an
+      // Preserve the legacy scan default. The toast below already expects an
       // `extracted` count, so without this the chain-extraction pipeline
       // never fires.
       () => api.scan({ directory, extract: true }),
@@ -652,7 +652,7 @@ export default function LibraryModal({
 
   const handleRefreshMetadata = async () => {
     if (!canEdit) {
-      toast.warn('Backend not ready')
+      toast.warn('Local library storage is unavailable in this session')
       return
     }
     const bridge = window.electronAPI?.libraryRefreshMetadata
@@ -823,7 +823,7 @@ export default function LibraryModal({
                 {!canEdit ? (
                   <span
                     className="library-modal-offline-badge"
-                    title="Backend not connected"
+                    title="Local desktop library unavailable"
                   >
                     Demo
                   </span>
@@ -837,7 +837,7 @@ export default function LibraryModal({
                       icon={<Upload size={16} strokeWidth={1.75} />}
                       label={
                         !canEdit
-                          ? 'Connect backend to upload a PDF'
+                          ? 'Open desktop app to upload a PDF'
                           : 'Upload a PDF file'
                       }
                       size="md"
@@ -848,7 +848,7 @@ export default function LibraryModal({
                       icon={<FolderOpen size={16} strokeWidth={1.75} />}
                       label={
                         !canEdit
-                          ? 'Connect backend to scan a folder'
+                          ? 'Open desktop app to scan a folder'
                           : 'Scan folder for PDFs'
                       }
                       size="md"
@@ -859,7 +859,7 @@ export default function LibraryModal({
                       icon={<RefreshCw size={16} strokeWidth={1.75} />}
                       label={
                         !canEdit
-                          ? 'Connect backend to refresh metadata'
+                          ? 'Open desktop app to refresh metadata'
                           : 'Refresh Crossref metadata for Unknown / spaced-DOI rows'
                       }
                       size="md"
@@ -881,7 +881,7 @@ export default function LibraryModal({
                         className="library-win-import-summary"
                         title={
                           !canEdit
-                            ? 'Connect backend to import BibTeX or RIS'
+                            ? 'Open desktop app to import BibTeX or RIS'
                             : 'Import BibTeX or RIS'
                         }
                         onClick={(e) => {
@@ -925,9 +925,9 @@ export default function LibraryModal({
                       icon={<MessageSquare size={16} strokeWidth={1.75} />}
                       label={
                         !canEdit
-                          ? 'Connect backend for multi-paper Q&A'
+                          ? 'Open desktop app for multi-paper Q&A'
                           : askablePapers.length < 2
-                            ? 'Need at least two filtered papers with backend IDs'
+                            ? 'Need at least two filtered papers with library IDs'
                             : 'Ask across filtered papers'
                       }
                       size="md"
@@ -938,7 +938,7 @@ export default function LibraryModal({
                       icon={<Download size={16} strokeWidth={1.75} />}
                       label={
                         !canEdit
-                          ? 'Connect backend to export BibTeX'
+                          ? 'Open desktop app to export BibTeX'
                           : 'Export current filter as BibTeX'
                       }
                       size="md"
@@ -963,7 +963,7 @@ export default function LibraryModal({
                     className="library-toolbar-btn"
                     title={
                       !canEdit
-                        ? 'Connect backend to upload a PDF'
+                        ? 'Open desktop app to upload a PDF'
                         : 'Upload a single PDF'
                     }
                   >
@@ -977,7 +977,7 @@ export default function LibraryModal({
                     className="library-toolbar-btn"
                     title={
                       !canEdit
-                        ? 'Connect backend to scan a directory'
+                        ? 'Open desktop app to scan a directory'
                         : 'Scan a directory for PDFs'
                     }
                   >
@@ -991,7 +991,7 @@ export default function LibraryModal({
                     className="library-toolbar-btn"
                     title={
                       !canEdit
-                        ? 'Connect backend to refresh metadata'
+                        ? 'Open desktop app to refresh metadata'
                         : 'Refresh Crossref metadata for Unknown / spaced-DOI rows'
                     }
                   >
@@ -1004,7 +1004,7 @@ export default function LibraryModal({
                     disabled={!canEdit || busyKey === 'bibtex'}
                     className="library-toolbar-btn"
                     title={
-                      !canEdit ? 'Connect backend to import BibTeX' : 'Import .bib file'
+                      !canEdit ? 'Open desktop app to import BibTeX' : 'Import .bib file'
                     }
                   >
                     <Upload size={14} strokeWidth={1.75} />
@@ -1016,7 +1016,7 @@ export default function LibraryModal({
                     disabled={!canEdit || busyKey === 'ris'}
                     className="library-toolbar-btn"
                     title={
-                      !canEdit ? 'Connect backend to import RIS' : 'Import .ris file'
+                      !canEdit ? 'Open desktop app to import RIS' : 'Import .ris file'
                     }
                   >
                     <Upload size={14} strokeWidth={1.75} />
@@ -1029,9 +1029,9 @@ export default function LibraryModal({
                     className="library-toolbar-btn"
                     title={
                       !canEdit
-                        ? 'Connect backend to ask across papers'
+                        ? 'Open desktop app to ask across papers'
                         : askablePapers.length < 2
-                          ? 'Need at least two filtered papers with backend IDs'
+                          ? 'Need at least two filtered papers with library IDs'
                           : 'Ask across the current filtered papers'
                     }
                   >
@@ -1045,7 +1045,7 @@ export default function LibraryModal({
                     className="library-toolbar-btn"
                     title={
                       !canEdit
-                        ? 'Connect backend to export BibTeX'
+                        ? 'Open desktop app to export BibTeX'
                         : 'Export current filter as BibTeX'
                     }
                   >
@@ -1180,7 +1180,7 @@ export default function LibraryModal({
 
 // ─── Data adapters ───────────────────────────────────────────────
 
-function backendRowToCard(row: LibraryPaperRow): PaperCard {
+function libraryRowToCard(row: LibraryPaperRow): PaperCard {
   return {
     id: String(row.id),
     backendId: row.id,
@@ -1217,7 +1217,7 @@ function demoPaperToCard(p: DemoPaper): PaperCard {
 
 function splitAuthors(raw: string): string[] {
   if (!raw) return []
-  // Backend stores authors as ";"-separated. Some legacy rows use ", " —
+  // Library stores authors as ";"-separated. Some legacy rows use ", " —
   // handle both without splitting on commas inside names like "Li, A.".
   const primary = raw
     .split(';')
@@ -1239,7 +1239,7 @@ function filterPapers(
   const q = query.trim().toLowerCase()
   return papers.filter((p) => {
     if (collectionId !== ALL_PAPERS_ID) {
-      // For demo data the collection id == collectionId; for backend data
+      // For demo data the collection id == collectionId; for local library data
       // the collection set carries names — match either.
       if (!p.collections.includes(collectionId)) return false
     }
@@ -1258,4 +1258,3 @@ function filterPapers(
 // dead-code check — we only dereference it via the adapter above.
 const _unusedDemoCollectionType = null as unknown as DemoCollection
 void _unusedDemoCollectionType
-

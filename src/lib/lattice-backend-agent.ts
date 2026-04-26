@@ -1,4 +1,5 @@
-// lattice-cli agent path: POST /api/chat/send + WebSocket task/tool/chat events.
+// Optional legacy lattice-cli agent path: POST /api/chat/send + WebSocket
+// task/tool/chat events.
 //
 // When the Python backend (lattice_cli.web.server) is running, agent turns
 // should execute server-side with the full tool catalog — matching the
@@ -6,8 +7,9 @@
 // structured WS protocol in `useWebSocket.ts` (task_start, tool_*, chat_message,
 // task_end, …). This module only kicks off the turn and waits for completion.
 //
-// Set `VITE_LATTICE_BACKEND_AGENT=0` to force the local TS orchestrator even
-// when the backend is up (debug only).
+// Lattice-app is self-contained by default. Set
+// `VITE_LATTICE_BACKEND_AGENT=1` only when explicitly testing the legacy
+// lattice-cli agent bridge.
 
 import { useAppStore } from '../stores/app-store'
 import { wsClient } from '../stores/ws-client'
@@ -39,7 +41,7 @@ function taskIdFromWsPayload(evt: unknown): string | null {
 }
 
 export function latticeBackendAgentPreferred(): boolean {
-  if (import.meta.env.VITE_LATTICE_BACKEND_AGENT === '0') return false
+  if (import.meta.env.VITE_LATTICE_BACKEND_AGENT !== '1') return false
   return useAppStore.getState().backend.ready
 }
 
@@ -73,6 +75,11 @@ export async function submitLatticeBackendAgentTurn(
     body.mentions = opts.mentions
   }
 
+  // Start watching before POST. Very fast backend turns can emit task_end
+  // before the HTTP response is parsed; missing that event leaves the
+  // composer in a fake running state until the long timeout expires.
+  const taskEndWaiter = createTaskEndWaiter(opts.signal)
+
   let res: Response
   try {
     res = await fetch(url, {
@@ -85,6 +92,7 @@ export async function submitLatticeBackendAgentTurn(
       signal: opts.signal,
     })
   } catch (e) {
+    taskEndWaiter.dispose()
     if (e instanceof DOMException && e.name === 'AbortError') {
       return { ok: false, error: 'Cancelled' }
     }
@@ -93,6 +101,7 @@ export async function submitLatticeBackendAgentTurn(
   }
 
   if (!res.ok) {
+    taskEndWaiter.dispose()
     const t = await res.text().catch(() => '')
     return { ok: false, error: t || `HTTP ${res.status} ${res.statusText}` }
   }
@@ -110,16 +119,15 @@ export async function submitLatticeBackendAgentTurn(
       : json && json.success === false && typeof json.message === 'string'
         ? json.message
         : null
-  if (httpErr) return { ok: false, error: httpErr }
+  if (httpErr) {
+    taskEndWaiter.dispose()
+    return { ok: false, error: httpErr }
+  }
 
   const expectedTaskId = pickTaskId(json)
 
   try {
-    await waitForBackendTaskEnd({
-      expectedTaskId,
-      signal: opts.signal,
-      timeoutMs: 180_000,
-    })
+    await taskEndWaiter.wait(expectedTaskId, 180_000)
   } catch (e) {
     if (e instanceof DOMException && e.name === 'AbortError') {
       return { ok: false, error: 'Cancelled' }
@@ -131,52 +139,88 @@ export async function submitLatticeBackendAgentTurn(
   return { ok: true }
 }
 
-function waitForBackendTaskEnd(opts: {
-  expectedTaskId: string | null
-  signal?: AbortSignal
-  timeoutMs: number
-}): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      cleanup()
-      reject(
-        new Error(
-          'Timed out waiting for backend agent (no task_end on WebSocket)',
-        ),
-      )
-    }, opts.timeoutMs)
+function createTaskEndWaiter(signal?: AbortSignal): {
+  wait(expectedTaskId: string | null, timeoutMs: number): Promise<void>
+  dispose(): void
+} {
+  const endedTaskIds = new Set<string>()
+  let sawAnyTaskEnd = false
+  let disposed = false
+  const waiters: Array<{
+    expectedTaskId: string | null
+    resolve: () => void
+    reject: (err: unknown) => void
+    timer: ReturnType<typeof setTimeout>
+  }> = []
 
-    const unsubscribe = wsClient.on('task_end', (evt) => {
-      const tid = taskIdFromWsPayload(evt)
-      if (opts.expectedTaskId) {
-        if (tid === opts.expectedTaskId) {
-          cleanup()
-          resolve()
-        }
-        return
-      }
-      // No task id from HTTP — accept the next task_end (may race with other
-      // tabs; prefer configuring lattice-cli to return task_id).
-      cleanup()
-      resolve()
-    })
+  const cleanupWaiter = (waiter: (typeof waiters)[number]) => {
+    clearTimeout(waiter.timer)
+    const idx = waiters.indexOf(waiter)
+    if (idx >= 0) waiters.splice(idx, 1)
+  }
 
-    const onAbort = () => {
-      cleanup()
-      reject(new DOMException('aborted', 'AbortError'))
+  const unsubscribe = wsClient.on('task_end', (evt) => {
+    sawAnyTaskEnd = true
+    const tid = taskIdFromWsPayload(evt)
+    if (tid) endedTaskIds.add(tid)
+    for (const waiter of waiters.slice()) {
+      if (waiter.expectedTaskId && tid !== waiter.expectedTaskId) continue
+      cleanupWaiter(waiter)
+      waiter.resolve()
     }
-
-    function cleanup() {
-      clearTimeout(timer)
-      unsubscribe()
-      opts.signal?.removeEventListener('abort', onAbort)
-    }
-
-    if (opts.signal?.aborted) {
-      cleanup()
-      reject(new DOMException('aborted', 'AbortError'))
-      return
-    }
-    opts.signal?.addEventListener('abort', onAbort)
   })
+
+  const dispose = (reason?: unknown) => {
+    if (disposed) return
+    disposed = true
+    unsubscribe()
+    signal?.removeEventListener('abort', onAbort)
+    for (const waiter of waiters.slice()) {
+      cleanupWaiter(waiter)
+      if (reason !== undefined) waiter.reject(reason)
+      else waiter.reject(new Error('disposed'))
+    }
+  }
+
+  const onAbort = () => {
+    dispose(new DOMException('aborted', 'AbortError'))
+  }
+  signal?.addEventListener('abort', onAbort, { once: true })
+
+  const finishWaiter = (waiter: (typeof waiters)[number], resolve: () => void) => {
+    cleanupWaiter(waiter)
+    dispose()
+    resolve()
+  }
+
+  return {
+    wait(expectedTaskId, timeoutMs) {
+      if (expectedTaskId ? endedTaskIds.has(expectedTaskId) : sawAnyTaskEnd) {
+        dispose()
+        return Promise.resolve()
+      }
+      if (signal?.aborted) {
+        dispose()
+        return Promise.reject(new DOMException('aborted', 'AbortError'))
+      }
+      return new Promise<void>((resolve, reject) => {
+        const waiter = {
+          expectedTaskId,
+          resolve: () => finishWaiter(waiter, resolve),
+          reject,
+          timer: setTimeout(() => {
+            cleanupWaiter(waiter)
+            dispose()
+            reject(
+              new Error(
+                'Timed out waiting for backend agent (no task_end on WebSocket)',
+              ),
+            )
+          }, timeoutMs),
+        }
+        waiters.push(waiter)
+      })
+    },
+    dispose,
+  }
 }

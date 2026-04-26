@@ -36,6 +36,8 @@ export function getArtifactPreview(artifact: Artifact): PreviewBlocks {
     case 'compute':
     case 'compute-pro':
       return renderComputePreview(artifact)
+    case 'compute-experiment':
+      return renderComputeExperimentPreview(artifact)
     case 'structure':
       return renderStructurePreview(artifact)
     case 'paper':
@@ -166,6 +168,29 @@ function renderRamanIdPreview(artifact: Artifact): PreviewBlocks {
       top?.score != null ? m('Score', `${Math.round(top.score * 100)}%`) : null,
       m('Candidates', matches.length || null),
       payload.laserWavelength ? m('Laser', `${payload.laserWavelength} nm`) : null,
+    ].filter((x): x is Meta => x != null),
+  }
+}
+
+
+function renderComputeExperimentPreview(artifact: Artifact): PreviewBlocks {
+  const payload = artifact.payload as {
+    status?: string
+    points?: Array<{ status?: string }>
+    result?: { metrics?: Record<string, unknown>; warnings?: string[] }
+  }
+  const points = Array.isArray(payload.points) ? payload.points : []
+  const done = points.filter((point) => point.status === 'succeeded').length
+  const b = payload.result?.metrics?.bulk_modulus_gpa
+  const parts = [payload.status ?? 'draft', `${done}/${points.length} points`]
+  if (typeof b === 'number') parts.push(`${b.toFixed(2)} GPa`)
+  return {
+    oneLiner: parts.join(' · '),
+    meta: [
+      m('Status', payload.status),
+      m('Points', `${done}/${points.length}`),
+      m('Bulk modulus', typeof b === 'number' ? `${b.toFixed(2)} GPa` : null),
+      m('Warnings', payload.result?.warnings?.length ?? null),
     ].filter((x): x is Meta => x != null),
   }
 }

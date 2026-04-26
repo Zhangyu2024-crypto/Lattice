@@ -13,7 +13,9 @@ files:
 #     154,879 phases. SQLite WAL mode requires read/write filesystem
 #     access so the DB must live outside the asar archive.
 #   * `data/raman_references.json`, `data/xps_lines.json`,
-#     `data/xrd_references.json` — bundled reference JSONs.
+#     `data/xps_reference_lines.json`, `data/xps_rsf_scofield.json`,
+#     `data/xrd_references.json` — bundled reference JSONs used by
+#     XPS/XRD/Raman lookup, validation, and quantification tools.
 extraResources:
   - from: worker
     to: worker

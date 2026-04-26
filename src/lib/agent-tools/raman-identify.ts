@@ -19,6 +19,7 @@ export const ramanIdentifyTool: LocalTool<Input, Output> = {
   name: 'raman_identify',
   description:
     'Match the peaks on a raman-pro workbench against the bundled Raman reference database. Requires peaks to be detected first. Writes payload.matches.',
+  trustLevel: 'localWrite',
   cardMode: 'review',
   inputSchema: {
     type: 'object',

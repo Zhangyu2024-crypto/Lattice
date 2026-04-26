@@ -33,7 +33,7 @@ interface FetchedPaper {
   title: string
   doi: string
   hasPdf: boolean
-  source: 'openalex' | 'arxiv' | 'doi'
+  source: 'openalex' | 'arxiv' | 'semantic_scholar' | 'doi'
 }
 
 interface Output {
@@ -56,7 +56,7 @@ const UNPAYWALL_TIMEOUT_MS = 8_000
 export const literatureFetchTool: LocalTool<Input, Output | ErrorOutput> = {
   name: 'literature_fetch',
   description:
-    'Search OpenAlex + arXiv for papers, download open-access PDFs, and import them '
+    'Search OpenAlex + arXiv + Semantic Scholar for papers, download open-access PDFs, and import them '
     + 'into the local Library with full metadata. After import, papers are available for '
     + 'page-indexed RAG via hypothesis_gather_evidence. Prefer focused 3-8 keyword queries. '
     + 'Alternatively, pass a list of DOIs to fetch specific papers.',

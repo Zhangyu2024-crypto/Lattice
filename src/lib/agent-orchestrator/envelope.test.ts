@@ -73,6 +73,49 @@ describe('toToolResultBlock integrity warning', () => {
     expect(content).toContain('"status":"succeeded"')
   })
 
+  it('wraps running compute result in a warning envelope', () => {
+    const result = toToolResultBlock(
+      step({
+        artifactId: 'art_1',
+        status: 'running',
+        cancelled: false,
+        background: true,
+        exitCode: null,
+        durationMs: 125000,
+        stdoutTail: 'SCF iteration 23',
+        figureCount: 0,
+        summary: 'RUNNING in 2m 5s — compute process is still in progress. Do NOT present derived results until status=succeeded.',
+      }),
+    )
+    const content = String(result.content)
+    expect(content.startsWith('⚠️ INTEGRITY WARNING')).toBe(true)
+    expect(content).toContain('status=running')
+    expect(content).toContain('still in progress')
+  })
+
+  it('wraps partial compute experiment result in a warning envelope', () => {
+    const result = toToolResultBlock(
+      step({
+        artifactId: 'exp_1',
+        status: 'partial',
+        pointCount: 6,
+        succeeded: 4,
+        failed: 2,
+        summary: 'partial: 4/6 points succeeded',
+      }, { name: 'compute_experiment_run' }),
+    )
+    const content = String(result.content)
+    expect(content.startsWith('⚠️ INTEGRITY WARNING')).toBe(true)
+    expect(content).toContain('partially complete')
+  })
+
+  it('does not warn on non-compute tool outputs with a failed status', () => {
+    const result = toToolResultBlock(
+      step({ status: 'failed', reason: 'not a compute run' }, { name: 'some_other_tool' }),
+    )
+    expect(String(result.content).startsWith('⚠️')).toBe(false)
+  })
+
   it('does not warn on non-compute tool outputs (no status field)', () => {
     const result = toToolResultBlock(
       step({ peaks: [{ twoTheta: 27.3, intensity: 1.0 }] }, { name: 'detect_peaks' }),

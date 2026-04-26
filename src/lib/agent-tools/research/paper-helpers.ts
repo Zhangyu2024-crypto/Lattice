@@ -8,9 +8,12 @@
 // still drawn from one shared pool fetched once at plan-time.
 
 import type { PaperSearchResultPayload } from '../../../types/electron'
-import type { Citation } from '../research-shared'
+import { localProLibrary } from '../../local-pro-library'
+import type { Citation, ResearchRetrievalMeta } from '../research-shared'
 
-export type Paper = PaperSearchResultPayload
+export type Paper = Omit<PaperSearchResultPayload, 'source'> & {
+  source: PaperSearchResultPayload['source'] | 'local_library'
+}
 
 const MIN_KEYWORD_LEN = 2
 const STOP_WORDS = new Set([
@@ -158,8 +161,176 @@ export async function searchPapers(
   try {
     const res = await api.literatureSearch({ query, limit })
     if (!res || !res.success) return []
-    return res.results
+    return res.results as Paper[]
   } catch {
     return []
+  }
+}
+
+export interface MultiQuerySearchResult {
+  papers: Paper[]
+  meta: ResearchRetrievalMeta
+}
+
+export async function searchPapersForResearch(args: {
+  topic: string
+  focus?: string | null
+  variantQueries?: string[]
+  limitPerQuery?: number
+  maxQueries?: number
+}): Promise<MultiQuerySearchResult> {
+  const topic = args.topic.trim()
+  const focus = args.focus?.trim()
+  const baseQuery = focus ? `${topic} ${focus}` : topic
+  const currentYear = new Date().getFullYear()
+  const rawQueries = [
+    baseQuery,
+    `"${baseQuery}" survey OR review`,
+    ...(args.variantQueries ?? []),
+    `"${baseQuery}" ${currentYear - 2} OR ${currentYear - 1} OR ${currentYear}`,
+  ]
+  const queries = dedupeStrings(rawQueries)
+    .filter((query) => query.length >= 3)
+    .slice(0, args.maxQueries ?? 6)
+  const [onlineBatches, localBatches] = await Promise.all([
+    Promise.all(
+      queries.map((query) => searchPapers(query, args.limitPerQuery ?? 30)),
+    ),
+    Promise.all(
+      queries.map((query) => searchLocalLibraryPapers(query, args.limitPerQuery ?? 30)),
+    ),
+  ])
+  const merged = dedupePapers([...onlineBatches.flat(), ...localBatches.flat()])
+  const keywords = extractKeywords(baseQuery)
+  const filtered = filterResearchPapers(merged, keywords)
+  const papers = rankResearchPapers(filtered.length > 0 ? filtered : merged)
+  return {
+    papers,
+    meta: {
+      ...buildRetrievalMeta(queries, merged.length, papers),
+      localLibraryQueries: queries,
+    },
+  }
+}
+
+
+async function searchLocalLibraryPapers(
+  query: string,
+  limit: number,
+): Promise<Paper[]> {
+  if (!localProLibrary.ready) return []
+  try {
+    const res = await localProLibrary.listPapers({
+      q: query,
+      limit: Math.max(1, Math.min(limit, 50)),
+      sort: 'year',
+      order: 'desc',
+    })
+    return res.papers.map((paper) => ({
+      id: `local:${paper.id}`,
+      title: paper.title || '(untitled)',
+      abstract: paper.abstract || paper.notes || '',
+      authors: paper.authors || '',
+      year: paper.year || '',
+      doi: paper.doi || '',
+      url: paper.url || '',
+      source: 'local_library' as const,
+      venue: paper.journal || '',
+      citedByCount: paper.citation_count,
+    }))
+  } catch {
+    return []
+  }
+}
+
+function dedupeStrings(values: string[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const value of values) {
+    const clean = value.trim().replace(/\s+/g, ' ')
+    if (!clean) continue
+    const key = clean.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(clean)
+  }
+  return out
+}
+
+function dedupePapers(papers: Paper[]): Paper[] {
+  const byKey = new Map<string, Paper>()
+  for (const paper of papers) {
+    const key = paper.doi
+      ? `doi:${normaliseDoi(paper.doi).toLowerCase()}`
+      : `title:${paper.title.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 140)}`
+    if (!key.endsWith(':')) {
+      const current = byKey.get(key)
+      if (!current || preferredPaper(paper, current) === paper) byKey.set(key, paper)
+    }
+  }
+  return Array.from(byKey.values())
+}
+
+function preferredPaper(a: Paper, b: Paper): Paper {
+  if (a.source === 'local_library' && b.source !== 'local_library') return a
+  if (b.source === 'local_library' && a.source !== 'local_library') return b
+  if (a.source === 'openalex' && b.source !== 'openalex') return a
+  if (b.source === 'openalex' && a.source !== 'openalex') return b
+  return (a.citedByCount ?? 0) >= (b.citedByCount ?? 0) ? a : b
+}
+
+function filterResearchPapers(papers: Paper[], keywords: string[]): Paper[] {
+  if (keywords.length === 0) return papers
+  return papers.filter((paper) => {
+    const score = relevanceScore(paper, keywords)
+    return score >= 1 || ((paper.citedByCount ?? 0) >= 50 && score > 0)
+  })
+}
+
+function rankResearchPapers(papers: Paper[]): Paper[] {
+  const currentYear = new Date().getFullYear()
+  const recentCount = papers.filter((paper) => {
+    const year = Number.parseInt(paper.year || '', 10)
+    return Number.isFinite(year) && year >= currentYear - 3
+  }).length
+  const boostRecent = papers.length > 0 && recentCount / papers.length < 0.2
+  return [...papers].sort((a, b) => {
+    if (boostRecent) {
+      const aYear = Number.parseInt(a.year || '', 10)
+      const bYear = Number.parseInt(b.year || '', 10)
+      const aRecent = Number.isFinite(aYear) && aYear >= currentYear - 3
+      const bRecent = Number.isFinite(bYear) && bYear >= currentYear - 3
+      if (aRecent !== bRecent) return aRecent ? -1 : 1
+    }
+    const citeDelta = (b.citedByCount ?? -1) - (a.citedByCount ?? -1)
+    if (citeDelta !== 0) return citeDelta
+    return Number.parseInt(b.year || '0', 10) - Number.parseInt(a.year || '0', 10)
+  })
+}
+
+function buildRetrievalMeta(
+  queries: string[],
+  totalRetrieved: number,
+  papers: Paper[],
+): ResearchRetrievalMeta {
+  const yearDistribution: Record<string, number> = {}
+  const sourceDistribution: Record<string, number> = {}
+  for (const paper of papers) {
+    const year = paper.year || 'unknown'
+    yearDistribution[year] = (yearDistribution[year] ?? 0) + 1
+    const source = paper.source || 'unknown'
+    sourceDistribution[source] = (sourceDistribution[source] ?? 0) + 1
+  }
+  const years = Object.keys(yearDistribution)
+    .filter((year) => /^\d{4}$/.test(year))
+    .sort()
+  return {
+    queries,
+    totalRetrieved,
+    papersUsed: papers.length,
+    yearRange: years.length > 0 ? `${years[0]}-${years[years.length - 1]}` : null,
+    yearDistribution,
+    sourceDistribution,
+    sourcesUsed: Object.keys(sourceDistribution).sort(),
   }
 }

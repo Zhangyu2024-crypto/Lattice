@@ -271,6 +271,15 @@ export const usePrefsStore = create<PrefsState>()(
       name: 'lattice.prefs',
       version: 16,
       storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        ...state,
+        permissionMode: 'normal' as PermissionMode,
+      }),
+      merge: (persisted, current) => ({
+        ...current,
+        ...(persisted as Partial<PrefsState>),
+        permissionMode: 'normal' as PermissionMode,
+      }),
       // v2 introduces `layout`. v3 extends with inspector visibility + width.
       // v4 adds `layout.activeView`. v5 drops `agentModel` (moved to
       // llm-config-store.agent.{providerId,modelId}). v6 removes the old
@@ -290,8 +299,8 @@ export const usePrefsStore = create<PrefsState>()(
       // workspace; `normalizeActiveView` falls back to 'session' for
       // any unknown value in older persisted states.
       // v14 adds 'data' sidebar view for the data management panel.
-      // v15 adds `permissionMode` (session-level approval preset). Legacy
-      // persisted states get 'normal' via the initial state default.
+      // v15 adds `permissionMode`. It now resets to Normal on hydrate via
+      // merge/partialize so risky modes never persist across app restarts.
       // v16 adds `layout.editorPaneHeight` for the workspace editor/chat
       // vertical splitter.
       // migrate-forward fills defaults via normalizeLayout so legacy

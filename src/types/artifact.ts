@@ -8,6 +8,7 @@ export type ArtifactKind =
   | 'raman-id'
   | 'structure'
   | 'compute'
+  | 'compute-experiment'
   | 'job'
   | 'research-report'
   | 'batch'
@@ -349,6 +350,7 @@ export interface ComputeRunEntry {
   finishedAt?: string
   exitCode?: number | null
   cancelled?: boolean
+  timedOut?: boolean
   durationMs?: number
   status: ComputeStatus
   /** Absolute path to the archived workdir (script, stdout.log,
@@ -365,6 +367,9 @@ export interface ComputeArtifactPayload {
   figures: ComputeFigure[]
   exitCode: number | null
   status: ComputeStatus
+  /** True when the latest run was killed by the configured timeout rather
+   *  than by an explicit user Stop action. */
+  timedOut?: boolean
   env?: { packages: string[]; pythonVersion: string }
   durationMs?: number
   /** Set while a run is in flight so Cancel knows which IPC runId to target. */
@@ -386,6 +391,87 @@ export type ComputeArtifact = ArtifactBase<'compute', ComputeArtifactPayload>
 
 export function isComputeArtifact(a: Artifact): a is ComputeArtifact {
   return a.kind === 'compute'
+}
+
+
+// ─── Compute Experiment Matrix ───────────────────────────────────
+export type ComputeExperimentStatus =
+  | 'draft'
+  | 'queued'
+  | 'running'
+  | 'succeeded'
+  | 'partial'
+  | 'failed'
+  | 'cancelled'
+
+export type ComputeExperimentPointStatus =
+  | 'pending'
+  | 'queued'
+  | 'running'
+  | 'succeeded'
+  | 'failed'
+  | 'cancelled'
+  | 'skipped'
+
+export interface ComputeExperimentParameter {
+  name: string
+  label?: string
+  unit?: string
+  kind: 'continuous' | 'integer' | 'categorical' | 'boolean'
+  values?: Array<string | number | boolean>
+  role?: 'scan' | 'control' | 'derived'
+}
+
+export interface ComputeExperimentPoint {
+  id: string
+  index: number
+  params: Record<string, string | number | boolean>
+  status: ComputeExperimentPointStatus
+  runId?: string
+  workspaceRelPath?: string
+  startedAt?: number
+  endedAt?: number
+  exitCode?: number | null
+  durationMs?: number
+  error?: string
+  metrics?: Record<string, number | string | boolean | null>
+}
+
+export interface ComputeExperimentResultSummary {
+  model: 'quadratic' | 'custom'
+  coefficients?: number[]
+  metrics: Record<string, number | string | boolean | null>
+  warnings: string[]
+  figureRelPaths?: string[]
+}
+
+export interface ComputeExperimentPayload {
+  schemaVersion: 1
+  templateId: string
+  objective: string
+  /** Optional generic per-point script template. When present, the
+   *  experiment runner renders this for each point instead of using a
+   *  built-in preset. Supported placeholders: {{params_json}},
+   *  {{point_id}}, {{point_index}}, and {{param:name}}. */
+  pointScriptTemplate?: string
+  engine: 'python' | 'cp2k' | 'lammps' | 'shell'
+  status: ComputeExperimentStatus
+  parameters: ComputeExperimentParameter[]
+  points: ComputeExperimentPoint[]
+  metrics: Array<{ name: string; label?: string; unit?: string }>
+  analysis: Array<{ type: string; model?: string; inputs: string[]; outputs: string[] }>
+  stdout: string
+  stderr: string
+  progress?: { current: number; total: number }
+  workspaceRelPath?: string
+  activeRunId?: string | null
+  result?: ComputeExperimentResultSummary
+}
+
+export type ComputeExperimentArtifact = ArtifactBase<'compute-experiment', ComputeExperimentPayload>
+
+export function isComputeExperimentArtifact(a: Artifact): a is ComputeExperimentArtifact {
+  return a.kind === 'compute-experiment'
 }
 
 // ─── Pro Workbench: shared types ───────────────────────────────────
@@ -1385,6 +1471,7 @@ export type Artifact =
   | RamanIdArtifact
   | StructureArtifact
   | ComputeArtifact
+  | ComputeExperimentArtifact
   | JobArtifact
   | ResearchReportArtifact
   | BatchArtifact

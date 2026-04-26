@@ -25,6 +25,14 @@ import type { LocalTool, ToolInputSchema } from '../../types/agent-tool'
 
 export type ResearchMode = 'research' | 'survey'
 export type ResearchStyle = 'concise' | 'comprehensive'
+export type ResearchStage =
+  | 'Interview'
+  | 'Retrieval'
+  | 'Outline'
+  | 'Writing'
+  | 'Refinement'
+  | 'Assembly'
+  | 'Complete'
 
 export type ReportStatus = 'planning' | 'drafting' | 'complete'
 export type SectionStatus = 'empty' | 'drafting' | 'done'
@@ -32,7 +40,7 @@ export type SectionStatus = 'empty' | 'drafting' | 'done'
 export interface ReportSection {
   id: string
   heading: string
-  level: 1
+  level: 1 | 2 | 3
   markdown: string
   citationIds: string[]
   status: SectionStatus
@@ -52,6 +60,46 @@ export interface Citation {
   unverified: boolean
 }
 
+export interface ResearchRetrievalMeta {
+  queries: string[]
+  localLibraryQueries?: string[]
+  totalRetrieved: number
+  papersUsed: number
+  yearRange: string | null
+  yearDistribution: Record<string, number>
+  sourceDistribution: Record<string, number>
+  sourcesUsed: string[]
+}
+
+export interface ResearchInterviewMeta {
+  questions: string[]
+  answers: string[]
+  assumptions: string[]
+}
+
+export interface ResearchRefinementMeta {
+  passCount: number
+  changes: string[]
+  unresolvedIssues: string[]
+}
+
+export interface ResearchExportMeta {
+  markdownReady: boolean
+  latexReady: boolean
+  pdfPipeline: string
+  notes: string[]
+}
+
+export interface ResearchAssemblyMeta {
+  abstract?: string
+  keywords?: string[]
+  methodology?: string
+  qualityAudit?: {
+    summary: string
+    warnings: string[]
+  }
+}
+
 export interface ResearchReportPayload {
   topic: string
   mode: ResearchMode
@@ -61,6 +109,13 @@ export interface ResearchReportPayload {
   generatedAt: number
   status: ReportStatus
   currentSectionId?: string | null
+  /** CLI-compatible phase name: Interview → Retrieval → Outline → Writing → Refinement → Assembly. */
+  stage?: ResearchStage
+  interview?: ResearchInterviewMeta
+  retrieval?: ResearchRetrievalMeta
+  refinement?: ResearchRefinementMeta
+  assembly?: ResearchAssemblyMeta
+  export?: ResearchExportMeta
 }
 
 /** Soft fallback headings keyed by mode/style. These are no longer the

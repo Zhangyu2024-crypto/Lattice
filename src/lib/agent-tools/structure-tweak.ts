@@ -7,9 +7,7 @@ import {
 } from '../compute-tweak-templates'
 import {
   createComputeArtifact,
-  ensureComputeReady,
   resolveStructureArtifact,
-  runAndWait,
   structureSlug,
 } from './compute-helpers'
 
@@ -19,15 +17,11 @@ interface Input {
   artifactId?: string
   tweakKind: TweakKind
   params: Record<string, unknown>
-  autoRun?: boolean
 }
 
 interface Output {
   artifactId: string
   summary: string
-  exitCode?: number | null
-  stdoutTail?: string
-  figureCount?: number
 }
 
 export const structureTweakTool: LocalTool<Input, Output> = {
@@ -55,10 +49,6 @@ export const structureTweakTool: LocalTool<Input, Output> = {
         type: 'object',
         description:
           'Tweak-specific params. supercell: {nx,ny,nz}. dope: {fromElement,toElement,fraction?}. surface: {miller:[h,k,l],minSlab,minVacuum}. vacancy: {element,count?,seed?}.',
-      },
-      autoRun: {
-        type: 'boolean',
-        description: 'Execute immediately. Default true.',
       },
     },
     required: ['tweakKind', 'params'],
@@ -112,20 +102,9 @@ export const structureTweakTool: LocalTool<Input, Output> = {
       language: 'python',
     })
 
-    const shouldRun = input?.autoRun !== false
-    if (shouldRun) {
-      await ensureComputeReady()
-      const run = await runAndWait(ctx.sessionId, artifact.id, ctx.signal)
-      return {
-        artifactId: artifact.id,
-        summary: `${result.title} — exit ${run.exitCode}`,
-        ...run,
-      }
-    }
-
     return {
       artifactId: artifact.id,
-      summary: `Created "${result.title}" (idle)`,
+      summary: `Created "${result.title}" (idle). Run it with compute_run.`,
     }
   },
 }

@@ -3,24 +3,18 @@ import type { SimulateKind } from '../compute-simulate-templates'
 import { buildSimulateTemplate } from '../compute-simulate-templates'
 import {
   createComputeArtifact,
-  ensureComputeReady,
   resolveStructureArtifact,
-  runAndWait,
   structureSlug,
 } from './compute-helpers'
 
 interface Input {
   artifactId?: string
   simulationKind: SimulateKind
-  autoRun?: boolean
 }
 
 interface Output {
   artifactId: string
   summary: string
-  exitCode?: number | null
-  stdoutTail?: string
-  figureCount?: number
 }
 
 export const simulateStructureTool: LocalTool<Input, Output> = {
@@ -39,10 +33,6 @@ export const simulateStructureTool: LocalTool<Input, Output> = {
       simulationKind: {
         type: 'string',
         description: '"md-ase", "dft-cp2k", or "py-play".',
-      },
-      autoRun: {
-        type: 'boolean',
-        description: 'Execute immediately. Default false (creates draft for review).',
       },
     },
     required: ['simulationKind'],
@@ -71,19 +61,9 @@ export const simulateStructureTool: LocalTool<Input, Output> = {
       language: 'python',
     })
 
-    if (input?.autoRun) {
-      await ensureComputeReady()
-      const result = await runAndWait(ctx.sessionId, artifact.id, ctx.signal)
-      return {
-        artifactId: artifact.id,
-        summary: `${tmpl.title} — exit ${result.exitCode}`,
-        ...result,
-      }
-    }
-
     return {
       artifactId: artifact.id,
-      summary: `Created "${tmpl.title}" (idle, ready to run)`,
+      summary: `Created "${tmpl.title}" (idle). Run it with compute_run.`,
     }
   },
 }

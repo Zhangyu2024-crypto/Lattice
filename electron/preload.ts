@@ -20,11 +20,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   listSkills: () => ipcRenderer.invoke('slash:list-skills'),
   onSkillsChanged: (cb: () => void) => subscribe('slash:skills-changed', cb),
   listPlugins: () => ipcRenderer.invoke('slash:list-plugins'),
+  pluginListTools: () => ipcRenderer.invoke('plugin:list-tools'),
+  pluginCallTool: (payload: unknown) =>
+    ipcRenderer.invoke('plugin:call-tool', payload),
   onPluginsChanged: (cb: () => void) =>
     subscribe('slash:plugins-changed', cb),
   mcpReconcile: (servers: unknown) =>
     ipcRenderer.invoke('mcp:reconcile', servers),
   mcpListPrompts: () => ipcRenderer.invoke('mcp:list-prompts'),
+  mcpListTools: () => ipcRenderer.invoke('mcp:list-tools'),
+  mcpCallTool: (payload: unknown) =>
+    ipcRenderer.invoke('mcp:call-tool', payload),
   mcpGetPrompt: (payload: unknown) =>
     ipcRenderer.invoke('mcp:get-prompt', payload),
   onMcpPromptsChanged: (cb: () => void) =>
@@ -130,6 +136,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     subscribe(COMPUTE_RUN_CHANNELS.STDERR, callback),
   onComputeExit: (callback: (msg: unknown) => void) =>
     subscribe(COMPUTE_RUN_CHANNELS.EXIT, callback),
+  issueApprovalToken: (req: unknown) =>
+    ipcRenderer.invoke('approval-token:issue', req),
   // ─── Workspace bash (shell command runner) ─────────────────────
   // Trust-gated at the tool layer (`workspace_bash` = hostExec). cwd is
   // supplied in the request payload — main-chat callers pass the user's

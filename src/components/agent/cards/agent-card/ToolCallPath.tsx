@@ -30,6 +30,7 @@ import {
   type PreviewBlocks,
 } from '../preview-registry'
 import { pendingHeadline, pendingSubject } from '../pending-headline'
+import { isProposalFirstTool } from '../../tool-cards/applier-registry'
 import {
   formatDuration,
   looksLikeJsonBlob,
@@ -60,6 +61,7 @@ export default function ToolCallPath({
   const isRunning = step.status === 'running'
   const isFailed = step.status === 'failed'
   const isPending = step.approvalState === 'pending'
+  const isProposalFirst = isProposalFirstTool(step.toolName)
   const tone = statusTone(step.status)
   // Pending overrides tone visuals — a ✓ next to "Awaiting approval" reads
   // as "already done", which is exactly the confusion this redesign is
@@ -195,13 +197,16 @@ export default function ToolCallPath({
       </button>
 
       {isPending ? (
-        // Pre-commit banner — clarifies that execute() returning a proposal
-        // is NOT the same as the change landing. Without this users read
-        // the card as "succeeded, approve after the fact" and either
-        // rubber-stamp destructive edits or (rightly) complain.
+        // Pending banner. Proposal-first tools commit via an applier on
+        // Approve; execution-first tools have already produced their result
+        // and this gate only controls whether the agent may consume it.
         <div className="agent-card-pending-banner" role="status">
           <Info size={11} aria-hidden />
-          <span>Nothing is applied yet. Approve to commit.</span>
+          <span>
+            {isProposalFirst
+              ? 'Nothing is applied yet. Approve to commit.'
+              : 'Review this result before the agent continues.'}
+          </span>
         </div>
       ) : null}
       {expanded ? (

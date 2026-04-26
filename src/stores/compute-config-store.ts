@@ -57,6 +57,8 @@ export interface ComputeConfigState {
   resetDefaults: () => void
 }
 
+export const COMPUTE_TIMEOUT_MAX_SEC = 24 * 60 * 60
+
 export const RESOURCE_PRESETS: Record<
   'light' | 'balanced' | 'heavy' | 'max',
   { label: string; spec: ComputeResourceSpec }
@@ -85,7 +87,7 @@ const DEFAULT_RESOURCES: ComputeResourceSpec = {
 
 const DEFAULTS = {
   mode: 'native' as ComputeMode,
-  timeoutSec: 60,
+  timeoutSec: 30 * 60,
   lastTest: null as ComputeTestResult | null,
   resources: { ...DEFAULT_RESOURCES },
   envVars: [] as ComputeEnvVar[],
@@ -100,7 +102,7 @@ export const useComputeConfigStore = create<ComputeConfigState>()(
 
       setMode: (mode) => set({ mode, lastTest: null }),
       setTimeoutSec: (timeoutSec) =>
-        set({ timeoutSec: clamp(Math.round(timeoutSec), 1, 3600) }),
+        set({ timeoutSec: clamp(Math.round(timeoutSec), 1, COMPUTE_TIMEOUT_MAX_SEC) }),
       setLastTest: (lastTest) => set({ lastTest }),
 
       setResources: (patch) =>
@@ -128,9 +130,11 @@ export const useComputeConfigStore = create<ComputeConfigState>()(
     }),
     {
       name: 'lattice.compute-config',
-      version: 5,
+      version: 6,
       storage: createJSONStorage(() => localStorage),
       // Migration history:
+      //   v6 — raise the default wall-clock timeout from 60s to 30min for
+      //        real scientific jobs; old persisted 60s defaults are bumped.
       //   v5 — drop Local (Docker) and Remote (SSH) modes; coerce them to
       //        'native'. Also drop containerName/remoteSsh/networking/
       //        volumes/provisioningRevision fields and memoryGB/shmSizeGB
@@ -140,7 +144,7 @@ export const useComputeConfigStore = create<ComputeConfigState>()(
       //   v3 — introduced full container-provisioning UI (now obsolete).
       //   v1→v2 — discarded legacy `dockerHost/image/cpuCores/memoryMB`
       //        (already obsolete long before v5).
-      migrate: (persistedState, _fromVersion) => {
+      migrate: (persistedState, fromVersion) => {
         const s = (persistedState ?? {}) as Record<string, unknown>
         const migrated: ComputeConfigState = {
           ...DEFAULTS,
@@ -164,7 +168,10 @@ export const useComputeConfigStore = create<ComputeConfigState>()(
           migrated.mode = 'native'
         }
         if (typeof s.timeoutSec === 'number' && Number.isFinite(s.timeoutSec)) {
-          migrated.timeoutSec = clamp(Math.round(s.timeoutSec), 1, 3600)
+          const storedTimeout = clamp(Math.round(s.timeoutSec), 1, COMPUTE_TIMEOUT_MAX_SEC)
+          migrated.timeoutSec = fromVersion < 6 && storedTimeout <= 60
+            ? DEFAULTS.timeoutSec
+            : storedTimeout
         }
         if (s.resources && typeof s.resources === 'object') {
           migrated.resources = normaliseResources(

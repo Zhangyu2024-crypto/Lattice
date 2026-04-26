@@ -1,10 +1,9 @@
 import type { PromptCommand } from '../types'
-import { buildInlineResearchScaffold } from '../../research-prompts'
+import { buildResearchScaffold } from '../../research-prompts'
 
-// Delegates to the same scaffold builder that `@research <topic>` uses, so
-// the transition is a behaviour-preserving refactor. `@research` stays
-// wired with a deprecation warning for one release — see
-// `AgentComposer.handleSend`.
+export const RESEARCH_COMMAND_MAX_ITERATIONS = 80
+
+// Slash-only entry point for the unified research flow.
 export const researchCommand: PromptCommand = {
   type: 'prompt',
   name: 'research',
@@ -12,6 +11,6 @@ export const researchCommand: PromptCommand = {
   argumentHint: '<topic>',
   source: 'builtin',
   paletteGroup: 'Research',
-  maxIterations: 12,
-  getPrompt: async (args) => buildInlineResearchScaffold(args),
+  maxIterations: RESEARCH_COMMAND_MAX_ITERATIONS,
+  getPrompt: async (args) => buildResearchScaffold(args),
 }

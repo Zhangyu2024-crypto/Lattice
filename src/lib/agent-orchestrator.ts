@@ -53,6 +53,10 @@ import {
   iterationSignature,
 } from './agent-orchestrator/loop-detect'
 import {
+  buildIterationControlMessage,
+  shouldForceFinalAnswer,
+} from './agent-orchestrator/control'
+import {
   assistantMessageFromResult,
   toToolResultBlock,
 } from './agent-orchestrator/envelope'
@@ -74,6 +78,19 @@ import {
 // `import { … } from '.../agent-orchestrator'` consumers keep working
 // without chasing the split.
 export type { AgentToolStep, RunAgentTurnArgs, RunAgentTurnResult }
+
+function extractToolSearchResultNames(output: unknown): string[] {
+  if (!output || typeof output !== 'object') return []
+  const results = (output as { results?: unknown }).results
+  if (!Array.isArray(results)) return []
+  return results
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object') return null
+      const name = (entry as { name?: unknown }).name
+      return typeof name === 'string' && name.length > 0 ? name : null
+    })
+    .filter((name): name is string => Boolean(name))
+}
 
 export async function runAgentTurn(
   args: RunAgentTurnArgs,
@@ -109,6 +126,7 @@ export async function runAgentTurn(
     ...transcriptToLlmMessages(args.transcript),
     userMessagePayload(args.userMessage, args.images),
   ]
+  const discoveredToolNames = new Set<string>()
 
   /** Compute the active tool catalog for this iteration. Filters by:
    *  1. Plan mode (only whitelisted tools)
@@ -131,7 +149,13 @@ export async function runAgentTurn(
       hasHypothesisArtifacts: artifacts.some((a) => a.kind === 'hypothesis'),
       userMessage: args.userMessage,
     }
-    return resolveToolsForContext(args.tools, ctx)
+    const filtered = resolveToolsForContext(args.tools, ctx)
+    if (discoveredToolNames.size === 0) return filtered
+    const byName = new Map(filtered.map((tool) => [tool.name, tool]))
+    for (const tool of args.tools) {
+      if (discoveredToolNames.has(tool.name)) byName.set(tool.name, tool)
+    }
+    return [...byName.values()]
   }
 
   wsClient.dispatch('task_start', {
@@ -172,7 +196,20 @@ export async function runAgentTurn(
       const { messages: clearedMessages } = clearOldToolResults(messages)
       messages = clearedMessages
 
-      const activeTools = resolveTools()
+      const forceFinalAnswer = shouldForceFinalAnswer({
+        iteration,
+        maxIterations,
+        toolStepCount: toolSteps.length,
+      })
+      const controlMessage = buildIterationControlMessage({
+        iteration,
+        maxIterations,
+        toolStepCount: toolSteps.length,
+      })
+      const activeTools = forceFinalAnswer ? [] : resolveTools()
+      const requestMessages = controlMessage
+        ? [...messages, controlMessage]
+        : messages
       const llm = await sendLlmChat({
         mode: 'agent',
         userMessage: args.userMessage,
@@ -183,7 +220,7 @@ export async function runAgentTurn(
         // the mention context in the prompt via contextBlocks from turn 1;
         // re-sending would duplicate the headers.
         mentions: iteration === 0 ? args.mentions : undefined,
-        messages,
+        messages: requestMessages,
         tools: activeTools,
         // Stream text deltas to the caller so the UI updates in real time.
         onTextDelta: args.onStreamAppend,
@@ -191,6 +228,7 @@ export async function runAgentTurn(
         // loop talks to the same model — swapping mid-turn would confuse
         // tool-use continuity.
         modelBindingOverride: args.modelBindingOverride,
+        signal,
       })
 
       if (!llm.success) {
@@ -278,6 +316,11 @@ export async function runAgentTurn(
           orchestratorCtx,
         })
         toolSteps.push(step)
+        if (step.name === 'tool_search' && !step.isError) {
+          for (const name of extractToolSearchResultNames(step.output)) {
+            discoveredToolNames.add(name)
+          }
+        }
         toolResultBlocks.push(toToolResultBlock(step))
       }
 

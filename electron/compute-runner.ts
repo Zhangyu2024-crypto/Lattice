@@ -18,6 +18,7 @@ import path from 'node:path'
 import { app, type BrowserWindow } from 'electron'
 import { execPipe } from './exec-helpers'
 import { COMPUTE_RUN_CHANNELS } from './compute-constants'
+import { getCurrentWorkspaceRoot, getCurrentWorkspaceRootLoaded } from './ipc-workspace-root'
 import {
   resolvePython,
   resolveLammps,
@@ -28,10 +29,11 @@ import {
 } from './conda-env-manager'
 
 // Per-artifact workdir retention. Runs older than this many are pruned
-// from disk on the next run (keeps `~/.config/lattice-app/workspace/`
-// from growing unbounded). The metadata entry stays in the artifact's
+// from disk on the next run. The metadata entry stays in the artifact's
 // `runs[]` until that's explicitly trimmed UI-side.
 const KEEP_RUNS_PER_ARTIFACT = 3
+const WORKSPACE_COMPUTE_RUNS_REL = path.join('lattice-runs', 'compute')
+const LEGACY_COMPUTE_RUNS_REL = path.join('workspace', 'compute')
 
 function sanitizePathSegment(s: string): string {
   // Session IDs / artifact IDs can contain '/', ':', etc. Keep the shape
@@ -47,51 +49,100 @@ function formatTimestampForFilename(d: Date): string {
   )
 }
 
-/** Root under Electron userData for archived compute runs. Organized as
- *  `<root>/<sessionId>/<artifactId>/run_<ts>_<runIdTail>/`. */
-function computeWorkspaceRoot(): string {
-  return path.join(app.getPath('userData'), 'workspace', 'compute')
+function legacyComputeWorkspaceRoot(): string {
+  return path.join(app.getPath('userData'), ...LEGACY_COMPUTE_RUNS_REL.split(path.sep))
 }
 
-function allocateRunWorkdir(
+/** Root for archived compute runs. Prefer the user-selected workspace so
+ *  process files are visible and portable with the project. Fall back to the
+ *  legacy Electron userData directory when no workspace is open yet. */
+async function computeWorkspaceRoot(): Promise<{ root: string; workspaceRoot: string | null }> {
+  const workspaceRoot = await getCurrentWorkspaceRootLoaded()
+  if (workspaceRoot) {
+    return {
+      root: path.join(workspaceRoot, ...WORKSPACE_COMPUTE_RUNS_REL.split(path.sep)),
+      workspaceRoot,
+    }
+  }
+  return { root: legacyComputeWorkspaceRoot(), workspaceRoot: null }
+}
+
+function datePathSegment(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function workspaceRelativePath(workspaceRoot: string | null, absPath: string): string | null {
+  if (!workspaceRoot) return null
+  const rel = path.relative(workspaceRoot, absPath)
+  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) return null
+  return rel.split(path.sep).join('/')
+}
+
+async function allocateRunWorkdir(
   sessionId: string,
   artifactId: string,
   runId: string,
   startedAt: Date,
-): string {
-  const root = computeWorkspaceRoot()
+): Promise<{ workdir: string; workspaceRoot: string | null; workspaceRelPath: string | null }> {
+  const { root, workspaceRoot } = await computeWorkspaceRoot()
   const sid = sanitizePathSegment(sessionId)
   const aid = sanitizePathSegment(artifactId)
   const ts = formatTimestampForFilename(startedAt)
   const tail = runId.slice(-6)
-  const dir = path.join(root, sid, aid, `run_${ts}_${tail}`)
+  const dir = path.join(
+    root,
+    datePathSegment(startedAt),
+    sid,
+    aid,
+    `run_${ts}_${tail}`,
+  )
   fs.mkdirSync(dir, { recursive: true })
-  return dir
+  return {
+    workdir: dir,
+    workspaceRoot,
+    workspaceRelPath: workspaceRelativePath(workspaceRoot, dir),
+  }
 }
 
-/** Prune older workdirs under this artifact so disk usage stays bounded.
- *  Keeps the `KEEP_RUNS_PER_ARTIFACT` most recent; directories whose
- *  names don't start with `run_` are left alone. Silent on errors (best
- *  effort — a failed prune must never block a new run). */
-function pruneArtifactWorkdirs(
-  sessionId: string,
-  artifactId: string,
-): void {
+function collectRunDirs(root: string, artifactId: string): Array<{ path: string; mtimeMs: number }> {
+  const aid = sanitizePathSegment(artifactId)
+  const out: Array<{ path: string; mtimeMs: number }> = []
+  const visit = (dir: string) => {
+    let entries: fs.Dirent[]
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      const child = path.join(dir, entry.name)
+      if (entry.name === aid) {
+        try {
+          for (const run of fs.readdirSync(child, { withFileTypes: true })) {
+            if (!run.isDirectory() || !run.name.startsWith('run_')) continue
+            const runPath = path.join(child, run.name)
+            out.push({ path: runPath, mtimeMs: fs.statSync(runPath).mtimeMs })
+          }
+        } catch {
+          /* skip unreadable artifact dir */
+        }
+        continue
+      }
+      visit(child)
+    }
+  }
+  visit(root)
+  return out
+}
+
+/** Prune older workdirs for the same artifact so disk usage stays bounded.
+ *  Keeps the `KEEP_RUNS_PER_ARTIFACT` most recent across date folders. */
+async function pruneArtifactWorkdirs(artifactId: string): Promise<void> {
   try {
-    const base = path.join(
-      computeWorkspaceRoot(),
-      sanitizePathSegment(sessionId),
-      sanitizePathSegment(artifactId),
-    )
-    if (!fs.existsSync(base)) return
-    const entries = fs
-      .readdirSync(base, { withFileTypes: true })
-      .filter((e) => e.isDirectory() && e.name.startsWith('run_'))
-      .map((e) => ({
-        name: e.name,
-        path: path.join(base, e.name),
-        mtimeMs: fs.statSync(path.join(base, e.name)).mtimeMs,
-      }))
+    const { root } = await computeWorkspaceRoot()
+    const entries = collectRunDirs(root, artifactId)
       .sort((a, b) => b.mtimeMs - a.mtimeMs)
     for (const stale of entries.slice(KEEP_RUNS_PER_ARTIFACT)) {
       fs.rmSync(stale.path, { recursive: true, force: true })
@@ -99,6 +150,13 @@ function pruneArtifactWorkdirs(
   } catch {
     /* best effort */
   }
+}
+
+export function computeArchiveRoots(): string[] {
+  const roots = [legacyComputeWorkspaceRoot()]
+  const workspaceRoot = getCurrentWorkspaceRoot()
+  if (workspaceRoot) roots.unshift(path.join(workspaceRoot, ...WORKSPACE_COMPUTE_RUNS_REL.split(path.sep)))
+  return Array.from(new Set(roots.map((root) => path.resolve(root))))
 }
 
 const SCRIPT_FILENAME_BY_LANG: Record<ComputeLanguage, string> = {
@@ -133,9 +191,9 @@ export interface ComputeRunRequest {
     ompThreads?: number | 'auto'
   }
   /** Session + artifact identifiers so the runner can archive this run
-   *  under `<userData>/workspace/compute/<sid>/<aid>/run_.../`. When
-   *  either is absent, falls back to os.tmpdir() and skips archival
-   *  (kept for back-compat with older call sites). */
+   *  under `<workspace>/lattice-runs/compute/<date>/<sid>/<aid>/run_.../`.
+   *  When no workspace is open, it falls back to the legacy userData
+   *  archive; when either ID is absent, it uses os.tmpdir(). */
   sessionId?: string
   artifactId?: string
 }
@@ -147,7 +205,7 @@ export interface ComputeFigurePayload {
 }
 
 export type ComputeRunAck =
-  | { success: true; runId: string }
+  | { success: true; runId: string; workdir?: string }
   | { success: false; error: string }
 
 export interface ComputeStreamChunk {
@@ -161,6 +219,7 @@ export interface ComputeExitEvent {
   figures: ComputeFigurePayload[]
   durationMs: number
   cancelled: boolean
+  timedOut?: boolean
   error?: string
   /** Absolute path to this run's archived workdir (script, stdout.log,
    *  stderr.log, meta.json, plus anything the script wrote under
@@ -187,6 +246,7 @@ export interface ComputeHealth {
 interface ActiveRun {
   proc: ChildProcessWithoutNullStreams
   cancelled: boolean
+  timedOut: boolean
   startedAt: number
   startedAtIso: string
   stdoutBuf: string
@@ -195,6 +255,8 @@ interface ActiveRun {
   /** When present, this run is archived to disk. Streams below mirror
    *  stdout/stderr to `stdout.log` / `stderr.log` inside the workdir. */
   workdir: string | null
+  workspaceRoot: string | null
+  workspaceRelPath: string | null
   stdoutFile: fs.WriteStream | null
   stderrFile: fs.WriteStream | null
   language: ComputeLanguage
@@ -396,23 +458,29 @@ export class ComputeRunnerManager {
     const ctx = req.context ?? {}
 
     // Decide between "archived" mode (sessionId + artifactId supplied →
-    // per-run workdir under userData, retained with a short history) and
-    // back-compat tmpdir mode. Archiving is the default for UI-triggered
-    // runs; programmatic back-compat callers fall through to os.tmpdir().
+    // per-run workdir under the workspace archive, retained with a short
+    // history) and back-compat tmpdir mode. Archiving is the default for
+    // UI-triggered runs; programmatic back-compat callers fall through to
+    // os.tmpdir().
     let archivedWorkdir: string | null = null
+    let archiveWorkspaceRoot: string | null = null
+    let archiveWorkspaceRelPath: string | null = null
     const startedDate = new Date()
     if (req.sessionId && req.artifactId) {
       try {
-        archivedWorkdir = allocateRunWorkdir(
+        const allocated = await allocateRunWorkdir(
           req.sessionId,
           req.artifactId,
           req.runId,
           startedDate,
         )
+        archivedWorkdir = allocated.workdir
+        archiveWorkspaceRoot = allocated.workspaceRoot
+        archiveWorkspaceRelPath = allocated.workspaceRelPath
         // Prune older runs for the same artifact after the new one is
         // allocated — ordering matters so we never delete the slot we
         // just created.
-        pruneArtifactWorkdirs(req.sessionId, req.artifactId)
+        await pruneArtifactWorkdirs(req.artifactId)
       } catch (err) {
         // Archival failure must not block the run; log and fall through.
         const msg = err instanceof Error ? err.message : String(err)
@@ -488,16 +556,22 @@ export class ComputeRunnerManager {
         }
       }
       const cp2kEnv = { ...nativeEnv }
+      // Conda CP2K often ships as `cp2k.psmp` (MPI+OpenMP). Launching it
+      // through `mpirun -np 1` is fragile on WSL / sandboxed desktops
+      // because PMIx/UCX tries to open host networking sockets even for a
+      // single rank. Running the binary directly still gives one MPI rank
+      // and honors OMP_NUM_THREADS. These OpenMPI defaults also keep direct
+      // `cp2k.psmp` away from unavailable high-performance transports.
+      cp2kEnv.OMPI_MCA_btl = cp2kEnv.OMPI_MCA_btl ?? 'self'
+      cp2kEnv.OMPI_MCA_pml = cp2kEnv.OMPI_MCA_pml ?? 'ob1'
+      cp2kEnv.OMPI_MCA_rmaps_base_oversubscribe =
+        cp2kEnv.OMPI_MCA_rmaps_base_oversubscribe ?? '1'
       const cp2kRoot = path.resolve(cp2kBin, '..', '..')
       const cp2kData = path.join(cp2kRoot, 'share', 'cp2k', 'data')
       if (fs.existsSync(cp2kData)) cp2kEnv.CP2K_DATA_DIR = cp2kData
-      const mpirun = path.join(path.dirname(cp2kBin), 'mpirun')
-      const usesMpi = fs.existsSync(mpirun)
       tempInputFile = writeTempInput(req.code, 'cp2k')
       payload = ''
-      const cp2kArgs = usesMpi
-        ? [mpirun, '--oversubscribe', '-np', '1', cp2kBin, '-i', tempInputFile]
-        : [cp2kBin, '-i', tempInputFile]
+      const cp2kArgs = [cp2kBin, '-i', tempInputFile]
       try {
         proc = spawn(cp2kArgs[0], cp2kArgs.slice(1), {
           stdio: ['pipe', 'pipe', 'pipe'],
@@ -538,12 +612,15 @@ export class ComputeRunnerManager {
     const active: ActiveRun = {
       proc,
       cancelled: false,
+      timedOut: false,
       startedAt: startedDate.getTime(),
       startedAtIso: startedDate.toISOString(),
       stdoutBuf: '',
       timeoutHandle: null,
       tempInputFile,
       workdir: archivedWorkdir,
+      workspaceRoot: archiveWorkspaceRoot,
+      workspaceRelPath: archiveWorkspaceRelPath,
       stdoutFile,
       stderrFile,
       language,
@@ -602,8 +679,11 @@ export class ComputeRunnerManager {
             durationMs,
             exitCode,
             cancelled: active.cancelled,
+            timedOut: active.timedOut,
             figureCount: figures.length,
             workdir: active.workdir,
+            workspaceRoot: active.workspaceRoot,
+            workspaceRelPath: active.workspaceRelPath,
           }
           fs.writeFileSync(
             path.join(active.workdir, 'meta.json'),
@@ -620,6 +700,7 @@ export class ComputeRunnerManager {
         figures,
         durationMs,
         cancelled: active.cancelled,
+        ...(active.timedOut ? { timedOut: true } : {}),
         ...(active.workdir ? { workdir: active.workdir } : {}),
       }
       this.getWindow()?.webContents.send(STREAM_CHANNEL_EXIT, exit)
@@ -629,6 +710,13 @@ export class ComputeRunnerManager {
     active.timeoutHandle = setTimeout(() => {
       if (!this.runs.has(req.runId)) return
       active.cancelled = true
+      active.timedOut = true
+      const note = `\n[lattice] compute timed out after ${req.timeoutSec}s; killing process\n`
+      active.stderrFile?.write(note)
+      this.getWindow()?.webContents.send(STREAM_CHANNEL_STDERR, {
+        runId: req.runId,
+        chunk: note,
+      })
       try {
         proc.kill('SIGKILL')
       } catch {
@@ -650,7 +738,11 @@ export class ComputeRunnerManager {
       return { success: false, error: `Failed to send code to process: ${message}` }
     }
 
-    return { success: true, runId: req.runId }
+    return {
+      success: true,
+      runId: req.runId,
+      ...(archivedWorkdir ? { workdir: archivedWorkdir } : {}),
+    }
   }
 
   /** SIGKILL an in-flight run. Exit handler emits the close event. */

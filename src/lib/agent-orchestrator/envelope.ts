@@ -152,6 +152,22 @@ function detectIntegrityWarning(step: AgentToolStep): string | null {
   const record = out as Record<string, unknown>
   const status = record.status
   if (typeof status !== 'string') return null
+  if (!step.name.startsWith('compute')) return null
+  if (status === 'running' || status === 'idle') {
+    return (
+      `INTEGRITY WARNING — compute run has not completed yet (status=${status}). ` +
+      `You MUST tell the user the run is still in progress. ` +
+      `Do NOT fabricate, interpolate, or restate numeric results derived from this run. ` +
+      `Inspect the compute artifact later and only present results when status=succeeded.`
+    )
+  }
+  if (status === 'partial') {
+    return (
+      `INTEGRITY WARNING — compute experiment is only partially complete (status=partial). ` +
+      `You MUST tell the user the run is incomplete. ` +
+      `Do NOT present aggregate numeric results as final or fully trusted.`
+    )
+  }
   if (status !== 'cancelled' && status !== 'failed') return null
   return (
     `INTEGRITY WARNING — compute run did NOT complete (status=${status}). ` +

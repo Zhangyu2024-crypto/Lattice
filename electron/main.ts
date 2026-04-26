@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog, net, protocol } from 'electron'
 import { promises as fs } from 'node:fs'
 import { watch as fsWatch, type FSWatcher } from 'node:fs'
+import { spawn } from 'node:child_process'
 import path from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { PythonManager } from './python-manager'
@@ -15,6 +16,7 @@ import { registerLibraryIpc, resolveLibraryPdfPath } from './ipc-library'
 import { registerLiteratureIpc } from './ipc-literature'
 import { registerWorkerIpc, getWorkerManager } from './ipc-worker'
 import { registerWorkspaceIpc } from './ipc-workspace'
+import { registerApprovalTokenIpc, consumeApprovalToken } from './ipc-approval-tokens'
 import {
   registerWorkspaceRootIpc,
   closeAllWorkspaceWatchers,
@@ -399,16 +401,141 @@ ipcMain.handle('slash:list-skills', async () => {
   }
 })
 
-// Plugin discovery. Each `<userData>/plugins/<name>/` is a plugin; the
-// manifest at `plugin.json` (optional) supplies metadata, and any markdown
-// under `skills/` becomes commands. v1 is skills-only — JS execution is
-// deferred until the isolation model is decided.
+
+interface PluginToolManifest {
+  plugin: string
+  name: string
+  description?: string
+  inputSchema?: unknown
+  command: string
+  args: string[]
+  timeoutMs?: number
+}
+
+function normalizePluginTool(
+  plugin: string,
+  raw: unknown,
+): PluginToolManifest | null {
+  if (!raw || typeof raw !== 'object') return null
+  const item = raw as Record<string, unknown>
+  if (typeof item.name !== 'string' || item.name.trim().length === 0) return null
+  if (typeof item.command !== 'string' || item.command.trim().length === 0) return null
+  const args = Array.isArray(item.args)
+    ? item.args.filter((arg): arg is string => typeof arg === 'string')
+    : []
+  const timeoutMs =
+    typeof item.timeoutMs === 'number' && Number.isFinite(item.timeoutMs)
+      ? Math.max(1000, Math.min(Math.floor(item.timeoutMs), 120_000))
+      : undefined
+  return {
+    plugin,
+    name: item.name.trim(),
+    description:
+      typeof item.description === 'string' ? item.description : undefined,
+    inputSchema: item.inputSchema,
+    command: item.command.trim(),
+    args,
+    timeoutMs,
+  }
+}
+
+async function readPluginTools(root: string): Promise<{
+  tools: PluginToolManifest[]
+  errors: Array<{ plugin: string; message: string }>
+}> {
+  const tools: PluginToolManifest[] = []
+  const errors: Array<{ plugin: string; message: string }> = []
+  await fs.mkdir(root, { recursive: true })
+  const entries = await fs.readdir(root, { withFileTypes: true })
+  for (const dirent of entries) {
+    if (!dirent.isDirectory()) continue
+    const plugin = dirent.name
+    try {
+      const raw = await fs.readFile(path.join(root, plugin, 'plugin.json'), 'utf8')
+      const parsed = JSON.parse(raw) as { tools?: unknown }
+      if (!Array.isArray(parsed.tools)) continue
+      for (const entry of parsed.tools) {
+        const tool = normalizePluginTool(plugin, entry)
+        if (tool) tools.push(tool)
+      }
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException | undefined)?.code
+      if (code === 'ENOENT') continue
+      errors.push({
+        plugin,
+        message: err instanceof Error ? err.message : String(err),
+      })
+    }
+  }
+  return { tools, errors }
+}
+
+function runPluginTool(opts: {
+  pluginRoot: string
+  tool: PluginToolManifest
+  input: Record<string, unknown>
+}): Promise<{ code: number; stdout: string; stderr: string; timedOut: boolean }> {
+  const timeoutMs = opts.tool.timeoutMs ?? 30_000
+  const MAX_OUTPUT = 2 * 1024 * 1024
+  return new Promise((resolve) => {
+    let settled = false
+    let stdout = ''
+    let stderr = ''
+    let timedOut = false
+    const child = spawn(opts.tool.command, opts.tool.args, {
+      cwd: opts.pluginRoot,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: { ...process.env },
+    })
+    const timer = setTimeout(() => {
+      if (settled) return
+      timedOut = true
+      settled = true
+      try {
+        child.kill('SIGKILL')
+      } catch {
+        // best effort
+      }
+      resolve({ code: -1, stdout, stderr: stderr || 'timeout', timedOut })
+    }, timeoutMs)
+    child.stdout.on('data', (chunk: Buffer) => {
+      if (stdout.length < MAX_OUTPUT) stdout += chunk.toString('utf8')
+    })
+    child.stderr.on('data', (chunk: Buffer) => {
+      if (stderr.length < MAX_OUTPUT) stderr += chunk.toString('utf8')
+    })
+    child.on('error', (err) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      resolve({ code: -1, stdout, stderr: err.message, timedOut })
+    })
+    child.on('exit', (code) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      resolve({ code: code ?? -1, stdout, stderr, timedOut })
+    })
+    child.stdin.end(
+      JSON.stringify({
+        input: opts.input,
+        context: { plugin: opts.tool.plugin, tool: opts.tool.name },
+      }),
+    )
+  })
+}
+
+// Plugin discovery. Each `<userData>/plugins/<name>/` is a plugin.
+// `plugin.json` supplies metadata plus optional executable tool manifests,
+// and any markdown under `skills/` becomes slash commands. Executable tools
+// run as JSON stdin/stdout subprocesses and are hostExec-gated in Agent.
 ipcMain.handle('slash:list-plugins', async () => {
   const root = path.join(app.getPath('userData'), 'plugins')
   const result: Array<{
     name: string
     manifest: { name?: string; description?: string; version?: string }
     skills: Array<{ fileName: string; source: string }>
+    tools: Array<{ name: string; description?: string; inputSchema?: unknown }>
     error?: string
   }> = []
   try {
@@ -423,6 +550,7 @@ ipcMain.handle('slash:list-plugins', async () => {
         description?: string
         version?: string
       } = {}
+      let tools: Array<{ name: string; description?: string; inputSchema?: unknown }> = []
       try {
         const raw = await fs.readFile(
           path.join(pluginRoot, 'plugin.json'),
@@ -438,6 +566,16 @@ ipcMain.handle('slash:list-plugins', async () => {
           version:
             typeof parsed.version === 'string' ? parsed.version : undefined,
         }
+        if (Array.isArray(parsed.tools)) {
+          tools = parsed.tools
+            .map((entry: unknown) => normalizePluginTool(name, entry))
+            .filter((entry: PluginToolManifest | null): entry is PluginToolManifest => Boolean(entry))
+            .map((tool: PluginToolManifest) => ({
+              name: tool.name,
+              description: tool.description,
+              inputSchema: tool.inputSchema,
+            }))
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
         // Missing plugin.json is fine — plugin can be skills-only. Parse
@@ -446,7 +584,7 @@ ipcMain.handle('slash:list-plugins', async () => {
           !(err as NodeJS.ErrnoException | undefined)?.code ||
           (err as NodeJS.ErrnoException).code !== 'ENOENT'
         ) {
-          result.push({ name, manifest: {}, skills: [], error: message })
+          result.push({ name, manifest: {}, skills: [], tools: [], error: message })
           continue
         }
       }
@@ -472,7 +610,7 @@ ipcMain.handle('slash:list-plugins', async () => {
         // see it in Settings and know it was scanned.
       }
 
-      result.push({ name, manifest, skills })
+      result.push({ name, manifest, skills, tools })
     }
     ensurePluginsWatcher(root)
     return { plugins: result }
@@ -481,6 +619,88 @@ ipcMain.handle('slash:list-plugins', async () => {
     return { plugins: [], error: message }
   }
 })
+
+
+ipcMain.handle('plugin:list-tools', async () => {
+  const root = path.join(app.getPath('userData'), 'plugins')
+  try {
+    const { tools, errors } = await readPluginTools(root)
+    ensurePluginsWatcher(root)
+    return {
+      tools: tools.map(({ command: _command, args: _args, timeoutMs: _timeoutMs, ...tool }) => tool),
+      errors,
+    }
+  } catch (err) {
+    return {
+      tools: [],
+      errors: [
+        {
+          plugin: '<directory>',
+          message: err instanceof Error ? err.message : String(err),
+        },
+      ],
+    }
+  }
+})
+
+ipcMain.handle(
+  'plugin:call-tool',
+  async (
+    _event,
+    payload: {
+      plugin: string
+      name: string
+      input?: Record<string, unknown>
+      approvalToken?: string
+    },
+  ) => {
+    const plugin = typeof payload?.plugin === 'string' ? payload.plugin : ''
+    const name = typeof payload?.name === 'string' ? payload.name : ''
+    if (!plugin || plugin.includes('/') || plugin.includes('\\')) {
+      throw new Error('Invalid plugin name')
+    }
+    if (!name) throw new Error('Tool name is required')
+    const tokenCheck = consumeApprovalToken(payload.approvalToken, 'plugin_call_tool', {
+      plugin,
+      name,
+      input: JSON.stringify(payload.input ?? {}),
+    })
+    if (!tokenCheck.ok) throw new Error(tokenCheck.error)
+
+    const root = path.join(app.getPath('userData'), 'plugins')
+    const { tools } = await readPluginTools(root)
+    const tool = tools.find((entry) => entry.plugin === plugin && entry.name === name)
+    if (!tool) throw new Error(`Plugin tool not found: ${plugin}/${name}`)
+    const pluginRoot = path.join(root, plugin)
+    const result = await runPluginTool({
+      pluginRoot,
+      tool,
+      input: payload.input ?? {},
+    })
+    if (result.code !== 0) {
+      throw new Error(
+        `Plugin tool failed (${result.code})${result.timedOut ? ' after timeout' : ''}: ${result.stderr || result.stdout}`,
+      )
+    }
+    const trimmed = result.stdout.trim()
+    if (!trimmed) return { output: null, stdout: '', stderr: result.stderr }
+    try {
+      const parsed = JSON.parse(trimmed) as { ok?: boolean; output?: unknown; error?: string }
+      if (parsed && typeof parsed === 'object' && parsed.ok === false) {
+        throw new Error(parsed.error ?? 'Plugin tool returned ok=false')
+      }
+      if (parsed && typeof parsed === 'object' && 'output' in parsed) {
+        return { output: parsed.output, stdout: result.stdout, stderr: result.stderr }
+      }
+      return { output: parsed, stdout: result.stdout, stderr: result.stderr }
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        return { output: result.stdout, stdout: result.stdout, stderr: result.stderr }
+      }
+      throw err
+    }
+  },
+)
 
 let pluginsWatcher: FSWatcher | null = null
 let pluginsWatchedDir: string | null = null
@@ -727,6 +947,8 @@ registerLiteratureIpc()
 // renderer's StatusBar / "Test Python worker" command exercises it on
 // demand.
 registerWorkerIpc(() => mainWindow)
+
+registerApprovalTokenIpc()
 
 // IPC: workspace bash passthrough. Executes a shell command with the
 // user-supplied cwd (typically `useWorkspaceStore().rootPath`). Gated at

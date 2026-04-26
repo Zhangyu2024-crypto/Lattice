@@ -4,6 +4,16 @@ import { getSkillLoadErrors } from '../loaders/skills'
 import { getPluginLoadErrors } from '../loaders/plugins'
 import { getMcpLoadErrors } from '../loaders/mcp'
 
+const COMMAND_LABELS: Record<string, string> = {
+  research: '开始文献研究',
+  clear: '清空当前对话',
+  settings: '打开设置',
+  library: '打开文献库',
+  help: '查看帮助',
+}
+
+const PRIMARY_ORDER = ['research', 'clear', 'settings', 'library', 'help']
+
 export const helpCommand: LocalCommand = {
   type: 'local',
   name: 'help',
@@ -12,15 +22,33 @@ export const helpCommand: LocalCommand = {
   aliases: ['?'],
   paletteGroup: 'Help',
   call: async () => {
-    const rows = listCommands({ userInvocableOnly: true, enabledOnly: true })
-      .map((c) => {
-        const hint = c.argumentHint ? ` ${c.argumentHint}` : ''
-        return `  /${c.name}${hint}  — ${c.description}`
+    const commands = listCommands({ userInvocableOnly: true, enabledOnly: true })
+    const byName = new Map(commands.map((cmd) => [cmd.name, cmd]))
+    const render = (name: string): string | null => {
+      const cmd = byName.get(name)
+      if (!cmd) return null
+      const hint = cmd.argumentHint ? ` ${cmd.argumentHint}` : ''
+      return `/${cmd.name}${hint.padEnd(Math.max(1, 18 - cmd.name.length))} ${COMMAND_LABELS[cmd.name] ?? cmd.description}`
+    }
+    const primaryRows = PRIMARY_ORDER.map(render).filter(Boolean)
+    const customRows = commands
+      .filter((cmd) => !PRIMARY_ORDER.includes(cmd.name))
+      .map((cmd) => {
+        const hint = cmd.argumentHint ? ` ${cmd.argumentHint}` : ''
+        return `/${cmd.name}${hint}  ${cmd.description}`
       })
       .sort()
-    const commandsSection = rows.length
-      ? `Available slash commands:\n${rows.join('\n')}`
-      : 'No slash commands registered.'
+
+    const parts: string[] = []
+    if (primaryRows.length > 0) {
+      parts.push(`可用命令：\n${primaryRows.join('\n')}`)
+    } else {
+      parts.push('暂无可用命令。')
+    }
+    if (customRows.length > 0) {
+      parts.push(`扩展命令：\n${customRows.join('\n')}`)
+    }
+    const commandsSection = parts.join('\n\n')
 
     const sections: string[] = [commandsSection]
     const skillErrors = getSkillLoadErrors()

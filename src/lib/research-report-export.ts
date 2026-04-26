@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { RefObject } from 'react'
 import {
+  buildCitationIndexByFirstUse,
   buildFullMarkdown,
   slugify,
 } from '@/components/canvas/artifacts/research-report/helpers'
@@ -31,10 +32,7 @@ export function researchReportBaseName(
 export function downloadResearchReportMarkdown(
   payload: ResearchReportPayload,
 ): string {
-  const citationIndex = new Map<string, number>()
-  payload.citations.forEach((citation, idx) =>
-    citationIndex.set(citation.id, idx + 1),
-  )
+  const citationIndex = buildCitationIndexByFirstUse(payload)
   const filename = `${researchReportBaseName(payload)}.md`
   const md = buildFullMarkdown(payload, citationIndex)
   downloadTextFile(filename, md, 'text/markdown;charset=utf-8')
@@ -52,8 +50,7 @@ export async function exportResearchReportPdf(args: {
     typeof window !== 'undefined' &&
     typeof window.electronAPI?.researchExportPdf === 'function'
 
-  const citationIndex = new Map<string, number>()
-  payload.citations.forEach((c, i) => citationIndex.set(c.id, i + 1))
+  const citationIndex = buildCitationIndexByFirstUse(payload)
   const md = buildFullMarkdown(payload, citationIndex)
   const html = markdownToHtml(md)
   const container = buildPrintContainer(html)
