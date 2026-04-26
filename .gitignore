@@ -25,3 +25,19 @@ worker/data/mp_xrd_database.db
 public/busytex/*.data
 public/busytex/*.wasm
 *.zip
+
+# AI assistant / tool process files
+.claude/
+.codex
+.codex/
+
+# Session logs and unrelated documents
+*.zip:Zone.Identifier
+*:Zone.Identifier
+20*-*-*-*.txt
+china-europe-*.pdf
+
+# Editor/IDE
+.idea/
+.vscode/
+.DS_Store
