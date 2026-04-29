@@ -1036,6 +1036,18 @@ async function runAutoPush(): Promise<void> {
 // on 127.0.0.1. This one-liner eliminates the DNS race entirely.
 app.commandLine.appendSwitch('disable-features', 'HappyEyeballsV3')
 
+// WSL2/WSLg fallback: when the GPU process fails to initialize, the
+// window opens but no rasterizer paints the React tree → the user sees
+// a blank dark-grey window. Setting `LATTICE_DISABLE_GPU=1` forces the
+// software path (SwiftShader). Keep it off by default so devs with a
+// real GPU don't pay the perf cost. Do NOT also set
+// `disable-software-rasterizer` — that kills the only remaining
+// rasterizer and the window goes blank again. See BUGFIX_BLANK_WINDOW.md.
+if (process.env.LATTICE_DISABLE_GPU === '1') {
+  app.disableHardwareAcceleration()
+  app.commandLine.appendSwitch('disable-gpu')
+}
+
 // App lifecycle
 app.whenReady().then(async () => {
   protocol.handle('lattice-pdf', async (request) => {
