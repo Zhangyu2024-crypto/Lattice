@@ -34,6 +34,9 @@ Lattice is an Electron + React + TypeScript application that brings together AI 
 
 ## Project Structure
 
+<details>
+<summary>Directory tree</summary>
+
 ```
 Lattice-app/
 ├── electron/              # Main process: window lifecycle, IPC, native bridges
@@ -135,6 +138,8 @@ Lattice-app/
 └── package.json
 ```
 
+</details>
+
 ---
 
 ## Architecture
@@ -189,6 +194,22 @@ Lattice runs entirely on your machine in three coordinated processes:
 
 ### 2. Clone & install
 
+> **Tip:** use a virtual environment for Python dependencies:
+>
+> **venv**
+> ```bash
+> python3 -m venv .venv
+> source .venv/bin/activate    # Windows: .venv\Scripts\activate
+> pip install -r worker/requirements.txt
+> ```
+>
+> **conda**
+> ```bash
+> conda create -n lattice python=3.11
+> conda activate lattice
+> pip install -r worker/requirements.txt
+> ```
+
 ```bash
 # Clone the repository
 git clone https://github.com/Zhangyu2024-crypto/Lattice.git
@@ -203,13 +224,6 @@ pip install -r worker/requirements.txt
 # Download large data assets (~784 MB Materials Project XRD database)
 npm run setup
 ```
-
-> **Tip:** use a virtual environment for Python dependencies:
-> ```bash
-> python3 -m venv .venv
-> source .venv/bin/activate    # Windows: .venv\Scripts\activate
-> pip install -r worker/requirements.txt
-> ```
 
 ### 3. Dependency overview
 
