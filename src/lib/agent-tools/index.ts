@@ -392,7 +392,9 @@ export interface SessionContext {
   userMessage: string
 }
 
-const SPECTRUM_KEYWORDS = /spectrum|xrd|xps|raman|ftir|diffract|peak|phase|refine|fit|谱|衍射|峰|拉曼/i
+const SPECTRUM_KEYWORDS = /spectrum|xrd|xps|raman|ftir|diffract|peak|phase|refine|rietveld|fit|谱|衍射|峰|物相|拟合|精修|拉曼/i
+const XRD_REFINEMENT_KEYWORDS =
+  /(?=.*\b(?:xrd|diffract|rietveld)\b)(?=.*\b(?:refine|refinement|rietveld|fit|fitting)\b)|(?=.*(?:衍射|物相))(?=.*(?:拟合|精修))/i
 const STRUCTURE_KEYWORDS = /structure|crystal|cif|nacl|batio|build.*struct|supercell|晶体|结构|建模/i
 const COMPUTE_KEYWORDS = /compute|script|simulate|lammps|cp2k|dft|md|docker|计算|模拟|脚本/i
 const RESEARCH_KEYWORDS = /research|literature|survey|report|研究|文献|报告/i
@@ -405,11 +407,17 @@ export function resolveToolsForContext(
   ctx: SessionContext,
 ): LocalTool[] {
   const activeGroups = new Set<ToolGroup>(['core'])
+  const spectrumRequested = SPECTRUM_KEYWORDS.test(ctx.userMessage)
+  const xrdRefinementRequested = XRD_REFINEMENT_KEYWORDS.test(ctx.userMessage)
+  const computeRequested = COMPUTE_KEYWORDS.test(ctx.userMessage)
 
+  if (ctx.hasSpectrumArtifacts || spectrumRequested) {
+    activeGroups.add('spectrum')
+  }
   if (ctx.hasStructureArtifacts || STRUCTURE_KEYWORDS.test(ctx.userMessage)) {
     activeGroups.add('structure')
   }
-  if (ctx.hasComputeArtifacts || COMPUTE_KEYWORDS.test(ctx.userMessage)) {
+  if (computeRequested || (ctx.hasComputeArtifacts && !xrdRefinementRequested)) {
     activeGroups.add('compute')
   }
   if (ctx.hasResearchArtifacts || RESEARCH_KEYWORDS.test(ctx.userMessage)) {

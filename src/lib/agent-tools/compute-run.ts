@@ -89,7 +89,7 @@ const STDOUT_TAIL_CHARS = 1200
 export const computeRunTool: LocalTool<Input, Output> = {
   name: 'compute_run',
   description:
-    "Execute an existing compute artifact's stored script or native input deck. Supports Python, LAMMPS, CP2K, and shell according to the artifact language. Use this after compute_create_script / compute_edit_script / compute_from_snippet / simulate_structure / export_for_engine when the user wants to actually run the code. For long materials jobs such as DFT geometry optimization, NEB, phonons, or production MD, set waitForCompletion=false so the run continues in the background and the agent can report status without waiting for final results. The returned stdoutTail is the last slice of stdout so you can summarise results without re-fetching the whole artifact.",
+    "Execute an existing compute artifact's stored script or native input deck. Supports Python, LAMMPS, CP2K, and shell according to the artifact language. Use this after compute_create_script / compute_edit_script / compute_from_snippet / simulate_structure / export_for_engine when the user wants to actually run the code. Do not use compute_run as a substitute for built-in spectrum analysis/refinement tools such as xrd_refine. For long materials jobs such as DFT geometry optimization, NEB, phonons, or production MD, set waitForCompletion=false so the run continues in the background and the agent can report status without waiting for final results. The returned stdoutTail is the last slice of stdout so you can summarise results without re-fetching the whole artifact.",
   trustLevel: 'hostExec',
   cardMode: 'info',
   inputSchema: {

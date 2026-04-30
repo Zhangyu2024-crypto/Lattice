@@ -64,6 +64,7 @@ import {
 import { buildPeaksCsv, buildRefineReportCsv, buildRefineCurveCsv, buildRefinedCif } from './parts/helpers'
 import { buildXrdCommands } from './parts/commands'
 import XrdToolbar from './parts/Toolbar'
+import { renderXrdFooter } from './parts/Footer'
 
 export type { XrdActions } from './parts/actions'
 export { buildOverlays } from './parts/MainViz'
@@ -772,7 +773,7 @@ export const XrdModule: TechniqueModule<XrdSubState, XrdActions> = {
   renderMainViz: (ctx, actions) => <MainViz ctx={ctx} actions={actions} />,
   buildDataTabs,
   renderInspector: () => null,
-  renderFooter: () => null,
+  renderFooter: renderXrdFooter,
   renderRibbonRight: (ctx, actions) => <XrdToolbar ctx={ctx} actions={actions} />,
   commands: buildXrdCommands,
   peaksFromSub,

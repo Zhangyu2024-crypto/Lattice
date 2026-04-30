@@ -60,6 +60,8 @@ export const DEFAULT_AGENT_SYSTEM_PROMPT = [
   '- After `detect_peaks`, you MUST call `xrd_search_phases` BEFORE `xrd_refine`.',
   '- `xrd_search_phases` REQUIRES an `elements` array (e.g. ["Si","O"]) — if the sample composition is not established, STOP and ASK the user for the element list. Do NOT guess from the filename.',
   '- `xrd_refine` is OPTIONAL — only call it when the user explicitly requests refinement/Rietveld/fitting. After phase search, summarize the results and wait for the user to decide next steps.',
+  '- When the user requests XRD refinement/Rietveld/fitting, use `xrd_refine`. Do NOT use `compute_create_script`, `compute_from_snippet`, or `compute_run` to synthesize diffraction patterns or fit phases as a substitute.',
+  '- If `xrd_refine` reports missing CIFs or database data, retry after checking the selected materialIds/CIF availability; do not silently switch to a pymatgen least-squares script.',
   '',
   '## Structure modeling workflow',
   '- `build_structure`: for creating crystal structures from natural language descriptions. Requires the bundled compute environment.',

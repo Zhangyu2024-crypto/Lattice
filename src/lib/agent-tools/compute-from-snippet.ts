@@ -33,7 +33,7 @@ function summarizeCustomization(raw: string): string {
 export const computeFromSnippetTool: LocalTool<Input, Output> = {
   name: 'compute_from_snippet',
   description:
-    'Create a compute artifact from a built-in snippet template. Covers XRD simulation, supercell, slab, doping, vacancy, ASE optimization, phonon dispersion, bond analysis, LAMMPS MD (NVE/NPT/minimize/dump), CP2K DFT (cell_opt/md/band/single_point/Si bulk modulus), and more. Call list_compute_snippets to browse available IDs.',
+    'Create a compute artifact from a built-in snippet template. Covers XRD simulation, supercell, slab, doping, vacancy, ASE optimization, phonon dispersion, bond analysis, LAMMPS MD (NVE/NPT/minimize/dump), CP2K DFT (cell_opt/md/band/single_point/Si bulk modulus), and more. XRD simulation snippets are for theoretical patterns, not refinement/fitting of experimental XRD data; use xrd_refine for that. Call list_compute_snippets to browse available IDs.',
   trustLevel: 'localWrite',
   cardMode: 'edit',
   inputSchema: {

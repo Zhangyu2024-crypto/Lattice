@@ -42,7 +42,7 @@ const CODE_FENCE_RE = /```(?:python|py)?\s*\n([\s\S]*?)\n```/i
 export const computeCreateScriptTool: LocalTool<Input, Output> = {
   name: 'compute_create_script',
   description:
-    'Generate a Python compute script from a natural-language intent and open it as a new compute artifact (idle, not yet executed). Use this when the user asks for a calculation, simulation, or data transformation that should live as an editable script instead of inline code in chat. The returned artifactId can be passed to compute_run to execute it.',
+    'Generate a Python compute script from a natural-language intent and open it as a new compute artifact (idle, not yet executed). Use this when the user asks for a calculation, simulation, or data transformation that should live as an editable script instead of inline code in chat. Do not use this to replace built-in spectrum analysis/refinement tools such as xrd_refine. The returned artifactId can be passed to compute_run to execute it.',
   trustLevel: 'localWrite',
   cardMode: 'edit',
   inputSchema: {

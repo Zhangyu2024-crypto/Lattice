@@ -83,9 +83,9 @@ function buildRefinePlot(
 export const xrdRefineTool: LocalTool<Input, Output> = {
   name: 'xrd_refine',
   description:
-    'Run the offline XRD whole-pattern refinement (approximate isotropic fit — not full Rietveld). Uses candidate phases already selected on the xrd-pro workbench unless materialIds is supplied. Writes payload.refineResult and creates a plot artifact showing the Rietveld-style overlay (observed + calculated + difference).',
+    'Run XRD refinement through the repo-local Python worker using dara-xrd/BGMN. Uses candidate phases already selected on the xrd-pro workbench unless materialIds is supplied; when no CIFs were uploaded, it fetches CIF texts from the bundled Materials Project CIF database before calling xrd.refine_dara. Do not replace this with compute_run or a pymatgen script for refinement/Rietveld requests. Writes payload.refineResult and creates a plot artifact showing observed + calculated + difference curves.',
   trustLevel: 'localWrite',
-  cardMode: 'review',
+  cardMode: 'info',
   inputSchema: {
     type: 'object',
     properties: {
