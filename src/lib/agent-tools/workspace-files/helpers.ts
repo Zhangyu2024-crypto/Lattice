@@ -26,17 +26,21 @@ export function rootApi(): RootFsApi {
   return api as unknown as RootFsApi
 }
 
-/** Simple glob → RegExp translator mirroring ipc-workspace.ts's
- *  matchesGlob. Supports double-star, single-star, and `?`. Deliberately
- *  modest fidelity: plenty for the LLM's typical recursive patterns. */
+/** Simple glob → RegExp translator. Supports double-star, single-star,
+ *  and `?`. `**​/` is treated as "zero or more directory segments" so
+ *  `**​/*.raw` matches both `foo.raw` (root) and `dir/foo.raw` — matching
+ *  minimatch / git glob semantics. A bare `**` (no trailing slash) still
+ *  collapses to `.*` for backward compatibility. */
 export function matchesGlob(relPath: string, pattern: string): boolean {
   const re = new RegExp(
     '^' +
       pattern
         .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+        .replace(/\*\*\//g, '§§§')
         .replace(/\*\*/g, '§§')
         .replace(/\*/g, '[^/]*')
         .replace(/\?/g, '[^/]')
+        .replace(/§§§/g, '(?:.*/)?')
         .replace(/§§/g, '.*') +
       '$',
   )
