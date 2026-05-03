@@ -170,24 +170,6 @@ const CLAUDE_HAIKU_4_5: LLMModel = {
   description: 'Fast, affordable model — ideal for dialog and lightweight calls',
 }
 
-// Claude Sonnet 4.5 — exposed via the claw-d.cc proxy (below).
-const CLAUDE_SONNET_4_5: LLMModel = {
-  id: 'claude-sonnet-4-5-20250929',
-  label: 'Claude Sonnet 4.5',
-  contextWindow: 200_000,
-  maxOutputTokens: 64_000,
-  pricing: {
-    inputPerMillion: 3,
-    outputPerMillion: 15,
-    cacheReadPerMillion: 0.3,
-    cacheCreatePerMillion: 3.75,
-  },
-  supportsTools: true,
-  supportsVision: true,
-  supportsCaching: true,
-  description: 'Claude Sonnet 4.5 via claw-d.cc proxy',
-}
-
 // OpenAI GPT-4o family.
 const GPT_4O: LLMModel = {
   id: 'gpt-4o',
@@ -219,14 +201,6 @@ const GPT_4O_MINI: LLMModel = {
   description: 'Small, low-cost OpenAI model — good dialog / draft baseline',
 }
 
-// LOCAL DEV ONLY — DO NOT COMMIT.
-// Preconfigured proxy provider for the author's dev machine. The API key is
-// hardcoded here as a convenience while the LLM Config UI is under repair.
-// Delete this block (and remove CLAWD_PROXY from BUILT_IN_PROVIDERS below)
-// before publishing or sharing the source tree.
-const CLAWD_PROXY_KEY = 'sk-MLrHXrQ7lYD2T5Itf6fs4mpDmxNImxSdL63iEMY8J9vIGYLf'
-const CLAWD_PROXY_ID = 'clawd-proxy'
-
 // Built-in provider templates. Both ship disabled + keyless so the app is
 // safe to launch on a clean install; the user must explicitly enable a
 // provider and paste a key before any network call is possible.
@@ -254,22 +228,7 @@ export const BUILT_IN_PROVIDERS: readonly LLMProvider[] = Object.freeze([
     mentionResolve: 'allow',
     models: [GPT_4O, GPT_4O_MINI],
   },
-  {
-    id: CLAWD_PROXY_ID,
-    name: 'claw-d proxy',
-    type: 'anthropic',
-    baseUrl: 'https://claw-d.cc',
-    apiKey: CLAWD_PROXY_KEY,
-    enabled: true,
-    // Third-party proxy: default to soft-confirm so users notice outgoing
-    // artifact payloads. Can be lowered to 'allow' or raised to 'block' per
-    // user's own risk appetite in LLM Config → Providers.
-    mentionResolve: 'confirm',
-    models: [CLAUDE_SONNET_4_5],
-  },
 ])
-
-export { CLAWD_PROXY_ID }
 
 // Deep-clones the built-in provider templates so the caller (typically the
 // llm-config-store initial state) can safely mutate the result without

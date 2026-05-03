@@ -12,8 +12,6 @@ import type {
   RateLimitConfig,
 } from '../types/llm'
 import {
-  BUILT_IN_PROVIDERS,
-  CLAWD_PROXY_ID,
   DEFAULT_AGENT_SYSTEM_PROMPT,
   DEFAULT_DIALOG_SYSTEM_PROMPT,
   createDefaultProviders,
@@ -91,6 +89,18 @@ const DEFAULT_RATE_LIMIT: RateLimitConfig = {
     maxMs: 30_000,
   },
 }
+
+const REMOVED_DEV_PROVIDER_IDS = new Set(['clawd-proxy'])
+
+const withoutRemovedDevProviders = (providers: LLMProvider[]): LLMProvider[] =>
+  providers.filter((provider) => !REMOVED_DEV_PROVIDER_IDS.has(provider.id))
+
+const clearRemovedDevProviderBinding = (
+  config: GenerationConfig,
+): GenerationConfig =>
+  config.providerId && REMOVED_DEV_PROVIDER_IDS.has(config.providerId)
+    ? { ...config, providerId: null, modelId: null }
+    : config
 
 function tryResolveProviderModel(
   providers: LLMProvider[],
@@ -256,12 +266,10 @@ const mergeRateLimit = (
 // typically legacy persisted configs from before MP-1 landed. Trusted
 // first-party providers default to 'allow'; anything that could be a proxy
 // / self-hosted endpoint defaults to 'confirm' so the user at least sees
-// what is going out. The claw-d proxy is called out explicitly because it's
-// an `anthropic`-typed record but actually traverses a third party.
+// what is going out.
 const inferMentionResolvePolicy = (
   provider: { id: string; type: LLMProviderType },
 ): MentionResolvePolicy => {
-  if (provider.id === CLAWD_PROXY_ID) return 'confirm'
   switch (provider.type) {
     case 'anthropic':
     case 'openai':
@@ -442,36 +450,18 @@ export const useLLMConfigStore = create<LLMConfigState>()(
     }),
     {
       name: 'lattice.llm-config',
-      version: 5,
+      version: 6,
       storage: createJSONStorage(() => localStorage),
       // All fields are small and meant to survive restarts — no partialize
       // needed. The only large-ish field (`providers[].models`) caps at a
       // dozen entries per provider in practice.
       migrate: (persistedState: unknown, fromVersion: number) => {
         const state = (persistedState ?? {}) as Partial<LLMConfigState>
-        const providers: LLMProvider[] = Array.isArray(state.providers)
-          ? [...state.providers]
-          : createDefaultProviders()
-
-        if (fromVersion < 2) {
-          // Upsert the claw-d proxy built-in so existing localStorage sessions
-          // pick it up without wiping the rest of their config.
-          const seed = BUILT_IN_PROVIDERS.find((p) => p.id === CLAWD_PROXY_ID)
-          if (seed) {
-            const existingIdx = providers.findIndex(
-              (p) => p.id === CLAWD_PROXY_ID,
-            )
-            const fresh: LLMProvider = {
-              ...seed,
-              models: seed.models.map((m) => ({
-                ...m,
-                pricing: { ...m.pricing },
-              })),
-            }
-            if (existingIdx >= 0) providers[existingIdx] = fresh
-            else providers.push(fresh)
-          }
-        }
+        const providers: LLMProvider[] = withoutRemovedDevProviders(
+          Array.isArray(state.providers)
+            ? [...state.providers]
+            : createDefaultProviders(),
+        )
 
         // v3: backfill `mentionResolve` on any provider that predates MP-1.
         // Idempotent — only fills when the field is absent.
@@ -481,25 +471,14 @@ export const useLLMConfigStore = create<LLMConfigState>()(
             : { ...provider, mentionResolve: inferMentionResolvePolicy(provider) },
         )
 
-        // Point both dialog and agent at the clawd proxy if they weren't
-        // already bound to a specific provider — this avoids "no provider
-        // configured" warnings on a fresh install.
-        let dialog: GenerationConfig = {
+        let dialog: GenerationConfig = clearRemovedDevProviderBinding({
           ...DEFAULT_DIALOG_CONFIG,
           ...(state.dialog ?? {}),
-        }
-        let agent: GenerationConfig = {
+        })
+        let agent: GenerationConfig = clearRemovedDevProviderBinding({
           ...DEFAULT_AGENT_CONFIG,
           ...(state.agent ?? {}),
-        }
-        if (!dialog.providerId) {
-          dialog.providerId = CLAWD_PROXY_ID
-          dialog.modelId = 'claude-sonnet-4-5-20250929'
-        }
-        if (!agent.providerId) {
-          agent.providerId = CLAWD_PROXY_ID
-          agent.modelId = 'claude-sonnet-4-5-20250929'
-        }
+        })
 
         // v4: one shared provider/model binding for both modes (dialog keeps
         // its pair when both were valid; otherwise fall back to agent).
@@ -529,7 +508,11 @@ export const useLLMConfigStore = create<LLMConfigState>()(
         return {
           ...state,
           providers: normalizedProviders,
-          activeProviderId: state.activeProviderId ?? CLAWD_PROXY_ID,
+          activeProviderId:
+            state.activeProviderId &&
+            !REMOVED_DEV_PROVIDER_IDS.has(state.activeProviderId)
+              ? state.activeProviderId
+              : null,
           dialog,
           agent,
           budget: state.budget ?? {
