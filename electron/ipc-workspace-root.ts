@@ -14,9 +14,11 @@ import { app, BrowserWindow, clipboard, ipcMain, shell } from 'electron'
 import type { WebContents } from 'electron'
 import chokidar from 'chokidar'
 import type { FSWatcher } from 'chokidar'
+import { isIgnoredWorkspacePath } from './workspace-ignore'
 
 const MAX_READ_BYTES = 8 * 1024 * 1024
 const ROOT_CONFIG_FILE = 'workspace-root.json'
+const LIST_STAT_CONCURRENCY = 32
 
 type OkEnvelope<T extends object> = { ok: true } & T
 type ErrEnvelope = { ok: false; error: string }
@@ -146,24 +148,41 @@ async function listDir(rel: string): Promise<FsEntryPayload[]> {
   const entries = await readdir(abs, { withFileTypes: true })
   const out: FsEntryPayload[] = []
   const rootAbs = path.resolve(currentRoot)
-  for (const entry of entries) {
-    const name = entry.name
-    if (name === '.lattice') continue
-    if (name.startsWith('.')) continue
-    try {
-      const childAbs = path.join(abs, name)
-      const childStat = await stat(childAbs)
-      out.push(
-        toEntry(rootAbs, abs, relClean, name, {
-          isDirectory: childStat.isDirectory(),
-          size: childStat.isDirectory() ? 0 : childStat.size,
-          mtimeMs: childStat.mtimeMs,
-        }),
-      )
-    } catch {
-      // skip unreadable entries silently
+  const parentRel = toPosix(relClean)
+  const visibleEntries = entries.filter((entry) => {
+    const childRel = parentRel ? `${parentRel}/${entry.name}` : entry.name
+    return !isIgnoredWorkspacePath(childRel)
+  })
+
+  let nextIndex = 0
+  async function statNextEntry(): Promise<void> {
+    for (;;) {
+      const idx = nextIndex
+      nextIndex += 1
+      const entry = visibleEntries[idx]
+      if (!entry) return
+      const name = entry.name
+      try {
+        const childAbs = path.join(abs, name)
+        const childStat = await stat(childAbs)
+        out.push(
+          toEntry(rootAbs, abs, parentRel, name, {
+            isDirectory: childStat.isDirectory(),
+            size: childStat.isDirectory() ? 0 : childStat.size,
+            mtimeMs: childStat.mtimeMs,
+          }),
+        )
+      } catch {
+        // skip unreadable entries silently
+      }
     }
   }
+
+  const workerCount = Math.min(LIST_STAT_CONCURRENCY, visibleEntries.length)
+  await Promise.all(
+    Array.from({ length: workerCount }, () => statNextEntry()),
+  )
+
   out.sort((a, b) => {
     if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1
     return a.name.localeCompare(b.name)
@@ -198,12 +217,16 @@ async function startWatcher(relDir: string): Promise<string> {
   const { abs, rel } = resolveInRoot(relDir)
   const rootAbs = path.resolve(currentRoot)
   const watchId = randomUUID()
+  const shouldIgnoreWatchPath = (candidatePath: string): boolean => {
+    const absCandidate = path.isAbsolute(candidatePath)
+      ? candidatePath
+      : path.resolve(rootAbs, candidatePath)
+    const info = chokidarTypeFor(absCandidate, rootAbs)
+    return info ? isIgnoredWorkspacePath(info.rel) : false
+  }
   const watcher = chokidar.watch(abs, {
     ignoreInitial: true,
-    ignored: [
-      // Trash cascade — avoid self-churn when files are soft-deleted.
-      /(^|[/\\])\.lattice[/\\]trash[/\\]/,
-    ],
+    ignored: shouldIgnoreWatchPath,
     awaitWriteFinish: { stabilityThreshold: 150, pollInterval: 50 },
   })
   watchers.set(watchId, {
@@ -306,7 +329,7 @@ export function registerWorkspaceRootIpc(
   getMainWindowRef = getMainWindow
 
   void loadRootFromDisk().then((loaded) => {
-    currentRoot = loaded
+    if (currentRoot == null) currentRoot = loaded
   })
 
   ipcMain.handle(
