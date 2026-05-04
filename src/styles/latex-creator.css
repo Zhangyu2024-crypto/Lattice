@@ -533,6 +533,141 @@ button.latex-errors-row-message:disabled {
   color: var(--color-text-secondary);
 }
 
+/* === Document versions ============================================= */
+.latex-versions-pane {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.latex-versions-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
+.latex-versions-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+
+.latex-versions-title svg {
+  color: var(--color-text-muted);
+}
+
+.latex-versions-save,
+.latex-version-restore {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  background: color-mix(in srgb, var(--color-bg-input) 45%, transparent);
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.latex-versions-save:hover,
+.latex-version-restore:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.latex-versions-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.latex-version-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  background: color-mix(in srgb, var(--color-bg-input) 28%, transparent);
+}
+
+.latex-version-main {
+  flex: 1 1 0%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.latex-version-label {
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.latex-version-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  color: var(--color-text-muted);
+  font-size: var(--text-xxs);
+  line-height: 1.35;
+}
+
+.latex-version-meta span {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text-primary) 5%, transparent);
+}
+
+.latex-version-restore {
+  min-height: 26px;
+  padding-inline: 8px;
+}
+
+.latex-versions-empty {
+  flex: 1 1 auto;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+
+.latex-versions-empty strong {
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+}
+
 /* Dedicated workbench window: card fills the glass; no floating “island”. */
 .pro-workbench-standalone-root .latex-card-root,
 .creator-overlay .latex-card-root {

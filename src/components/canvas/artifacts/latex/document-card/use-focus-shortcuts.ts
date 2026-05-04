@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 
-type DrawerTab = 'preview' | 'errors' | 'ai' | 'details'
+type DrawerTab = 'preview' | 'errors' | 'versions' | 'ai' | 'details'
 
 /**
  * Focus-mode keyboard shortcuts for LatexDocumentCard.

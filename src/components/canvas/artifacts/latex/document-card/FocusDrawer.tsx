@@ -1,7 +1,7 @@
 import { type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 
-export type FocusDrawerTab = 'preview' | 'errors' | 'ai' | 'details'
+export type FocusDrawerTab = 'preview' | 'errors' | 'versions' | 'ai' | 'details'
 
 // Right-hand slide-in drawer for focus variant. Owns the splitter, tab
 // header and body; the body slot is rendered by the parent so it can keep
@@ -89,6 +89,18 @@ export function FocusDrawer({
               onClick={() => setDrawerTab('details')}
             >
               Details
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={drawerTab === 'versions'}
+              className={
+                'latex-focus-drawer-tab' +
+                (drawerTab === 'versions' ? ' is-active' : '')
+              }
+              onClick={() => setDrawerTab('versions')}
+            >
+              Versions
             </button>
             <button
               type="button"

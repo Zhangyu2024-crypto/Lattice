@@ -2,6 +2,7 @@ import {
   AlertTriangle,
   Circle,
   Eye,
+  History,
   Loader2,
   MessageSquare,
   Play,
@@ -12,7 +13,7 @@ import { Button } from '../../../../ui'
 import { CompileBadge } from './CompileBadge'
 import { FocusToggle } from './FocusToggle'
 
-export type FocusDrawerTab = 'preview' | 'errors' | 'ai' | 'details'
+export type FocusDrawerTab = 'preview' | 'errors' | 'versions' | 'ai' | 'details'
 
 // Right-hand action cluster of the focus-mode header: compile-status pill,
 // drawer/AI toggles, primary Compile button with kbd hint. Lifted out of
@@ -87,6 +88,15 @@ export function FocusHeaderActions({
         icon={<Settings2 size={12} aria-hidden />}
         label="Details"
         title="Toggle the Details drawer"
+      />
+      <FocusToggle
+        active={drawerTab === 'versions'}
+        onClick={() =>
+          setDrawerTab((t) => (t === 'versions' ? null : 'versions'))
+        }
+        icon={<History size={12} aria-hidden />}
+        label="Versions"
+        title="Toggle document versions"
       />
       <FocusToggle
         active={drawerTab === 'ai'}

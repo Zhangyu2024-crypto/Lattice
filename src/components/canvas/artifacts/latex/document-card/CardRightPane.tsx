@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-export type CardRightTab = 'preview' | 'errors' | 'details'
+export type CardRightTab = 'preview' | 'errors' | 'versions' | 'details'
 
 // Right column of the card variant: tablist header + body slot. The body
 // is rendered by the parent so compile state + pane props stay in the
@@ -57,6 +57,18 @@ export function CardRightPane({
           onClick={() => setRightTab('details')}
         >
           Details
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={rightTab === 'versions'}
+          className={
+            'latex-card-right-tab' +
+            (rightTab === 'versions' ? ' is-active' : '')
+          }
+          onClick={() => setRightTab('versions')}
+        >
+          Versions
         </button>
       </div>
       <div className="latex-card-right-body">{children}</div>

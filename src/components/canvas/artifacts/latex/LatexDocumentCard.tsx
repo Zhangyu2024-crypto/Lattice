@@ -7,7 +7,9 @@ import type {
   LatexCompileError,
   LatexCompileStatus,
   LatexDocumentPayload,
+  LatexDocumentVersion,
   LatexFile,
+  LatexVersionReason,
 } from '../../../../types/latex'
 import { toast } from '../../../../stores/toast-store'
 import { useWorkspaceStore } from '../../../../stores/workspace-store'
@@ -16,6 +18,7 @@ import LatexCodeMirror from './LatexCodeMirror'
 import LatexPreviewPane from './LatexPreviewPane'
 import LatexErrorsPane from './LatexErrorsPane'
 import LatexDetailsPane from './LatexDetailsPane'
+import LatexVersionsPane from './LatexVersionsPane'
 import LatexAgentChat from './LatexAgentChat'
 import {
   latexSelectionMenu,
@@ -52,6 +55,12 @@ import {
   type LatexCollabConnectionStatus,
   type LatexCollabPeer,
 } from '../../../../lib/latex/collab-client'
+import {
+  appendLatexVersion,
+  createLatexVersion,
+  defaultLatexVersionLabel,
+  restoreLatexVersionPayload,
+} from '../../../../lib/latex/versions'
 
 interface Props {
   artifact: Artifact
@@ -62,7 +71,7 @@ interface Props {
   variant?: 'card' | 'focus'
 }
 
-type RightTab = 'preview' | 'errors' | 'details'
+type RightTab = 'preview' | 'errors' | 'versions' | 'details'
 type FocusRightTab = RightTab | 'ai'
 
 const AUTO_COMPILE_DEBOUNCE_MS = 2000
@@ -340,6 +349,86 @@ export default function LatexDocumentCard({
     [patchArtifact, sessionId, artifact.id],
   )
 
+  const saveVersion = useCallback(
+    (label: string, reason: LatexVersionReason): LatexDocumentVersion => {
+      const current = payloadRef.current
+      const snapshot = normalizeLatexProjectFiles(filesRef.current)
+      const version = createLatexVersion({
+        files: snapshot,
+        rootFile: current.rootFile,
+        activeFile,
+        label,
+        reason,
+      })
+      patchArtifact(sessionId, artifact.id, {
+        payload: {
+          ...current,
+          files: snapshot,
+          activeFile,
+          versions: appendLatexVersion(current.versions, version),
+        },
+      } as never)
+      return version
+    },
+    [activeFile, artifact.id, patchArtifact, sessionId],
+  )
+
+  const handleCreateManualVersion = useCallback(async () => {
+    const label = await asyncPrompt({
+      message: 'Version label',
+      placeholder: defaultLatexVersionLabel('manual'),
+      defaultValue: defaultLatexVersionLabel('manual'),
+      okLabel: 'Save',
+    })
+    if (label == null) return
+    saveVersion(label, 'manual')
+    toast.success('LaTeX version saved')
+    setDrawerTab('versions')
+    setRightTab('versions')
+  }, [saveVersion])
+
+  const syncSnapshotToCollab = useCallback((snapshotFiles: LatexFile[], root: string) => {
+    const client = collabClientRef.current
+    if (!client) return
+    for (const file of snapshotFiles) {
+      client.replaceFile(file.path, file.content)
+    }
+    client.setRootFile(root)
+  }, [])
+
+  const handleRestoreVersion = useCallback(
+    (version: LatexDocumentVersion) => {
+      // eslint-disable-next-line no-alert
+      if (!window.confirm(`Restore "${version.label}"? Current files will be replaced.`)) {
+        return
+      }
+      const current = payloadRef.current
+      const before = createLatexVersion({
+        files: filesRef.current,
+        rootFile: current.rootFile,
+        activeFile,
+        label: `Before restoring ${version.label}`,
+        reason: 'restore',
+      })
+      const restored = restoreLatexVersionPayload(current, version)
+      const versions = appendLatexVersion(current.versions, before)
+      setFiles(restored.files)
+      filesRef.current = restored.files
+      setActiveFile(restored.activeFile)
+      applyVersionBumpRef.current = restored.activeFile
+      setApplyVersion((v) => v + 1)
+      syncSnapshotToCollab(restored.files, restored.rootFile)
+      patchArtifact(sessionId, artifact.id, {
+        payload: {
+          ...restored,
+          versions,
+        },
+      } as never)
+      toast.success(`Restored ${version.label}`)
+    },
+    [activeFile, artifact.id, patchArtifact, sessionId, syncSnapshotToCollab],
+  )
+
   const handleEdit = useCallback(
     (next: string) => {
       const editedPath = activeFile
@@ -518,7 +607,9 @@ export default function LatexDocumentCard({
       const next = current.map((f) =>
         f.path === normalized ? { ...f, content } : f,
       )
+      saveVersion('Before AI apply', 'ai-apply')
       setFiles(next)
+      filesRef.current = next
       collabClientRef.current?.replaceFile(normalized, content)
       // If we just overwrote the file the editor is currently showing,
       // bump the remount counter so CodeMirror picks up the new doc.
@@ -534,7 +625,7 @@ export default function LatexDocumentCard({
       }
       flushFiles(next, normalized)
     },
-    [flushFiles, activeFile],
+    [flushFiles, activeFile, saveVersion],
   )
 
   const handleCloseFile = (path: string) => {
@@ -890,6 +981,12 @@ export default function LatexDocumentCard({
                   initialPrompt={aiAutoPrompt}
                   onInitialPromptConsumed={() => setAiAutoPrompt(null)}
                 />
+              ) : drawerTab === 'versions' ? (
+                <LatexVersionsPane
+                  versions={normalizedPayload.versions ?? []}
+                  onCreateVersion={handleCreateManualVersion}
+                  onRestoreVersion={handleRestoreVersion}
+                />
               ) : (
                 <LatexDetailsPane
                   documentTitle={artifact.title}
@@ -988,6 +1085,12 @@ export default function LatexDocumentCard({
               logTail={compileSnapshot.logTail}
               onFixWithAi={handleFixWithAi}
               onJumpToSource={handleJumpToSource}
+            />
+          ) : rightTab === 'versions' ? (
+            <LatexVersionsPane
+              versions={normalizedPayload.versions ?? []}
+              onCreateVersion={handleCreateManualVersion}
+              onRestoreVersion={handleRestoreVersion}
             />
           ) : (
             <LatexDetailsPane

@@ -51,6 +51,22 @@ export interface LatexCollabState {
   joinedAt?: number
 }
 
+export type LatexVersionReason =
+  | 'manual'
+  | 'compile-success'
+  | 'ai-apply'
+  | 'restore'
+
+export interface LatexDocumentVersion {
+  id: string
+  label: string
+  reason: LatexVersionReason
+  createdAt: number
+  files: LatexFile[]
+  rootFile: string
+  activeFile: string
+}
+
 export interface LatexDocumentPayload {
   files: LatexFile[]
   /** Must equal one of `files[].path`. Default 'main.tex'. */
@@ -73,6 +89,7 @@ export interface LatexDocumentPayload {
   autoCompile: boolean
   autoFixSuggest: boolean
   collab?: LatexCollabState
+  versions?: LatexDocumentVersion[]
   /** Hash of last auto-fix attempt — used to break suggestion loops when the
    *  LLM keeps proposing the same patch for the same error. */
   lastAutoFixSig?: string
