@@ -1,14 +1,23 @@
 import {
   CircleUserRound,
   ExternalLink,
+  Gauge,
+  KeyRound,
   RefreshCw,
   ShieldCheck,
   Sparkles,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react'
 import { useOutsideClickDismiss } from '../../hooks/useOutsideClickDismiss'
 import {
-  hostLabel,
+  lastCallLabel,
   useAccountStats,
 } from './account-stats'
 
@@ -16,7 +25,7 @@ interface Props {
   onOpenSettings: (tab?: 'account' | 'models') => void
 }
 
-const POPOVER_WIDTH = 260
+const POPOVER_WIDTH = 280
 const POPOVER_MARGIN = 8
 
 export default function AccountStatsMenu({ onOpenSettings }: Props) {
@@ -79,7 +88,7 @@ export default function AccountStatsMenu({ onOpenSettings }: Props) {
           ref={popoverRef}
           role="dialog"
           aria-label="Account"
-          className="account-stats-popover account-stats-popover--compact"
+          className="account-stats-popover"
           style={
             {
               '--account-popover-left': `${position.left}px`,
@@ -94,18 +103,8 @@ export default function AccountStatsMenu({ onOpenSettings }: Props) {
                 : '?'}
             </div>
             <div className="account-stats-title-wrap">
-              <div className="account-stats-name">
-                {stats.authenticated
-                  ? stats.authSession?.username
-                  : stats.checking
-                    ? 'Checking account'
-                    : 'Not signed in'}
-              </div>
-              <div className="account-stats-subtitle">
-                {stats.authenticated
-                  ? hostLabel(stats.authSession?.baseUrl ?? '')
-                  : stats.sessionError ?? 'chaxiejun.xyz desktop session'}
-              </div>
+              <div className="account-stats-name">{stats.accountName}</div>
+              <div className="account-stats-subtitle">{stats.accountSubtitle}</div>
             </div>
             <button
               type="button"
@@ -120,22 +119,32 @@ export default function AccountStatsMenu({ onOpenSettings }: Props) {
 
           <div className={`account-stats-state account-stats-state--${stats.providerTone}`}>
             <ShieldCheck size={13} aria-hidden />
-            <span>{stats.providerStatus}</span>
+            <span>{stats.providerLabel}</span>
           </div>
 
-          <div className="account-stats-compact-lines">
-            <div className="account-stats-row">
-              <span>Default model</span>
-              <strong>{stats.resolved?.model.label ?? 'Not configured'}</strong>
-            </div>
-            <div className="account-stats-row">
-              <span>Provider</span>
-              <strong>
-                {stats.latticeProvider
-                  ? `${stats.latticeProvider.models.length} models`
-                  : 'Missing'}
-              </strong>
-            </div>
+          <div className="account-stats-summary">
+            <InfoRow
+              icon={<KeyRound size={13} />}
+              label="Credential"
+              value={stats.credentialLabel}
+              detail={stats.credentialDetail}
+            />
+            <InfoRow
+              icon={<Sparkles size={13} />}
+              label="Default model"
+              value={stats.modelLabel}
+              detail={stats.modelDetail}
+            />
+            <InfoRow
+              icon={<Gauge size={13} />}
+              label="Today"
+              value={stats.todayUsageLabel}
+              detail={stats.todayUsageDetail}
+            />
+          </div>
+
+          <div className="account-stats-footnote">
+            Last call: {lastCallLabel(stats.lastRecord)}
           </div>
 
           <button
@@ -146,23 +155,37 @@ export default function AccountStatsMenu({ onOpenSettings }: Props) {
               onOpenSettings('account')
             }}
           >
-            <span>Account details</span>
+            <span>Manage account</span>
             <ExternalLink size={12} aria-hidden />
-          </button>
-          <button
-            type="button"
-            className="account-stats-settings account-stats-settings--secondary"
-            onClick={() => {
-              setOpen(false)
-              onOpenSettings('models')
-            }}
-          >
-            <span>Model settings</span>
-            <Sparkles size={12} aria-hidden />
           </button>
         </div>
       )}
     </>
+  )
+}
+
+function InfoRow({
+  icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: ReactNode
+  label: string
+  value: string
+  detail: string
+}) {
+  return (
+    <div className="account-stats-info-row">
+      <div className="account-stats-info-icon" aria-hidden>{icon}</div>
+      <div className="account-stats-info-main">
+        <div className="account-stats-info-head">
+          <span>{label}</span>
+          <strong title={value}>{value}</strong>
+        </div>
+        <div className="account-stats-info-detail" title={detail}>{detail}</div>
+      </div>
+    </div>
   )
 }
 

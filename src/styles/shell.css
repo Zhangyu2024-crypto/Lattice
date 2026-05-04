@@ -244,24 +244,20 @@
   left: var(--account-popover-left);
   bottom: var(--account-popover-bottom);
   z-index: var(--z-popover, 1100);
-  width: 260px;
+  width: 280px;
   max-height: calc(100vh - 16px);
   overflow: auto;
   box-sizing: border-box;
   padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
   background: var(--color-bg-panel);
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   font-size: var(--text-xs);
-}
-
-.account-stats-popover--compact {
-  gap: 9px;
 }
 
 .account-stats-header {
@@ -361,32 +357,76 @@
   color: var(--color-text-muted);
 }
 
-.account-stats-compact-lines {
+.account-stats-summary {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  padding: 6px 0;
 }
 
-.account-stats-row {
+.account-stats-info-row {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
+  align-items: flex-start;
+  gap: 9px;
+  min-width: 0;
+  padding: 7px 0;
+}
+
+.account-stats-info-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+  color: var(--color-text-muted);
+}
+
+.account-stats-info-main {
+  flex: 1;
   min-width: 0;
 }
 
-.account-stats-row span {
+.account-stats-info-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.account-stats-info-head span,
+.account-stats-info-head strong,
+.account-stats-info-detail {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.account-stats-row strong {
+.account-stats-info-head span {
+  color: var(--color-text-secondary);
+}
+
+.account-stats-info-head strong {
   flex: 0 0 auto;
+  max-width: 140px;
   color: var(--color-text-primary);
   font-family: var(--font-mono);
   font-weight: 650;
+}
+
+.account-stats-info-detail {
+  margin-top: 2px;
+  color: var(--color-text-muted);
+}
+
+.account-stats-footnote {
+  color: var(--color-text-muted);
+  line-height: 1.4;
 }
 
 .account-stats-settings {
@@ -407,10 +447,6 @@
 
 .account-stats-settings:hover {
   background: var(--color-bg-hover);
-}
-
-.account-stats-settings--secondary {
-  color: var(--color-text-secondary);
 }
 
 /* === Status Bar Items ===

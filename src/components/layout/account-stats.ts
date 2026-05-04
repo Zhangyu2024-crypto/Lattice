@@ -103,6 +103,31 @@ export function useAccountStats() {
         : latticeProvider.models.length === 0
           ? 'Models pending'
           : 'Ready'
+  const totalAllTimeTokens = allTime.inputTokens + allTime.outputTokens
+  const accountName = authenticated
+    ? authSession.username
+    : checking
+      ? 'Checking account'
+      : 'Not signed in'
+  const accountSubtitle = authenticated
+    ? `Signed in via ${hostLabel(authSession.baseUrl)}`
+    : sessionError ?? 'Desktop session not connected'
+  const credentialLabel = authenticated ? authSession.keyPrefix : 'No credential'
+  const credentialDetail = authenticated
+    ? `Saved ${formatRelativeDate(authSession.savedAt)}`
+    : 'Use chaxiejun.xyz sign-in to create one'
+  const modelLabel = resolved?.model.label ?? 'Not configured'
+  const modelDetail = resolved?.provider.name ?? 'Choose a model in Settings'
+  const providerLabel = providerStatus
+  const providerDetail = !authenticated
+    ? 'Sign in to enable account models'
+    : latticeProvider?.enabled
+      ? `${latticeProvider.models.length} account models available`
+      : 'Open Models to finish setup'
+  const todayUsageLabel = `${formatTokens(totalTodayTokens)} tokens`
+  const todayUsageDetail = `${today.calls} calls · ${formatUSD(today.costUSD)}`
+  const allTimeUsageLabel = `${formatTokens(totalAllTimeTokens)} tokens`
+  const allTimeUsageDetail = `${allTime.calls} calls · ${formatUSD(allTime.costUSD)}`
 
   return {
     checking,
@@ -120,9 +145,22 @@ export function useAccountStats() {
     today,
     allTime,
     totalTodayTokens,
+    totalAllTimeTokens,
     lastRecord,
     providerTone,
     providerStatus,
+    accountName,
+    accountSubtitle,
+    credentialLabel,
+    credentialDetail,
+    modelLabel,
+    modelDetail,
+    providerLabel,
+    providerDetail,
+    todayUsageLabel,
+    todayUsageDetail,
+    allTimeUsageLabel,
+    allTimeUsageDetail,
     refreshSession,
   }
 }

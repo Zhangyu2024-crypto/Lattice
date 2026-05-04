@@ -48,6 +48,10 @@ import { assembleLlmContext } from './context-management/assembler'
 import { recordUsage } from './llm-chat/usage'
 import type { LlmChatRequest, LlmChatResult } from './llm-chat/types'
 import {
+  LATTICE_AUTH_API_KEY_REF,
+  LATTICE_AUTH_PROVIDER_ID,
+} from './lattice-auth-client'
+import {
   getBrokenBindingMessage,
   isBindingBroken,
   resolveEffectiveBinding,
@@ -156,6 +160,22 @@ export async function sendLlmChat(
   const apiKey = provider.apiKey?.trim()
   if (!apiKey) {
     const msg = `API key missing for ${provider.name}. Add it in LLM Config -> Providers.`
+    log.error(msg, {
+      source: 'llm',
+      type: 'config',
+      detail: { provider: provider.name, model: model.label, mode: req.mode },
+    })
+    return {
+      success: false,
+      content: '',
+      error: msg,
+      durationMs: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+    }
+  }
+  if (apiKey === LATTICE_AUTH_API_KEY_REF && provider.id !== LATTICE_AUTH_PROVIDER_ID) {
+    const msg = 'Lattice secure credentials can only be used by the signed-in chaxiejun.xyz provider.'
     log.error(msg, {
       source: 'llm',
       type: 'config',

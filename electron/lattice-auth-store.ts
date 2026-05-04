@@ -3,6 +3,8 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 
 export const LATTICE_AUTH_API_KEY_REF = 'lattice-secure-token'
+export const LATTICE_AUTH_ENDPOINT_ERROR =
+  'Lattice credential can only be used with the signed-in chaxiejun.xyz endpoint.'
 
 export interface LatticeAuthSession {
   accessToken: string
@@ -161,11 +163,57 @@ export async function clearLatticeAuthSession(): Promise<void> {
   }
 }
 
-export async function resolveLatticeApiKey(apiKey: string): Promise<string> {
-  if (apiKey !== LATTICE_AUTH_API_KEY_REF) return apiKey
+interface NormalizedBaseUrl {
+  origin: string
+  pathname: string
+}
+
+function normalizeBaseUrlForPolicy(raw: string): NormalizedBaseUrl | null {
+  const input = raw.trim()
+  if (!input) return null
+  let url: URL
+  try {
+    url = new URL(input)
+  } catch {
+    return null
+  }
+  if (url.username || url.password || url.search || url.hash) return null
+  if (url.protocol !== 'https:' && !isLocalDevUrl(url)) return null
+  const pathname = url.pathname.replace(/\/+$/, '')
+  return {
+    origin: url.origin,
+    pathname: pathname === '/' ? '' : pathname,
+  }
+}
+
+function isLocalDevUrl(url: URL): boolean {
+  return (
+    url.protocol === 'http:' &&
+    (url.hostname === 'localhost' || url.hostname === '127.0.0.1')
+  )
+}
+
+export function isLatticeRequestBaseUrlAllowed(
+  requestBaseUrl: string,
+  sessionBaseUrl: string,
+): boolean {
+  const request = normalizeBaseUrlForPolicy(requestBaseUrl)
+  const session = normalizeBaseUrlForPolicy(sessionBaseUrl)
+  if (!request || !session) return false
+  return request.origin === session.origin && request.pathname === session.pathname
+}
+
+export async function resolveLatticeApiKeyForRequest(
+  apiKey: string,
+  baseUrl: string,
+): Promise<string> {
+  if (apiKey.trim() !== LATTICE_AUTH_API_KEY_REF) return apiKey
   const session = await loadLatticeAuthSession()
   if (!session?.accessToken) {
     throw new Error('Lattice blog login is missing. Log in from Settings -> Models.')
+  }
+  if (!isLatticeRequestBaseUrlAllowed(baseUrl, session.baseUrl)) {
+    throw new Error(LATTICE_AUTH_ENDPOINT_ERROR)
   }
   return session.accessToken
 }

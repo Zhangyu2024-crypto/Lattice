@@ -4,6 +4,7 @@ import Button from '../../../ui/Button'
 import { toast } from '../../../../stores/toast-store'
 import type { LLMProvider, LLMProviderType } from '../../../../types/llm'
 import { DEFAULT_BASE_URL, PROVIDER_TYPE_OPTIONS } from './types'
+import { LATTICE_AUTH_API_KEY_REF } from '../../../../lib/lattice-auth-client'
 
 interface NewProviderFormProps {
   onCancel: () => void
@@ -34,6 +35,10 @@ export default function NewProviderForm({
     }
     if (!baseUrl.trim()) {
       toast.warn('Base URL is required')
+      return
+    }
+    if (apiKey.trim() === LATTICE_AUTH_API_KEY_REF) {
+      toast.warn('Use "Sign in with chaxiejun.xyz" for the Lattice provider')
       return
     }
     onSubmit({

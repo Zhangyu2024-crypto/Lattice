@@ -2,9 +2,10 @@
 //
 // Flow:
 //   1. Renderer calls `electronAPI.issueApprovalToken({ toolName, scope })`
-//      after the trust gate's ApprovalDialog accepts. The main process
-//      mints a random hex token bound to `(toolName, canonicalScope,
-//      expiresAt)` and returns it.
+//      after the React trust gate's ApprovalDialog accepts. The main process
+//      shows its own native confirmation for hostExec, then mints a random
+//      hex token bound to `(toolName, canonicalScope, expiresAt)` and returns
+//      it.
 //   2. Renderer immediately invokes the action's IPC channel (e.g.
 //      `compute:run`, `workspace:bash`, `mcp:call-tool`,
 //      `plugin:call-tool`) including `approvalToken: <minted>` in the
@@ -14,11 +15,11 @@
 //      tool name / scope / expired / unknown all return `{ ok: false,
 //      error }`.
 //
-// The gate is what stops a compromised renderer from invoking hostExec
-// without the user having seen the ApprovalDialog: the dialog issues
-// the token; without it the IPC handler refuses.
+// The native main-process gate is what stops a compromised renderer from
+// invoking hostExec without a user-visible confirmation; without a minted
+// token the action IPC handler refuses.
 
-import { ipcMain } from 'electron'
+import { BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron'
 import { randomBytes } from 'node:crypto'
 
 interface IssueRequest {
@@ -45,6 +46,12 @@ const TOKEN_TTL_MS = 60_000
  *  Map can't grow unboundedly even if a renderer mints tokens it
  *  never consumes. */
 const pending = new Map<string, PendingToken>()
+const HOST_EXEC_TOOLS = new Set([
+  'compute_run',
+  'mcp_call_tool',
+  'plugin_call_tool',
+  'workspace_bash',
+])
 
 function canonicalizeScope(scope: unknown): string {
   if (scope === null || scope === undefined) return ''
@@ -90,6 +97,39 @@ function mintToken(
     expiresAt: now + TOKEN_TTL_MS,
   })
   return token
+}
+
+function truncatePreview(value: string, max = 4000): string {
+  return value.length <= max ? value : `${value.slice(0, max)}\n...`
+}
+
+async function confirmHostExec(
+  event: IpcMainInvokeEvent,
+  toolName: string,
+  scope: unknown,
+): Promise<boolean> {
+  const parent = BrowserWindow.fromWebContents(event.sender)
+  const detail = truncatePreview(JSON.stringify(scope ?? {}, null, 2))
+  const result = parent
+    ? await dialog.showMessageBox(parent, {
+        type: 'warning',
+        buttons: ['Deny', 'Allow once'],
+        defaultId: 0,
+        cancelId: 0,
+        title: 'Approve host execution',
+        message: `Allow Lattice to run ${toolName}?`,
+        detail,
+      })
+    : await dialog.showMessageBox({
+        type: 'warning',
+        buttons: ['Deny', 'Allow once'],
+        defaultId: 0,
+        cancelId: 0,
+        title: 'Approve host execution',
+        message: `Allow Lattice to run ${toolName}?`,
+        detail,
+      })
+  return result.response === 1
 }
 
 export interface ConsumeResult {
@@ -145,11 +185,20 @@ export function consumeApprovalToken(
 export function registerApprovalTokenIpc(): void {
   ipcMain.handle(
     'approval-token:issue',
-    async (_event, raw: unknown): Promise<IssueResponse> => {
+    async (event, raw: unknown): Promise<IssueResponse> => {
       const req = (raw ?? {}) as IssueRequest
       const toolName = typeof req.toolName === 'string' ? req.toolName : ''
       if (!toolName) {
         return { ok: false, error: 'toolName is required' }
+      }
+      if (!HOST_EXEC_TOOLS.has(toolName)) {
+        return {
+          ok: false,
+          error: `approval tokens are not available for '${toolName}'`,
+        }
+      }
+      if (!(await confirmHostExec(event, toolName, req.scope))) {
+        return { ok: false, error: 'user_denied' }
       }
       const now = Date.now()
       sweepExpired(now)

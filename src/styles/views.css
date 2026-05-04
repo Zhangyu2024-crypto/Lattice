@@ -3465,9 +3465,42 @@
 
 .settings-account-detail-row strong {
   flex: 0 0 auto;
+  max-width: 65%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--color-text-primary);
   font-family: var(--font-mono);
   font-weight: 650;
+}
+
+.settings-account-record {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-sidebar);
+}
+
+.settings-account-record-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+
+.settings-account-record-note svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--color-text-secondary);
 }
 
 /* === Compute containers ===

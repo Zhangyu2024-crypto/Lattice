@@ -60,6 +60,34 @@ function isLoopbackCallbackUrl(url: URL): boolean {
   )
 }
 
+function cleanReturnedBaseUrl(
+  raw: unknown,
+  authBaseUrl: string,
+): string {
+  const fallback = `${authBaseUrl}/api/lattice/v1`
+  const text = typeof raw === 'string' ? raw.trim() : ''
+  if (!text) return fallback
+  let returned: URL
+  let authBase: URL
+  try {
+    returned = new URL(text)
+    authBase = new URL(authBaseUrl)
+  } catch {
+    return fallback
+  }
+  if (
+    returned.origin !== authBase.origin ||
+    !returned.pathname.startsWith(`${authBase.pathname.replace(/\/+$/, '')}/`) ||
+    returned.username ||
+    returned.password ||
+    returned.search ||
+    returned.hash
+  ) {
+    return fallback
+  }
+  return returned.toString().replace(/\/+$/, '')
+}
+
 async function readJson(res: Response): Promise<Record<string, unknown>> {
   const text = await res.text()
   if (!text) return {}
@@ -232,11 +260,7 @@ async function login(
     ) {
       throw new Error('Blog returned an incomplete Lattice token response.')
     }
-    const returnedBaseUrl =
-      typeof token.base_url === 'string' ? token.base_url.trim() : ''
-    const baseUrl = returnedBaseUrl.startsWith(`${authBaseUrl}/`)
-      ? returnedBaseUrl
-      : `${authBaseUrl}/api/lattice/v1`
+    const baseUrl = cleanReturnedBaseUrl(token.base_url, authBaseUrl)
 
     const summary = await saveLatticeAuthSession({
       accessToken: token.access_token,
@@ -260,13 +284,9 @@ export function registerLatticeAuthIpc(): void {
     return getLatticeAuthSessionSummary()
   })
 
-  ipcMain.handle('lattice-auth:login', async (event, payload: unknown) => {
-    const authBaseUrl =
-      payload && typeof payload === 'object'
-        ? (payload as { authBaseUrl?: unknown }).authBaseUrl
-        : undefined
+  ipcMain.handle('lattice-auth:login', async (event) => {
     const parent = BrowserWindow.fromWebContents(event.sender)
-    return login(authBaseUrl, parent)
+    return login(undefined, parent)
   })
 
   ipcMain.handle('lattice-auth:logout', async () => {

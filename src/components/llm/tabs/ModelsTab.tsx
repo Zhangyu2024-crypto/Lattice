@@ -13,6 +13,7 @@ import {
 import type { LLMModel, LLMProvider } from '../../../types/llm'
 import type { LlmListModelsResultPayload } from '../../../types/electron'
 import {
+  LATTICE_AUTH_API_KEY_REF,
   LATTICE_AUTH_PROVIDER_ID,
   connectLatticeAuthProviderModels,
   disableLatticeAuthProvider,
@@ -261,6 +262,16 @@ function ProvidersSection() {
       setStatus(provider.id, {
         state: 'error',
         message: `Provider type "${provider.type}" does not expose a model catalog`,
+      })
+      return
+    }
+    if (
+      provider.apiKey.trim() === LATTICE_AUTH_API_KEY_REF &&
+      provider.id !== LATTICE_AUTH_PROVIDER_ID
+    ) {
+      setStatus(provider.id, {
+        state: 'error',
+        message: 'Lattice secure credentials can only be used by the signed-in chaxiejun.xyz provider',
       })
       return
     }

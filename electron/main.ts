@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, net, protocol } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, net, protocol, shell } from 'electron'
 import { promises as fs } from 'node:fs'
 import { watch as fsWatch, type FSWatcher } from 'node:fs'
 import { spawn } from 'node:child_process'
@@ -70,6 +70,57 @@ function broadcastBackendStatus(payload: {
   }
 }
 
+function isTrustedRendererUrl(rawUrl: string): boolean {
+  let url: URL
+  try {
+    url = new URL(rawUrl)
+  } catch {
+    return false
+  }
+  if (process.env.VITE_DEV_SERVER_URL) {
+    try {
+      return url.origin === new URL(process.env.VITE_DEV_SERVER_URL).origin
+    } catch {
+      return false
+    }
+  }
+  if (url.protocol !== 'file:') return false
+  try {
+    return fileURLToPath(url) === RENDERER_INDEX_PATH
+  } catch {
+    return false
+  }
+}
+
+function openExternalIfSafe(rawUrl: string): void {
+  let url: URL
+  try {
+    url = new URL(rawUrl)
+  } catch {
+    return
+  }
+  if (
+    url.protocol !== 'https:' &&
+    url.protocol !== 'http:' &&
+    url.protocol !== 'mailto:'
+  ) {
+    return
+  }
+  void shell.openExternal(url.toString())
+}
+
+function lockWindowToAppOrigin(win: BrowserWindow): void {
+  win.webContents.on('will-navigate', (event, url) => {
+    if (isTrustedRendererUrl(url)) return
+    event.preventDefault()
+    openExternalIfSafe(url)
+  })
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (!isTrustedRendererUrl(url)) openExternalIfSafe(url)
+    return { action: 'deny' }
+  })
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -98,6 +149,7 @@ function createWindow() {
       plugins: true,
     },
   })
+  lockWindowToAppOrigin(mainWindow)
 
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
@@ -196,6 +248,7 @@ function createLibraryWindow() {
       plugins: true,
     },
   })
+  lockWindowToAppOrigin(libraryWindow)
 
   if (process.env.VITE_DEV_SERVER_URL) {
     void libraryWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}#/library`)
@@ -237,6 +290,7 @@ function createWorkbenchWindow(sessionId: string, artifactId: string) {
       plugins: true,
     },
   })
+  lockWindowToAppOrigin(win)
 
   const q = new URLSearchParams({ sessionId, artifactId }).toString()
   if (process.env.VITE_DEV_SERVER_URL) {
@@ -282,6 +336,7 @@ function createPdfReaderWindow(relPath: string) {
       plugins: true,
     },
   })
+  lockWindowToAppOrigin(win)
 
   const q = new URLSearchParams({ relPath }).toString()
   if (process.env.VITE_DEV_SERVER_URL) {
@@ -317,6 +372,7 @@ function createDataManagerWindow() {
       sandbox: false,
     },
   })
+  lockWindowToAppOrigin(win)
 
   if (process.env.VITE_DEV_SERVER_URL) {
     void win.loadURL(`${process.env.VITE_DEV_SERVER_URL}#/data-manager`)

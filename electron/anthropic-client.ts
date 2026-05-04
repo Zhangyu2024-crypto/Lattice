@@ -8,7 +8,7 @@ import type {
   LlmToolUseBlock,
   ToolCallRequest,
 } from './llm-proxy'
-import { resolveLatticeApiKey } from './lattice-auth-store'
+import { resolveLatticeApiKeyForRequest } from './lattice-auth-store'
 
 const DEFAULT_TIMEOUT_MS = 60_000
 
@@ -57,7 +57,7 @@ export async function invokeAnthropicSdk(
     : req.maxTokens
 
   try {
-    const apiKey = await resolveLatticeApiKey(req.apiKey)
+    const apiKey = await resolveLatticeApiKeyForRequest(req.apiKey, req.baseUrl)
     const client = new Anthropic({
       apiKey,
       baseURL: normalizeBaseUrl(req.baseUrl),

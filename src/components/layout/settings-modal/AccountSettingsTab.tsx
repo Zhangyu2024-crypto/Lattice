@@ -1,18 +1,15 @@
 import {
-  Cpu,
-  Database,
   Gauge,
   KeyRound,
+  MessageSquare,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react'
 import type { CSSProperties, ReactNode } from 'react'
 import {
   colorForPct,
   dailyBudgetLabel,
   formatRelativeDate,
-  formatTokens,
-  formatUSD,
-  hostLabel,
   lastCallLabel,
   useAccountStats,
 } from '../account-stats'
@@ -31,59 +28,41 @@ export default function AccountSettingsTab() {
               : '?'}
           </div>
           <div className="settings-account-hero-main">
-            <div className="settings-account-name">
-              {stats.authenticated
-                ? stats.authSession?.username
-                : stats.checking
-                  ? 'Checking account'
-                  : 'Not signed in'}
-            </div>
-            <div className="settings-account-subtitle">
-              {stats.authenticated
-                ? hostLabel(stats.authSession?.baseUrl ?? '')
-                : stats.sessionError ?? 'chaxiejun.xyz desktop session'}
-            </div>
+            <div className="settings-account-name">{stats.accountName}</div>
+            <div className="settings-account-subtitle">{stats.accountSubtitle}</div>
           </div>
           <div className={`settings-account-status settings-account-status--${stats.providerTone}`}>
             <ShieldCheck size={14} aria-hidden />
-            <span>{stats.providerStatus}</span>
+            <span>{stats.providerLabel}</span>
           </div>
         </div>
       </Section>
 
-      <Section title="Authentication">
+      <Section title="Identity and model">
         <div className="settings-account-grid">
           <MetricCard
             icon={<KeyRound size={15} />}
             label="Credential"
-            value={stats.authenticated ? stats.authSession?.keyPrefix ?? 'Signed in' : 'No session'}
-            detail={
-              stats.authenticated
-                ? `Saved ${formatRelativeDate(stats.authSession?.savedAt ?? '')}`
-                : 'Login from the startup screen or Models settings'
-            }
+            value={stats.credentialLabel}
+            detail={stats.credentialDetail}
           />
           <MetricCard
-            icon={<Database size={15} />}
-            label="chaxiejun.xyz Provider"
-            value={stats.latticeProvider ? stats.latticeProvider.name : 'Missing'}
-            detail={
-              stats.latticeProvider?.enabled
-                ? `${stats.latticeProvider.models.length} models available`
-                : 'Provider needs setup'
-            }
+            icon={<ShieldCheck size={15} />}
+            label="Account provider"
+            value={stats.providerLabel}
+            detail={stats.providerDetail}
           />
           <MetricCard
-            icon={<Cpu size={15} />}
+            icon={<Sparkles size={15} />}
             label="Default model"
-            value={stats.resolved?.model.label ?? 'Not configured'}
-            detail={stats.resolved?.provider.name ?? 'Choose a model in Models'}
+            value={stats.modelLabel}
+            detail={stats.modelDetail}
           />
           <MetricCard
             icon={<Gauge size={15} />}
             label="Daily usage"
-            value={`${formatTokens(stats.totalTodayTokens)} tokens`}
-            detail={`${stats.today.calls} calls · ${formatUSD(stats.today.costUSD)}`}
+            value={stats.todayUsageLabel}
+            detail={stats.todayUsageDetail}
           />
         </div>
       </Section>
@@ -108,9 +87,39 @@ export default function AccountSettingsTab() {
           <div className="settings-account-detail-grid">
             <DetailRow label="Enabled providers" value={`${stats.enabledProviders} / ${stats.providers.length}`} />
             <DetailRow label="Available models" value={String(stats.totalModels)} />
-            <DetailRow label="Today" value={`${stats.today.calls} calls · ${formatUSD(stats.today.costUSD)}`} />
-            <DetailRow label="All time" value={`${stats.allTime.calls} calls · ${formatUSD(stats.allTime.costUSD)}`} />
+            <DetailRow label="Today" value={stats.todayUsageDetail} />
+            <DetailRow label="All time" value={stats.allTimeUsageDetail} />
+            <DetailRow label="Total tokens" value={stats.allTimeUsageLabel} />
             <DetailRow label="Last call" value={lastCallLabel(stats.lastRecord)} />
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Account record">
+        <div className="settings-account-record">
+          <DetailRow
+            label="Username"
+            value={stats.authenticated ? stats.authSession?.username ?? 'Signed in' : 'Not signed in'}
+          />
+          <DetailRow
+            label="Credential"
+            value={stats.credentialLabel}
+          />
+          <DetailRow
+            label="Saved"
+            value={
+              stats.authenticated
+                ? formatRelativeDate(stats.authSession?.savedAt ?? '')
+                : 'No local credential'
+            }
+          />
+          <DetailRow
+            label="Last request"
+            value={lastCallLabel(stats.lastRecord)}
+          />
+          <div className="settings-account-record-note">
+            <MessageSquare size={14} aria-hidden />
+            <span>Usage is tracked locally from Lattice model calls made in this workspace.</span>
           </div>
         </div>
       </Section>

@@ -17,6 +17,7 @@ import { toast } from '../../../../stores/toast-store'
 import { maskKey } from '../../llm-config-helpers'
 import type { LLMModel, LLMProvider } from '../../../../types/llm'
 import { CONNECTABLE_TYPES, isBuiltIn, truncate, type ConnectStatus } from './types'
+import { LATTICE_AUTH_API_KEY_REF } from '../../../../lib/lattice-auth-client'
 
 interface ProviderCardProps {
   provider: LLMProvider
@@ -47,7 +48,7 @@ export default function ProviderCard({
 
   const builtIn = isBuiltIn(provider.id)
   const hasKey = Boolean(provider.apiKey && provider.apiKey.trim())
-  const keyStoredSecurely = provider.apiKey?.trim() === 'lattice-secure-token'
+  const keyStoredSecurely = provider.apiKey?.trim() === LATTICE_AUTH_API_KEY_REF
   const canConnect =
     hasKey && CONNECTABLE_TYPES.has(provider.type) && provider.enabled
   const dotColor =
@@ -115,7 +116,17 @@ export default function ProviderCard({
         </label>
       </div>
 
-      <div className="llm-models-base-url">{provider.baseUrl}</div>
+      <div className="llm-models-base-url-row">
+        <div className="llm-models-base-url">{provider.baseUrl}</div>
+        {keyStoredSecurely ? (
+          <span
+            className="llm-models-locked-chip"
+            title="This endpoint is bound to your signed-in Lattice account in the main process"
+          >
+            locked
+          </span>
+        ) : null}
+      </div>
 
       <div className="llm-models-row">
         <span className="llm-models-row-label">API key</span>

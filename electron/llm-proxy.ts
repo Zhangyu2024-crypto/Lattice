@@ -10,7 +10,7 @@
 // a stable placeholder, and the main process resolves the real gateway token
 // from Electron safeStorage before dispatching the HTTPS request.
 
-import { resolveLatticeApiKey } from './lattice-auth-store'
+import { resolveLatticeApiKeyForRequest } from './lattice-auth-store'
 
 export type LlmProviderType = 'anthropic' | 'openai' | 'openai-compatible'
 
@@ -271,7 +271,7 @@ async function invokeAnthropic(req: LlmInvokeRequest): Promise<LlmInvokeResult> 
   const start = Date.now()
   let apiKey: string
   try {
-    apiKey = await resolveLatticeApiKey(req.apiKey)
+    apiKey = await resolveLatticeApiKeyForRequest(req.apiKey, req.baseUrl)
   } catch (err) {
     return toError(err, Date.now() - start)
   }
@@ -345,7 +345,7 @@ async function invokeOpenAI(req: LlmInvokeRequest): Promise<LlmInvokeResult> {
   const start = Date.now()
   let apiKey: string
   try {
-    apiKey = await resolveLatticeApiKey(req.apiKey)
+    apiKey = await resolveLatticeApiKeyForRequest(req.apiKey, req.baseUrl)
   } catch (err) {
     return toError(err, Date.now() - start)
   }
@@ -443,7 +443,7 @@ export async function testConnection(
   }
   let apiKey: string
   try {
-    apiKey = await resolveLatticeApiKey(req.apiKey)
+    apiKey = await resolveLatticeApiKeyForRequest(req.apiKey, req.baseUrl)
   } catch (err) {
     return toTestError(err, Date.now() - start)
   }
@@ -523,7 +523,7 @@ export async function listModels(
   }
   let apiKey: string
   try {
-    apiKey = await resolveLatticeApiKey(req.apiKey)
+    apiKey = await resolveLatticeApiKeyForRequest(req.apiKey, req.baseUrl)
   } catch (err) {
     return toListModelsError(err, Date.now() - start)
   }
