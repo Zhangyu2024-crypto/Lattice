@@ -1033,11 +1033,9 @@ export default function App() {
             <WorkspaceTopbar
               sessionTitle={workspaceBreadcrumbLabel}
               surfaceTitle={workspaceSurfaceTitle}
-              rightRailOpen={layout.chatVisible}
               onOpenFile={openFile}
               onNewSession={handleNewSession}
               onOpenProLauncher={() => setProLauncherOpen(true)}
-              onToggleRightRail={toggleRightRail}
             />
 
             <div

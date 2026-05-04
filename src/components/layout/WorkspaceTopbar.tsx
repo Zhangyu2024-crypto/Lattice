@@ -2,7 +2,6 @@ import {
   FilePlus,
   FlaskConical,
   MessageSquarePlus,
-  PanelRight,
 } from 'lucide-react'
 import IconButton from '../common/panel/IconButton'
 
@@ -11,21 +10,17 @@ const TB_ICON = { size: 17, strokeWidth: 1.75 } as const
 interface Props {
   sessionTitle: string
   surfaceTitle: string
-  rightRailOpen: boolean
   onOpenFile: () => void
   onNewSession: () => void
   onOpenProLauncher: () => void
-  onToggleRightRail: () => void
 }
 
 export default function WorkspaceTopbar({
   sessionTitle,
   surfaceTitle,
-  rightRailOpen,
   onOpenFile,
   onNewSession,
   onOpenProLauncher,
-  onToggleRightRail,
 }: Props) {
   // Breadcrumb fallbacks. Previously read "No session › Artifact Canvas" on
   // cold boot, which is both cases wrong (user hasn't chosen anything, the
@@ -97,13 +92,6 @@ export default function WorkspaceTopbar({
           title="Lab — analysis tools"
           icon={<FlaskConical {...TB_ICON} aria-hidden />}
           onClick={onOpenProLauncher}
-        />
-        <span className="workspace-topbar-actions-sep" aria-hidden />
-        <IconButton
-          title={rightRailOpen ? 'Hide side panel' : 'Show side panel'}
-          icon={<PanelRight {...TB_ICON} aria-hidden />}
-          active={rightRailOpen}
-          onClick={onToggleRightRail}
         />
       </div>
     </div>
