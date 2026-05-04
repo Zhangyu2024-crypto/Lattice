@@ -3,6 +3,7 @@ import crypto from 'node:crypto'
 import {
   clearLatticeAuthSession,
   getLatticeAuthSessionSummary,
+  loadLatticeAuthSession,
   saveLatticeAuthSession,
   type LatticeAuthSessionSummary,
 } from './lattice-auth-store'
@@ -16,6 +17,18 @@ const DEFAULT_AUTH_BASE_URL =
 type LatticeAuthLoginResult =
   | (Extract<LatticeAuthSessionSummary, { authenticated: true }> & { ok: true })
   | { ok: false; error: string }
+
+type LatticeCollabTicketResult =
+  | {
+      ok: true
+      roomName: string
+      wsUrl: string
+      ticketExpiresAt: string
+      expiresIn: number
+      username: string
+      userId: string
+    }
+  | { ok: false; error: string; status?: number }
 
 interface PendingCallback {
   code: string
@@ -88,6 +101,49 @@ function cleanReturnedBaseUrl(
   return returned.toString().replace(/\/+$/, '')
 }
 
+export function collabBaseFromSessionBase(baseUrl: string): string {
+  const url = new URL(baseUrl)
+  url.pathname = '/_collab'
+  url.search = ''
+  url.hash = ''
+  return url.toString().replace(/\/+$/, '')
+}
+
+export function collabWsUrl(
+  collabBaseUrl: string,
+  roomName: string,
+  ticket: string,
+): string {
+  const url = new URL(`${collabBaseUrl}/${encodeURIComponent(roomName)}`)
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+  url.searchParams.set('ticket', ticket)
+  return url.toString()
+}
+
+function sanitizeTicketInput(payload: unknown): {
+  projectId: string
+  roomId: string
+  roomName: string
+  role: string
+} {
+  const raw = payload && typeof payload === 'object'
+    ? payload as Record<string, unknown>
+    : {}
+  const projectId = String(raw.projectId ?? '').trim()
+  const roomId = String(raw.roomId ?? '').trim()
+  const roomName = String(raw.roomName ?? '').trim()
+  const role = String(raw.role ?? 'editor').trim().toLowerCase()
+  const idRe = /^[A-Za-z0-9._-]{1,120}$/
+  const roomRe = /^[A-Za-z0-9._:@-]{1,240}$/
+  if (!idRe.test(projectId)) throw new Error('Invalid collaboration project id.')
+  if (!idRe.test(roomId)) throw new Error('Invalid collaboration room id.')
+  if (!roomRe.test(roomName)) throw new Error('Invalid collaboration room name.')
+  if (!['owner', 'editor', 'reviewer', 'viewer'].includes(role)) {
+    throw new Error('Invalid collaboration role.')
+  }
+  return { projectId, roomId, roomName, role }
+}
+
 async function readJson(res: Response): Promise<Record<string, unknown>> {
   const text = await res.text()
   if (!text) return {}
@@ -98,6 +154,62 @@ async function readJson(res: Response): Promise<Record<string, unknown>> {
       : {}
   } catch {
     return { error: text.slice(0, 500) }
+  }
+}
+
+async function createCollabTicket(
+  payload: unknown,
+): Promise<LatticeCollabTicketResult> {
+  try {
+    const session = await loadLatticeAuthSession()
+    if (!session?.accessToken) {
+      throw new Error('Lattice blog login is required before collaboration.')
+    }
+    const input = sanitizeTicketInput(payload)
+    const collabBaseUrl = collabBaseFromSessionBase(session.baseUrl)
+    const ticketRes = await fetch(`${collabBaseUrl}/ticket`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${session.accessToken}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        project_id: input.projectId,
+        room_id: input.roomId,
+        room_name: input.roomName,
+        role: input.role,
+      }),
+    })
+    const json = await readJson(ticketRes)
+    if (!ticketRes.ok || typeof json.ticket !== 'string') {
+      return {
+        ok: false,
+        status: ticketRes.status,
+        error: String(json.error ?? 'Could not create collaboration ticket.'),
+      }
+    }
+    const expiresAt =
+      typeof json.expires_at === 'string' ? json.expires_at : ''
+    const expiresIn =
+      typeof json.expires_in === 'number' && Number.isFinite(json.expires_in)
+        ? json.expires_in
+        : 300
+    return {
+      ok: true,
+      roomName: input.roomName,
+      wsUrl: collabWsUrl(collabBaseUrl, input.roomName, json.ticket),
+      ticketExpiresAt: expiresAt,
+      expiresIn,
+      username: typeof json.username === 'string'
+        ? json.username
+        : session.username,
+      userId: typeof json.user_id === 'string' ? json.user_id : '',
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    }
   }
 }
 
@@ -292,5 +404,9 @@ export function registerLatticeAuthIpc(): void {
   ipcMain.handle('lattice-auth:logout', async () => {
     await clearLatticeAuthSession()
     return { ok: true }
+  })
+
+  ipcMain.handle('lattice-collab:create-ticket', async (_event, payload) => {
+    return createCollabTicket(payload)
   })
 }

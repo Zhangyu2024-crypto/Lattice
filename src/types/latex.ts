@@ -42,6 +42,15 @@ export interface LatexEditorState {
   scrollTop?: number
 }
 
+export interface LatexCollabState {
+  enabled: boolean
+  projectId: string
+  roomId: string
+  roomName: string
+  role: 'owner' | 'editor' | 'reviewer' | 'viewer'
+  joinedAt?: number
+}
+
 export interface LatexDocumentPayload {
   files: LatexFile[]
   /** Must equal one of `files[].path`. Default 'main.tex'. */
@@ -63,6 +72,7 @@ export interface LatexDocumentPayload {
   ghostEnabled: boolean
   autoCompile: boolean
   autoFixSuggest: boolean
+  collab?: LatexCollabState
   /** Hash of last auto-fix attempt — used to break suggestion loops when the
    *  LLM keeps proposing the same patch for the same error. */
   lastAutoFixSig?: string

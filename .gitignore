@@ -23,6 +23,7 @@ coverage/
 
 # Large binary assets (use Git LFS or download separately)
 worker/data/mp_xrd_database.db
+resources/conda-env/
 public/busytex/*.data
 public/busytex/*.wasm
 *.zip

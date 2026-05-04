@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  Circle,
   Eye,
   Loader2,
   MessageSquare,
@@ -24,6 +25,9 @@ export function FocusHeaderActions({
   issueCount,
   compilingSince,
   onCompile,
+  collabActive = false,
+  collabConnected = false,
+  onOpenCollab,
 }: {
   status: LatexCompileStatus
   drawerTab: FocusDrawerTab | null
@@ -31,10 +35,31 @@ export function FocusHeaderActions({
   issueCount: number
   compilingSince: number | null
   onCompile: () => void
+  collabActive?: boolean
+  collabConnected?: boolean
+  onOpenCollab?: () => void
 }) {
   return (
     <div className="latex-focus-actions">
       <CompileBadge status={status} />
+      {collabActive ? (
+        <FocusToggle
+          active={drawerTab === 'details'}
+          onClick={() => {
+            onOpenCollab?.()
+            setDrawerTab((t) => (t === 'details' ? null : 'details'))
+          }}
+          icon={
+            <Circle
+              size={9}
+              fill={collabConnected ? 'currentColor' : 'none'}
+              aria-hidden
+            />
+          }
+          label={collabConnected ? 'Live' : 'Collab'}
+          title="Open collaboration details"
+        />
+      ) : null}
       <FocusToggle
         active={drawerTab === 'errors'}
         onClick={() =>

@@ -1,6 +1,10 @@
-import { BookOpen, Cpu, FolderSync, Info, Sparkles } from 'lucide-react'
+import { BookOpen, Cpu, FolderSync, Info, Sparkles, Users } from 'lucide-react'
 import type { LatexDocumentPayload, LatexMentionMode } from '../../../../types/latex'
 import type { LatexWorkspaceSyncState } from '../../../../lib/latex/workspace-sync'
+import type {
+  LatexCollabConnectionStatus,
+  LatexCollabPeer,
+} from '../../../../lib/latex/collab-client'
 import MetaRow from '../../../ui/MetaRow'
 
 interface Props {
@@ -10,6 +14,11 @@ interface Props {
   workspaceRootPath: string | null
   workspaceSync: LatexWorkspaceSyncState
   onSyncWorkspace: () => void
+  collabStatus: LatexCollabConnectionStatus
+  collabError: string | null
+  collabPeers: LatexCollabPeer[]
+  onStartCollab: () => void
+  onLeaveCollab: () => void
 }
 
 const MENTION_LABEL: Record<LatexMentionMode, string> = {
@@ -25,6 +34,11 @@ export default function LatexDetailsPane({
   workspaceRootPath,
   workspaceSync,
   onSyncWorkspace,
+  collabStatus,
+  collabError,
+  collabPeers,
+  onStartCollab,
+  onLeaveCollab,
 }: Props) {
   const tex = payload.files.filter((f) => f.kind === 'tex').length
   const bib = payload.files.filter((f) => f.kind === 'bib').length
@@ -69,6 +83,61 @@ export default function LatexDetailsPane({
           label="Files"
           value={`${tex} TeX · ${bib} BibTeX · ${assets} other`}
         />
+      </section>
+
+      <section className="latex-details-section">
+        <h3 className="latex-details-section-title">
+          <Users size={14} strokeWidth={2} aria-hidden />
+          Collaboration
+        </h3>
+        <MetaRow
+          label="Status"
+          value={
+            payload.collab?.enabled
+              ? collabStatus === 'connected'
+                ? 'Connected'
+                : collabStatus === 'connecting'
+                  ? 'Connecting'
+                  : collabStatus === 'error'
+                    ? collabError ?? 'Connection failed'
+                    : 'Disconnected'
+              : 'Off'
+          }
+        />
+        {payload.collab?.enabled ? (
+          <>
+            <MetaRow label="Room" value={payload.collab.roomName} mono />
+            <MetaRow
+              label="Peers"
+              value={
+                collabPeers.length > 0
+                  ? collabPeers.map((p) => p.name).join(', ')
+                  : 'Only you'
+              }
+            />
+            <button
+              type="button"
+              className="latex-details-action"
+              onClick={onLeaveCollab}
+            >
+              Leave room
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="latex-details-hint">
+              Share this LaTeX project through chaxiejun.xyz. Files stay in the
+              Creator project and sync as room-bound Yjs updates.
+            </p>
+            <button
+              type="button"
+              className="latex-details-action"
+              onClick={onStartCollab}
+            >
+              Start collaboration
+            </button>
+          </>
+        )}
       </section>
 
       <section className="latex-details-section">
