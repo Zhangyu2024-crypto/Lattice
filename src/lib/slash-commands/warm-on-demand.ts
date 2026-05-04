@@ -11,6 +11,7 @@ let started = false
 let ready = false
 let version = 0
 let warmPromise: Promise<void> | null = null
+let cleanupWarmSubscriptions: (() => void) | null = null
 const listeners = new Set<Listener>()
 
 function notifyChanged(): void {
@@ -25,6 +26,33 @@ function runWarm(task: () => Promise<void>): void {
   })
 }
 
+function subscribeWarmInvalidations(): void {
+  if (cleanupWarmSubscriptions) return
+
+  const unsubs: Array<() => void> = []
+  const api = window.electronAPI
+  if (api?.onSkillsChanged) {
+    unsubs.push(api.onSkillsChanged(() => runWarm(warmSkillsCache)))
+  }
+  if (api?.onPluginsChanged) {
+    unsubs.push(api.onPluginsChanged(() => runWarm(warmPluginsCache)))
+  }
+  if (api?.onMcpPromptsChanged) {
+    unsubs.push(api.onMcpPromptsChanged(() => runWarm(warmMcpCache)))
+  }
+  unsubs.push(
+    useExtensionsConfigStore.subscribe((s, prev) => {
+      if (s.plugins !== prev.plugins) runWarm(warmPluginsCache)
+      if (s.mcpServers !== prev.mcpServers) runWarm(warmMcpCache)
+    }),
+  )
+
+  cleanupWarmSubscriptions = () => {
+    for (const unsub of unsubs) unsub()
+    cleanupWarmSubscriptions = null
+  }
+}
+
 export function ensureSlashCommandCachesWarm(): void {
   void warmSlashCommandCaches()
 }
@@ -33,6 +61,7 @@ export function warmSlashCommandCaches(): Promise<void> {
   if (warmPromise) return warmPromise
   if (started) return Promise.resolve()
   started = true
+  subscribeWarmInvalidations()
   warmPromise = (async () => {
     await Promise.all([
       warmSkillsCache(),
@@ -43,22 +72,14 @@ export function warmSlashCommandCaches(): Promise<void> {
     ready = true
     notifyChanged()
   })
-
-  const api = window.electronAPI
-  if (api?.onSkillsChanged) {
-    void api.onSkillsChanged(() => runWarm(warmSkillsCache))
-  }
-  if (api?.onPluginsChanged) {
-    void api.onPluginsChanged(() => runWarm(warmPluginsCache))
-  }
-  if (api?.onMcpPromptsChanged) {
-    void api.onMcpPromptsChanged(() => runWarm(warmMcpCache))
-  }
-  useExtensionsConfigStore.subscribe((s, prev) => {
-    if (s.plugins !== prev.plugins) runWarm(warmPluginsCache)
-    if (s.mcpServers !== prev.mcpServers) runWarm(warmMcpCache)
-  })
   return warmPromise
+}
+
+export function disposeSlashCommandWarmForTests(): void {
+  cleanupWarmSubscriptions?.()
+  started = false
+  ready = false
+  warmPromise = null
 }
 
 export function getSlashCommandWarmVersion(): number {

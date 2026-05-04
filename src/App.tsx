@@ -404,10 +404,30 @@ export default function App() {
   // session so AgentComposer shows that conversation.
   useEffect(() => {
     let cleanup: (() => void) | null = null
-    void import('./lib/workspace/session-bridge').then((m) => {
-      cleanup = m.initSessionBridge()
-    })
-    return () => cleanup?.()
+    let cancelled = false
+
+    const startBridge = () => {
+      void import('./lib/workspace/session-bridge').then((m) => {
+        if (cancelled) return
+        cleanup = m.initSessionBridge()
+      })
+    }
+
+    if (useRuntimeStore.persist.hasHydrated()) {
+      startBridge()
+      return () => {
+        cancelled = true
+        cleanup?.()
+      }
+    }
+
+    const unsubHydration =
+      useRuntimeStore.persist.onFinishHydration(startBridge)
+    return () => {
+      cancelled = true
+      unsubHydration()
+      cleanup?.()
+    }
   }, [])
 
   // Wire optional legacy bridge status to app-store + toast.
