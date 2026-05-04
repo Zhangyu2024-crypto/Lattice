@@ -6,6 +6,7 @@ import path from 'path'
 import { fileURLToPath, pathToFileURL } from 'url'
 import { PythonManager } from './python-manager'
 import { registerLlmIpc } from './ipc-llm'
+import { registerLatticeAuthIpc } from './ipc-lattice-auth'
 import { registerComputeIpc, getComputeManager } from './ipc-compute'
 
 
@@ -95,7 +96,7 @@ function createWindow() {
 
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
-    mainWindow.webContents.openDevTools({ mode: 'detach' })
+    mainWindow.webContents.openDevTools({ mode: 'right' })
   } else {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
   }
@@ -912,6 +913,7 @@ ipcMain.handle(
 
 // IPC: LLM proxy (direct HTTP to Anthropic/OpenAI from main process)
 registerLlmIpc()
+registerLatticeAuthIpc()
 
 // IPC: Docker-backed Python compute runner
 registerComputeIpc(() => mainWindow)

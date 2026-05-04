@@ -6,6 +6,7 @@
 export const maskKey = (key: string | undefined): string => {
   if (!key) return 'Not configured'
   const trimmed = key.trim()
+  if (trimmed === 'lattice-secure-token') return 'Stored securely'
   if (trimmed.length <= 10) return `${'*'.repeat(Math.max(0, trimmed.length - 2))}${trimmed.slice(-2)}`
   const prefix = trimmed.slice(0, 7)
   const suffix = trimmed.slice(-4)

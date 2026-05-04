@@ -8,6 +8,7 @@ import type {
   LlmToolUseBlock,
   ToolCallRequest,
 } from './llm-proxy'
+import { resolveLatticeApiKey } from './lattice-auth-store'
 
 const DEFAULT_TIMEOUT_MS = 60_000
 
@@ -15,12 +16,6 @@ export async function invokeAnthropicSdk(
   req: LlmInvokeRequest,
 ): Promise<LlmInvokeResult> {
   const start = Date.now()
-  const client = new Anthropic({
-    apiKey: req.apiKey,
-    baseURL: normalizeBaseUrl(req.baseUrl),
-    timeout: req.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-    maxRetries: 2,
-  })
 
   const systemText = buildSystemPrompt(req)
   // Only enable prompt caching on the official Anthropic API — proxies
@@ -62,6 +57,14 @@ export async function invokeAnthropicSdk(
     : req.maxTokens
 
   try {
+    const apiKey = await resolveLatticeApiKey(req.apiKey)
+    const client = new Anthropic({
+      apiKey,
+      baseURL: normalizeBaseUrl(req.baseUrl),
+      timeout: req.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+      maxRetries: 2,
+    })
+
     const response = await client.messages.create({
       model: req.model,
       max_tokens: effectiveMaxTokens,

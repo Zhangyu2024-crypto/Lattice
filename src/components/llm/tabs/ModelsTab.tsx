@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { LogIn, LogOut, Plus } from 'lucide-react'
 import Button from '../../ui/Button'
 import { useLLMConfigStore } from '../../../stores/llm-config-store'
 import { toast } from '../../../stores/toast-store'
@@ -26,6 +26,9 @@ import {
   parseModelOptionKey,
   type ConnectStatus,
 } from './models/types'
+
+const LATTICE_AUTH_API_KEY_REF = 'lattice-secure-token'
+const LATTICE_BLOG_PROVIDER_ID = 'lattice-blog'
 
 // ─── Top-level tab ──────────────────────────────────────────────────────
 
@@ -194,6 +197,13 @@ function ProvidersSection() {
     getCachedPricingCatalog(),
   )
   const [catalogRefreshing, setCatalogRefreshing] = useState(false)
+  const [blogLoginRunning, setBlogLoginRunning] = useState(false)
+  const [blogSession, setBlogSession] = useState<{
+    authenticated: true
+    baseUrl: string
+    username: string
+    keyPrefix: string
+  } | null>(null)
 
   const setStatus = (id: string, next: ConnectStatus) =>
     setConnectStatus((s) => ({ ...s, [id]: next }))
@@ -216,6 +226,21 @@ function ProvidersSection() {
       cancelled = true
     }
   }, [catalog])
+
+  useEffect(() => {
+    let cancelled = false
+    window.electronAPI?.latticeAuthGetSession?.()
+      .then((session) => {
+        if (cancelled) return
+        setBlogSession(session.authenticated ? session : null)
+      })
+      .catch(() => {
+        if (!cancelled) setBlogSession(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Runs the full connect flow: validate inputs → fetch catalog → merge
   // into provider.models → enable → if nothing is currently selected, pin
@@ -407,6 +432,72 @@ function ProvidersSection() {
     }
   }
 
+  const handleBlogLogin = async () => {
+    const api = window.electronAPI
+    if (!api?.latticeAuthLogin) {
+      toast.error('Blog login requires the Electron desktop shell')
+      return
+    }
+    setBlogLoginRunning(true)
+    try {
+      const result = await api.latticeAuthLogin()
+      if (!result.ok) {
+        toast.error(`Blog login failed: ${result.error}`)
+        return
+      }
+      const providerInput: Omit<LLMProvider, 'id'> = {
+        name: 'Lattice Blog',
+        type: 'openai-compatible',
+        baseUrl: result.baseUrl,
+        apiKey: LATTICE_AUTH_API_KEY_REF,
+        enabled: true,
+        mentionResolve: 'allow',
+        models: [],
+      }
+      const existing = providers.find((p) => p.id === LATTICE_BLOG_PROVIDER_ID)
+      const provider: LLMProvider = existing
+        ? {
+            ...existing,
+            ...providerInput,
+            id: existing.id,
+            models: existing.models,
+          }
+        : {
+            ...providerInput,
+            id: LATTICE_BLOG_PROVIDER_ID,
+          }
+      if (existing) {
+        updateProvider(existing.id, providerInput)
+      } else {
+        useLLMConfigStore.setState((s) => ({
+          providers: [...s.providers, provider],
+        }))
+      }
+      setBlogSession(result)
+      toast.success(`Logged in as ${result.username}`)
+      await handleConnect(provider)
+    } catch (err) {
+      toast.error(`Blog login failed: ${errorMessage(err)}`)
+    } finally {
+      setBlogLoginRunning(false)
+    }
+  }
+
+  const handleBlogLogout = async () => {
+    try {
+      await window.electronAPI?.latticeAuthLogout?.()
+      setBlogSession(null)
+      const provider = providers.find((p) => p.id === LATTICE_BLOG_PROVIDER_ID)
+      if (provider) {
+        updateProvider(provider.id, { apiKey: '', enabled: false })
+        setStatus(provider.id, CONNECT_IDLE)
+      }
+      toast.info('Logged out of Lattice Blog')
+    } catch (err) {
+      toast.error(`Blog logout failed: ${errorMessage(err)}`)
+    }
+  }
+
   return (
     <section>
       <header className="llm-models-section-header">
@@ -423,15 +514,38 @@ function ProvidersSection() {
             onRefresh={handleRefreshPricing}
           />
         </div>
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => setAdding(true)}
-          disabled={adding}
-          leading={<Plus size={13} />}
-        >
-          Add provider
-        </Button>
+        <div className="llm-models-header-actions">
+          {blogSession ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleBlogLogout}
+              leading={<LogOut size={13} />}
+              title={`Logged in as ${blogSession.username} (${blogSession.keyPrefix})`}
+            >
+              Blog logout
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleBlogLogin}
+              disabled={blogLoginRunning}
+              leading={<LogIn size={13} />}
+            >
+              {blogLoginRunning ? 'Logging in…' : 'Login with blog'}
+            </Button>
+          )}
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setAdding(true)}
+            disabled={adding}
+            leading={<Plus size={13} />}
+          >
+            Add provider
+          </Button>
+        </div>
       </header>
 
       {adding && (

@@ -20,6 +20,7 @@ import type {
   LlmToolUseBlock,
   ToolCallRequest,
 } from './llm-proxy'
+import { resolveLatticeApiKey } from './lattice-auth-store'
 
 // ── Stream bookkeeping ──────────────────────────────────────────────
 
@@ -97,8 +98,9 @@ async function runStream(
   const start = Date.now()
 
   try {
+    const apiKey = await resolveLatticeApiKey(req.apiKey)
     const client = new Anthropic({
-      apiKey: req.apiKey,
+      apiKey,
       baseURL: normalizeBaseUrl(req.baseUrl),
       timeout: req.timeoutMs ?? DEFAULT_TIMEOUT_MS,
       maxRetries: 2,

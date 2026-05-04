@@ -5,10 +5,12 @@
 // ws://localhost:* http://localhost:*` in index.html). Uses Node 18+ global
 // `fetch`, which is available in Electron 33.
 //
-// API keys flow through the renderer (from `llm-config-store`) but are passed
-// per-request, never persisted here. A future hardening step is to move keys
-// into Electron `safeStorage` and have the main process look them up by
-// provider id — that's a change surface localized to this file.
+// Normal provider API keys still flow through the renderer from the user's
+// llm-config-store. Lattice blog login is different: the renderer only sends
+// a stable placeholder, and the main process resolves the real gateway token
+// from Electron safeStorage before dispatching the HTTPS request.
+
+import { resolveLatticeApiKey } from './lattice-auth-store'
 
 export type LlmProviderType = 'anthropic' | 'openai' | 'openai-compatible'
 
@@ -80,6 +82,23 @@ interface LlmToolSpec {
   name: string
   description: string
   input_schema: ToolInputSchema
+}
+
+type OpenAiResponseInputItem = Record<string, unknown>
+
+interface OpenAiResponseOutputText {
+  type?: string
+  text?: string
+  refusal?: string
+}
+
+interface OpenAiResponseOutputItem {
+  type?: string
+  role?: string
+  content?: OpenAiResponseOutputText[]
+  call_id?: string
+  name?: string
+  arguments?: string
 }
 
 export interface ToolCallRequest {
@@ -250,6 +269,12 @@ export async function invoke(req: LlmInvokeRequest): Promise<LlmInvokeResult> {
 
 async function invokeAnthropic(req: LlmInvokeRequest): Promise<LlmInvokeResult> {
   const start = Date.now()
+  let apiKey: string
+  try {
+    apiKey = await resolveLatticeApiKey(req.apiKey)
+  } catch (err) {
+    return toError(err, Date.now() - start)
+  }
   const url = `${stripTrailingSlash(req.baseUrl)}/v1/messages`
   const body: Record<string, unknown> = {
     model: req.model,
@@ -268,7 +293,7 @@ async function invokeAnthropic(req: LlmInvokeRequest): Promise<LlmInvokeResult> 
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-api-key': req.apiKey,
+        'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify(body),
@@ -318,21 +343,25 @@ async function invokeAnthropic(req: LlmInvokeRequest): Promise<LlmInvokeResult> 
 
 async function invokeOpenAI(req: LlmInvokeRequest): Promise<LlmInvokeResult> {
   const start = Date.now()
-  const url = `${stripTrailingSlash(req.baseUrl)}/v1/chat/completions`
-  const messages: Array<Record<string, unknown>> = []
-  const systemPrompt = buildSystemPrompt(req)
-  if (systemPrompt) {
-    messages.push({ role: 'system', content: systemPrompt })
+  let apiKey: string
+  try {
+    apiKey = await resolveLatticeApiKey(req.apiKey)
+  } catch (err) {
+    return toError(err, Date.now() - start)
   }
-  messages.push(...toOpenAiMessages(req.messages))
+  const url = `${openAiApiRoot(req.baseUrl)}/responses`
+  const systemPrompt = buildSystemPrompt(req)
   const body: Record<string, unknown> = {
     model: req.model,
-    messages,
-    max_tokens: req.maxTokens,
+    input: toOpenAiResponseInput(req.messages),
+    max_output_tokens: req.maxTokens,
     temperature: req.temperature,
   }
+  if (systemPrompt) {
+    body.instructions = systemPrompt
+  }
   if (req.tools && req.tools.length > 0) {
-    body.tools = toOpenAiTools(req.tools)
+    body.tools = toOpenAiResponseTools(req.tools)
     body.tool_choice = 'auto'
   }
   try {
@@ -340,7 +369,7 @@ async function invokeOpenAI(req: LlmInvokeRequest): Promise<LlmInvokeResult> {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        authorization: `Bearer ${req.apiKey}`,
+        authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify(body),
       timeoutMs: req.timeoutMs ?? DEFAULT_TIMEOUT_MS,
@@ -355,15 +384,8 @@ async function invokeOpenAI(req: LlmInvokeRequest): Promise<LlmInvokeResult> {
       }
     }
     const json = (await res.json()) as {
-      choices?: Array<{
-        message?: {
-          content?: string | null
-          tool_calls?: Array<{
-            id?: string
-            function?: { name?: string; arguments?: string }
-          }>
-        }
-      }>
+      output_text?: string
+      output?: OpenAiResponseOutputItem[]
       usage?: {
         prompt_tokens?: number
         completion_tokens?: number
@@ -371,12 +393,12 @@ async function invokeOpenAI(req: LlmInvokeRequest): Promise<LlmInvokeResult> {
         output_tokens?: number
       }
     }
-    const assistantMessage = normalizeOpenAiAssistantMessage(
-      json.choices?.[0]?.message,
-    )
+    const assistantMessage = normalizeOpenAiResponseAssistantMessage(json.output)
     const content = assistantMessage
       ? extractTextFromContent(assistantMessage.content)
-      : ''
+      : typeof json.output_text === 'string'
+        ? json.output_text
+        : ''
     const toolCalls = assistantMessage
       ? extractToolCalls(assistantMessage.content)
       : []
@@ -419,16 +441,25 @@ export async function testConnection(
       durationMs: 0,
     }
   }
+  let apiKey: string
+  try {
+    apiKey = await resolveLatticeApiKey(req.apiKey)
+  } catch (err) {
+    return toTestError(err, Date.now() - start)
+  }
 
-  const url = `${stripTrailingSlash(req.baseUrl)}/v1/models`
+  const url =
+    req.provider === 'anthropic'
+      ? `${stripTrailingSlash(req.baseUrl)}/v1/models`
+      : `${openAiApiRoot(req.baseUrl)}/models`
   const headers: Record<string, string> =
     req.provider === 'anthropic'
       ? {
-          'x-api-key': req.apiKey,
+          'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',
         }
       : {
-          authorization: `Bearer ${req.apiKey}`,
+          authorization: `Bearer ${apiKey}`,
         }
 
   try {
@@ -490,16 +521,25 @@ export async function listModels(
   if (!req.baseUrl || !req.baseUrl.trim()) {
     return { success: false, error: 'Base URL is empty', durationMs: 0 }
   }
+  let apiKey: string
+  try {
+    apiKey = await resolveLatticeApiKey(req.apiKey)
+  } catch (err) {
+    return toListModelsError(err, Date.now() - start)
+  }
 
-  const url = `${stripTrailingSlash(req.baseUrl)}/v1/models`
+  const url =
+    req.provider === 'anthropic'
+      ? `${stripTrailingSlash(req.baseUrl)}/v1/models`
+      : `${openAiApiRoot(req.baseUrl)}/models`
   const headers: Record<string, string> =
     req.provider === 'anthropic'
       ? {
-          'x-api-key': req.apiKey,
+          'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',
         }
       : {
-          authorization: `Bearer ${req.apiKey}`,
+          authorization: `Bearer ${apiKey}`,
         }
 
   try {
@@ -692,18 +732,19 @@ function toAnthropicMessage(message: LlmMessage): Record<string, unknown> {
 }
 
 /**
- * Map our neutral message format to OpenAI's wire format. `tool_result`
- * blocks expand to separate `{role:'tool', tool_call_id, content}` messages
- * because OpenAI requires one message per tool reply; `tool_use` blocks on
- * an assistant message become the assistant's `tool_calls[]` array.
+ * Map our neutral message format to OpenAI's Responses API input format.
+ * `tool_use` blocks expand to top-level `function_call` input items, and
+ * `tool_result` blocks expand to matching top-level `function_call_output`
+ * items. The renderer remains provider-neutral and never has to know about
+ * Responses item wiring.
  */
-function toOpenAiMessages(
+function toOpenAiResponseInput(
   messages: LlmMessage[],
-): Array<Record<string, unknown>> {
-  const out: Array<Record<string, unknown>> = []
+): OpenAiResponseInputItem[] {
+  const out: OpenAiResponseInputItem[] = []
   for (const message of messages) {
     if (typeof message.content === 'string') {
-      out.push({ role: message.role, content: message.content })
+      out.push(openAiResponseMessage(message.role, message.content))
       continue
     }
 
@@ -712,22 +753,21 @@ function toOpenAiMessages(
       .filter((block): block is LlmTextBlock => block.type === 'text')
       .map((block) => block.text)
       .join('')
-    // OpenAI vision: content becomes an array of {type:'text'} + {type:'image_url'}
+    // OpenAI Responses vision: content is an input_text/input_image list.
     if (hasImages && message.role === 'user') {
       const parts: Array<Record<string, unknown>> = []
       for (const block of message.content) {
         if (block.type === 'text') {
-          parts.push({ type: 'text', text: block.text })
+          parts.push({ type: 'input_text', text: block.text })
         } else if (block.type === 'image') {
           parts.push({
-            type: 'image_url',
-            image_url: {
-              url: `data:${block.source.media_type};base64,${block.source.data}`,
-            },
+            type: 'input_image',
+            image_url: `data:${block.source.media_type};base64,${block.source.data}`,
+            detail: 'auto',
           })
         }
       }
-      out.push({ role: 'user', content: parts })
+      out.push({ type: 'message', role: 'user', content: parts })
       continue
     }
     const toolUses = message.content.filter(
@@ -738,49 +778,63 @@ function toOpenAiMessages(
     )
 
     if (message.role === 'assistant') {
-      out.push({
-        role: 'assistant',
-        // OpenAI allows `content: null` when tool_calls are present.
-        content: textParts.length > 0 ? textParts : null,
-        ...(toolUses.length > 0
-          ? {
-              tool_calls: toolUses.map((block) => ({
-                id: block.id,
-                type: 'function',
-                function: {
-                  name: block.name,
-                  arguments: JSON.stringify(block.input ?? {}),
-                },
-              })),
-            }
-          : {}),
-      })
+      if (textParts.length > 0) {
+        out.push(openAiResponseMessage('assistant', textParts))
+      }
+      for (const block of toolUses) {
+        out.push({
+          type: 'function_call',
+          call_id: block.id,
+          name: block.name,
+          arguments: JSON.stringify(block.input ?? {}),
+          status: 'completed',
+        })
+      }
       continue
     }
 
-    // user role: text first (if any), then one `tool` message per result
+    // user role: text first (if any), then one function output per result.
     if (textParts.length > 0) {
-      out.push({ role: 'user', content: textParts })
+      out.push(openAiResponseMessage('user', textParts))
     }
     for (const block of toolResults) {
       out.push({
-        role: 'tool',
-        tool_call_id: block.tool_use_id,
-        content: block.content,
+        type: 'function_call_output',
+        call_id: block.tool_use_id,
+        output: block.content,
       })
     }
   }
   return out
 }
 
-function toOpenAiTools(tools: LlmToolSpec[]): Array<Record<string, unknown>> {
+function openAiResponseMessage(
+  role: LlmMessage['role'],
+  text: string,
+): OpenAiResponseInputItem {
+  if (role === 'assistant') {
+    return {
+      type: 'message',
+      role,
+      status: 'completed',
+      content: [{ type: 'output_text', text, annotations: [] }],
+    }
+  }
+  return {
+    type: 'message',
+    role,
+    content: [{ type: 'input_text', text }],
+  }
+}
+
+function toOpenAiResponseTools(
+  tools: LlmToolSpec[],
+): Array<Record<string, unknown>> {
   return tools.map((tool) => ({
     type: 'function',
-    function: {
-      name: tool.name,
-      description: tool.description,
-      parameters: tool.input_schema,
-    },
+    name: tool.name,
+    description: tool.description,
+    parameters: tool.input_schema,
   }))
 }
 
@@ -818,33 +872,37 @@ function normalizeAnthropicAssistantMessage(
   return { role: 'assistant', content: collapseMessageContent(blocks) }
 }
 
-function normalizeOpenAiAssistantMessage(
-  message:
-    | {
-        content?: string | null
-        tool_calls?: Array<{
-          id?: string
-          function?: { name?: string; arguments?: string }
-        }>
-      }
-    | undefined,
+function normalizeOpenAiResponseAssistantMessage(
+  output: OpenAiResponseOutputItem[] | undefined,
 ): LlmMessage | null {
-  if (!message) return null
+  if (!output || output.length === 0) return null
   const blocks: LlmMessageBlock[] = []
-  if (typeof message.content === 'string' && message.content.length > 0) {
-    blocks.push({ type: 'text', text: message.content })
-  }
-  for (const call of message.tool_calls ?? []) {
-    const id = typeof call.id === 'string' ? call.id : null
-    const name =
-      typeof call.function?.name === 'string' ? call.function.name : null
-    if (!id || !name) continue
-    blocks.push({
-      type: 'tool_use',
-      id,
-      name,
-      input: parseJsonObject(call.function?.arguments),
-    })
+  for (const item of output) {
+    if (item.type === 'message' && Array.isArray(item.content)) {
+      for (const part of item.content) {
+        if (part.type === 'output_text' && typeof part.text === 'string') {
+          blocks.push({ type: 'text', text: part.text })
+        } else if (
+          part.type === 'refusal' &&
+          typeof part.refusal === 'string'
+        ) {
+          blocks.push({ type: 'text', text: part.refusal })
+        }
+      }
+      continue
+    }
+    if (
+      item.type === 'function_call' &&
+      typeof item.call_id === 'string' &&
+      typeof item.name === 'string'
+    ) {
+      blocks.push({
+        type: 'tool_use',
+        id: item.call_id,
+        name: item.name,
+        input: parseJsonObject(item.arguments),
+      })
+    }
   }
   if (blocks.length === 0) return null
   return { role: 'assistant', content: collapseMessageContent(blocks) }
@@ -948,4 +1006,9 @@ async function safeText(res: Response): Promise<string> {
 
 function stripTrailingSlash(s: string): string {
   return s.endsWith('/') ? s.slice(0, -1) : s
+}
+
+function openAiApiRoot(baseUrl: string): string {
+  const root = stripTrailingSlash(baseUrl.trim())
+  return /\/v1$/i.test(root) ? root : `${root}/v1`
 }

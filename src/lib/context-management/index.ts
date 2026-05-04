@@ -22,6 +22,19 @@ export {
 } from './compaction'
 
 export {
+  assembleLlmContext,
+  type ContextAssemblyInput,
+  type ContextAssemblyResult,
+  type ContextBudgetBreakdown,
+} from './assembler'
+
+export {
+  buildContextUsageReport,
+  type ContextUsageCategory,
+  type ContextUsageReport,
+} from './report'
+
+export {
   shouldAutoCompact,
   getContextUsage,
   estimateMessagesTokens,

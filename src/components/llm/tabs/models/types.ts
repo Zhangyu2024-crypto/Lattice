@@ -66,7 +66,10 @@ const buildDefaultModelFromCatalogue = (
   contextWindow: DEFAULT_CONTEXT_WINDOW,
   maxOutputTokens: DEFAULT_MAX_OUTPUT_TOKENS,
   pricing: { inputPerMillion: 0, outputPerMillion: 0 },
-  supportsTools: providerType === 'anthropic' || providerType === 'openai',
+  supportsTools:
+    providerType === 'anthropic' ||
+    providerType === 'openai' ||
+    providerType === 'openai-compatible',
   supportsVision: false,
   supportsCaching: providerType === 'anthropic',
 })

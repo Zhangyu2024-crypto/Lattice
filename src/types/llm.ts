@@ -41,7 +41,9 @@ export interface LLMProvider {
   name: string
   type: LLMProviderType
   baseUrl: string
-  apiKey?: string // MVP: plaintext in localStorage; later: Electron safeStorage ciphertext
+  // Normal providers store the user's API key here. Lattice Blog stores only
+  // a placeholder; the real gateway token stays in Electron safeStorage.
+  apiKey?: string
   enabled: boolean
   /**
    * Mention-resolve policy for this provider. Optional for backward

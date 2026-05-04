@@ -47,6 +47,7 @@ export default function ProviderCard({
 
   const builtIn = isBuiltIn(provider.id)
   const hasKey = Boolean(provider.apiKey && provider.apiKey.trim())
+  const keyStoredSecurely = provider.apiKey?.trim() === 'lattice-secure-token'
   const canConnect =
     hasKey && CONNECTABLE_TYPES.has(provider.type) && provider.enabled
   const dotColor =
@@ -153,14 +154,16 @@ export default function ProviderCard({
             >
               {maskKey(provider.apiKey)}
             </code>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={startEditingKey}
-              leading={<Edit2 size={11} />}
-            >
-              {hasKey ? 'Edit key' : 'Add key'}
-            </Button>
+            {keyStoredSecurely ? null : (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={startEditingKey}
+                leading={<Edit2 size={11} />}
+              >
+                {hasKey ? 'Edit key' : 'Add key'}
+              </Button>
+            )}
           </div>
         )}
       </div>

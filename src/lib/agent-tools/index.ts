@@ -7,6 +7,7 @@
 // fetches) should stay off the default catalog until a gating UX exists.
 
 import type { LocalTool } from '../../types/agent-tool'
+import { useRuntimeStore } from '../../stores/runtime-store'
 import { focusArtifactTool } from './focus-artifact'
 import { getArtifactTool } from './get-artifact'
 import { listArtifactsTool } from './list-artifacts'
@@ -42,6 +43,7 @@ import {
   workspaceContextReadTool,
   workspaceContextRefreshTool,
 } from './workspace-context'
+import { createContextUsageTool } from './context-usage'
 import { spawnAgentTool, listAgentsTool } from './spawn-agent'
 import { sendMessageTool } from './send-message'
 import {
@@ -103,6 +105,23 @@ import { cifLookupTool, cifSearchTool } from './cif-lookup'
 import { slashCommandTool } from './slash-command-tool'
 
 export const LOCAL_TOOL_CATALOG: LocalTool[] = [
+  createContextUsageTool(({ sessionId, userMessage }) => {
+    const session = useRuntimeStore.getState().sessions[sessionId]
+    const artifacts = session ? Object.values(session.artifacts) : []
+    return resolveToolsForContext(LOCAL_TOOL_CATALOG, {
+      hasSpectrumArtifacts: artifacts.some(
+        (a) => a.kind === 'spectrum-pro' || a.kind === 'xrd-pro' || a.kind === 'xps-pro' || a.kind === 'raman-pro' || a.kind === 'spectrum',
+      ),
+      hasStructureArtifacts: artifacts.some((a) => a.kind === 'structure'),
+      hasComputeArtifacts: artifacts.some((a) => a.kind === 'compute' || a.kind === 'compute-pro'),
+      hasResearchArtifacts: artifacts.some((a) => a.kind === 'research-report'),
+      hasLatexArtifacts: artifacts.some((a) => a.kind === 'latex-document'),
+      hasPapers: artifacts.some((a) => a.kind === 'paper'),
+      hasWorkspaceFiles: true,
+      hasHypothesisArtifacts: artifacts.some((a) => a.kind === 'hypothesis'),
+      userMessage,
+    })
+  }),
   listArtifactsTool,
   getArtifactTool,
   focusArtifactTool,
@@ -291,6 +310,7 @@ const TOOL_GROUP: Record<string, ToolGroup> = {
   tool_search: 'core',
   workspace_context_read: 'core',
   workspace_context_refresh: 'core',
+  context_usage: 'core',
   plugin_list_tools: 'core',
   plugin_call_tool: 'core',
   mcp_list_tools: 'core',

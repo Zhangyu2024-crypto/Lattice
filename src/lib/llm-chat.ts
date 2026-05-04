@@ -24,7 +24,7 @@ import {
   useLLMConfigStore,
 } from '../stores/llm-config-store'
 import { useRuntimeStore } from '../stores/runtime-store'
-import { computeCost, estimateMentionsBudget, estimateTokens } from './token-estimator'
+import { computeCost } from './token-estimator'
 import { maybeMicrocompactMessages } from './agent-compact'
 import { sendLlmStream } from './llm-stream-client'
 import { log } from './logger'
@@ -38,18 +38,13 @@ import type {
   LLMProvider,
   MentionResolvePolicy,
 } from '../types/llm'
-import {
-  HISTORY_SAFETY_MARGIN,
-  TIMEOUT_AGENT,
-  TIMEOUT_DIALOG,
-} from './llm-chat/constants'
+import { TIMEOUT_AGENT, TIMEOUT_DIALOG } from './llm-chat/constants'
 import { buildContextBlocks } from './llm-chat/mentions'
 import {
-  serializeToolsForInvoke,
   transcriptToLlmMessages,
   userMessagePayload,
 } from './llm-chat/messages'
-import { buildMessageHistoryWithinTokenBudget } from './llm-chat/history-budget'
+import { assembleLlmContext } from './context-management/assembler'
 import { recordUsage } from './llm-chat/usage'
 import type { LlmChatRequest, LlmChatResult } from './llm-chat/types'
 import {
@@ -226,8 +221,6 @@ export async function sendLlmChat(
 
   // ── Token budgeting ────────────────────────────────────────────
   const systemPrompt = req.systemPromptOverride ?? genCfg.systemPrompt ?? ''
-  const systemTokens = estimateTokens(systemPrompt)
-  const contextBlocksTokens = estimateMentionsBudget(blocks)
 
   // Single source of truth for the conversation this turn. If the caller
   // supplied `messages` (agent-orchestrator re-entry), that's the authority
@@ -256,26 +249,15 @@ export async function sendLlmChat(
     configState.budget.perRequest.maxInputTokens,
     model.contextWindow,
   )
-  const historyBudget = Math.max(
-    0,
-    requestCeiling - systemTokens - contextBlocksTokens - HISTORY_SAFETY_MARGIN,
-  )
 
-  // Token-based trim operates on whichever source we ended up with —
-  // orchestrator re-entries and single-shot dialog turns both flow through
-  // the same budgeter.
-  const trimmedMessages = buildMessageHistoryWithinTokenBudget(
+  const assembledContext = assembleLlmContext({
+    mode: req.mode,
+    systemPrompt,
+    contextBlocks: blocks,
     sourceMessages,
-    historyBudget,
-  )
-
-  // Chat (dialog) mode is a hard "no tools" surface per design doc §7.1.
-  // We honour this here even if a future caller accidentally passes
-  // `req.tools` with `mode: 'dialog'`.
-  const toolsForInvoke =
-    req.mode === 'agent' && req.tools && req.tools.length > 0
-      ? serializeToolsForInvoke(req.tools)
-      : undefined
+    tools: req.tools,
+    requestCeiling,
+  })
 
   const request: LlmInvokeRequestPayload = {
     provider: provider.type as LlmInvokeRequestPayload['provider'],
@@ -283,7 +265,7 @@ export async function sendLlmChat(
     baseUrl: provider.baseUrl,
     model: model.id,
     systemPrompt: systemPrompt || undefined,
-    messages: trimmedMessages,
+    messages: assembledContext.messages,
     maxTokens: genCfg.maxTokens,
     temperature: genCfg.temperature,
     timeoutMs,
@@ -292,7 +274,7 @@ export async function sendLlmChat(
     // the IPC payload identical to pre-MP-2 when the user did not @-mention
     // anything, simplifying provider-side debugging.
     ...(blocks.length > 0 ? { contextBlocks: blocks } : {}),
-    ...(toolsForInvoke ? { tools: toolsForInvoke } : {}),
+    ...(assembledContext.toolsForInvoke ? { tools: assembledContext.toolsForInvoke } : {}),
     // Extended thinking: pass the reasoning effort level so the main-process
     // SDK client can enable the `thinking` parameter when appropriate.
     ...(effective.reasoningEffort

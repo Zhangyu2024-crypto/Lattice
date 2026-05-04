@@ -183,6 +183,23 @@ export type LlmListModelsResultPayload =
       durationMs: number
     }
 
+export type LatticeAuthSessionPayload =
+  | {
+      authenticated: true
+      baseUrl: string
+      username: string
+      keyId: string
+      keyPrefix: string
+      savedAt: string
+    }
+  | { authenticated: false }
+
+export type LatticeAuthLoginResultPayload =
+  | ({
+      ok: true
+    } & Extract<LatticeAuthSessionPayload, { authenticated: true }>)
+  | { ok: false; error: string }
+
 // ─── Literature search (OpenAlex + arXiv) ───────────────────────────
 //
 // Ported from lattice-cli's `_search_openalex` / `_search_arxiv`
@@ -816,6 +833,11 @@ declare global {
         request: LlmInvokeRequestPayload,
       ) => Promise<LlmStreamStartResult>
       llmStreamAbort: (streamId: string) => Promise<void>
+      latticeAuthGetSession: () => Promise<LatticeAuthSessionPayload>
+      latticeAuthLogin: (payload?: {
+        authBaseUrl?: string
+      }) => Promise<LatticeAuthLoginResultPayload>
+      latticeAuthLogout: () => Promise<{ ok: true }>
       onLlmStreamChunk: (
         callback: (event: LlmStreamChunkEvent) => void,
       ) => () => void

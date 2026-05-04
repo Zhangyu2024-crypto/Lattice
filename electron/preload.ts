@@ -59,6 +59,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('llm:stream-start', request),
   llmStreamAbort: (streamId: string) =>
     ipcRenderer.invoke('llm:stream-abort', streamId),
+  latticeAuthGetSession: () =>
+    ipcRenderer.invoke('lattice-auth:get-session'),
+  latticeAuthLogin: (payload?: unknown) =>
+    ipcRenderer.invoke('lattice-auth:login', payload ?? {}),
+  latticeAuthLogout: () =>
+    ipcRenderer.invoke('lattice-auth:logout'),
   onLlmStreamChunk: (cb: (payload: { streamId: string; textDelta: string }) => void) =>
     subscribe('llm:stream-chunk', cb),
   onLlmStreamToolUse: (cb: (payload: { streamId: string; toolUse: { id: string; name: string; input: Record<string, unknown> } }) => void) =>
