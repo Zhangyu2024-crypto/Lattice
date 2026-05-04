@@ -140,7 +140,9 @@ export default function LatexDetailsPane({
     const invite = [
       `Lattice LaTeX room: ${collaboration.roomId}`,
       `Project: ${collaboration.projectId}`,
+      collaboration.roomAccessKey ? `Access key: ${collaboration.roomAccessKey}` : null,
       collaboration.serverUrl ? `Server: ${collaboration.serverUrl}` : null,
+      'Keep this invite private. Anyone with the access key can join the room.',
     ]
       .filter(Boolean)
       .join('\n')

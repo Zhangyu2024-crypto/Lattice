@@ -75,12 +75,20 @@ export function useLatexCollaboration({
       })
       return
     }
+    if (!collaboration.roomAccessKey) {
+      setTicketState({
+        status: 'error',
+        error: 'Collaboration room access key is missing.',
+      })
+      return
+    }
     setTicketState({ status: 'loading' })
     api.latticeAuthCollabTicket({
       serverUrl: collaboration.serverUrl,
       projectId: collaboration.projectId,
       roomId: collaboration.roomId,
       roomName,
+      roomAccessKey: collaboration.roomAccessKey,
       role: collaboration.role,
     })
       .then((result) => {
@@ -112,6 +120,7 @@ export function useLatexCollaboration({
     collaboration?.serverUrl,
     collaboration?.projectId,
     collaboration?.roomId,
+    collaboration?.roomAccessKey,
     collaboration?.role,
     roomName,
   ])

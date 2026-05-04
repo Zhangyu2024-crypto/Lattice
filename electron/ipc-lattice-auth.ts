@@ -324,9 +324,10 @@ async function createCollabTicket(payload: unknown): Promise<LatticeCollabTicket
     const projectId = stringField(payload.projectId)
     const roomId = stringField(payload.roomId)
     const roomName = stringField(payload.roomName)
+    const roomAccessKey = stringField(payload.roomAccessKey)
     const role = stringField(payload.role) || 'editor'
     const serverUrl = stringField(payload.serverUrl)
-    if (!projectId || !roomId || !roomName) {
+    if (!projectId || !roomId || !roomName || !roomAccessKey) {
       throw new Error('Collaboration project and room are required.')
     }
     const baseUrl = serverUrl || collabBaseFromLatticeApiBase(session.baseUrl)
@@ -341,6 +342,7 @@ async function createCollabTicket(payload: unknown): Promise<LatticeCollabTicket
         project_id: projectId,
         room_id: roomId,
         room_name: roomName,
+        room_access_key: roomAccessKey,
         role,
       }),
     })

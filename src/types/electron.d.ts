@@ -855,6 +855,7 @@ declare global {
         projectId: string
         roomId: string
         roomName: string
+        roomAccessKey: string
         role?: string
       }) => Promise<LatticeCollabTicketResultPayload>
       onLlmStreamChunk: (

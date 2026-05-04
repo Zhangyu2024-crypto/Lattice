@@ -62,6 +62,8 @@ describe('latex collaboration helpers', () => {
     expect(a.workspaceRelDir).toBe('papers/phase-diagram-draft')
     expect(a.serverUrl).toBe(DEFAULT_LATEX_COLLABORATION_SERVER_URL)
     expect(a.enabled).toBe(true)
+    expect(a.roomAccessKey).toMatch(/^[A-Za-z0-9_-]{32,256}$/)
+    expect(a.roomAccessKey).not.toBe(b.roomAccessKey)
   })
 
   it('keeps old documents compatible when collaboration is absent', () => {
@@ -97,6 +99,7 @@ describe('latex collaboration helpers', () => {
 
     expect(normalized?.projectId).toMatch(/^latex-artifact-1-/)
     expect(normalized?.roomId).toMatch(/^LAT-/)
+    expect(normalized?.roomAccessKey).toMatch(/^[A-Za-z0-9_-]{32,256}$/)
     expect(normalized?.localUserName).toBe('Local author')
     expect(normalized?.role).toBe('editor')
     expect(normalized?.serverUrl).toBeUndefined()

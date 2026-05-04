@@ -6,6 +6,7 @@ import type {
 import type { LatexDocumentPayload } from '../../types/latex'
 
 const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+const ROOM_ACCESS_KEY_BYTES = 32
 export const DEFAULT_LATEX_COLLABORATION_SERVER_URL =
   'wss://chaxiejun.xyz/_collab'
 
@@ -36,6 +37,21 @@ export function createLatexCollaborationProjectId(
     .replace(/^-+|-+$/g, '')
     .slice(0, 32)
   return `latex-${safe || 'project'}-${now.toString(36)}`
+}
+
+export function createLatexCollaborationRoomAccessKey(): string {
+  const cryptoApi = globalThis.crypto
+  if (cryptoApi?.getRandomValues) {
+    const bytes = cryptoApi.getRandomValues(new Uint8Array(ROOM_ACCESS_KEY_BYTES))
+    return base64UrlEncode(bytes)
+  }
+  // Non-cryptographic fallback only covers test/jsdom environments without
+  // Web Crypto. Electron and modern browsers use `crypto.getRandomValues`.
+  let out = ''
+  for (let i = 0; i < 48; i += 1) {
+    out += ROOM_ALPHABET[Math.floor(Math.random() * ROOM_ALPHABET.length)]
+  }
+  return out
 }
 
 export function normalizeCollaborationServerUrl(raw?: string): string | undefined {
@@ -100,6 +116,7 @@ export function createLatexCollaborationMetadata(args: {
     provider: 'yjs-websocket',
     projectId: createLatexCollaborationProjectId(args.artifactId, now),
     roomId: createLatexCollaborationRoomId(now),
+    roomAccessKey: createLatexCollaborationRoomAccessKey(),
     role: args.role ?? 'owner',
     initialSync: 'seed-from-artifact',
     localUserId,
@@ -136,11 +153,16 @@ export function normalizeLatexCollaborationMetadata(
     typeof cur.roomId === 'string' && cur.roomId.trim()
       ? cur.roomId.trim()
       : createLatexCollaborationRoomId(now)
+  const roomAccessKey =
+    typeof cur.roomAccessKey === 'string' && validRoomAccessKey(cur.roomAccessKey)
+      ? cur.roomAccessKey.trim()
+      : createLatexCollaborationRoomAccessKey()
   return {
     enabled: Boolean(cur.enabled),
     provider: 'yjs-websocket',
     projectId,
     roomId,
+    roomAccessKey,
     role: cur.role ?? 'owner',
     initialSync: cur.initialSync ?? 'seed-from-artifact',
     localUserId,
@@ -188,6 +210,19 @@ function randomToken(length: number): string {
     out += ROOM_ALPHABET[Math.floor(Math.random() * ROOM_ALPHABET.length)]
   }
   return out
+}
+
+function base64UrlEncode(bytes: Uint8Array): string {
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '')
+}
+
+function validRoomAccessKey(value: string): boolean {
+  return /^[A-Za-z0-9_-]{32,256}$/.test(value.trim())
 }
 
 function normalizeUserName(raw: string | undefined, fallback: string): string {

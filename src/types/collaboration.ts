@@ -27,6 +27,7 @@ export interface LatexCollaborationMetadata {
   provider: 'yjs-websocket'
   projectId: string
   roomId: string
+  roomAccessKey?: string
   role: LatexCollaborationRole
   initialSync: LatexCollaborationInitialSync
   localUserId: string
