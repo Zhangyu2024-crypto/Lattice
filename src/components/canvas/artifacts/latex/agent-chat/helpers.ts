@@ -10,6 +10,7 @@ import type {
 } from '../../../../../types/latex'
 import type { ChatTurn, ParsedCodeBlock } from './constants'
 import { SYSTEM_PROMPT } from './constants'
+import { normalizeLatexProjectPath } from '../../../../../lib/latex/project-paths'
 
 export function buildContextMessage(
   files: LatexFile[],
@@ -87,9 +88,12 @@ export function parseCodeBlocks(markdown: string): ParsedCodeBlock[] {
       /(?:^|\s)path\s*=\s*([^\s]+)/i.exec(info) ??
       /(?:^|\s)(\S+\.(?:tex|bib|cls|sty))(?:\s|$)/i.exec(info)
     const language = info.split(/\s+/)[0] || undefined
+    const path = pathMatch
+      ? normalizeLatexProjectPath(pathMatch[1]) || undefined
+      : undefined
     out.push({
       index: i++,
-      path: pathMatch ? pathMatch[1] : undefined,
+      path,
       language: language && language !== '' ? language : undefined,
       content: m[2],
     })
@@ -116,11 +120,14 @@ export function splitAroundCodeBlocks(markdown: string): Array<
     const pathMatch =
       /(?:^|\s)path\s*=\s*([^\s]+)/i.exec(info) ??
       /(?:^|\s)(\S+\.(?:tex|bib|cls|sty))(?:\s|$)/i.exec(info)
+    const path = pathMatch
+      ? normalizeLatexProjectPath(pathMatch[1]) || undefined
+      : undefined
     out.push({
       type: 'code',
       block: {
         index: i++,
-        path: pathMatch ? pathMatch[1] : undefined,
+        path,
         language: info.split(/\s+/)[0] || undefined,
         content: m[2],
       },

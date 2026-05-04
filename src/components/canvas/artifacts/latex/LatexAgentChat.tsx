@@ -31,10 +31,9 @@ import {
 import {
   buildContextMessage,
   mergeDuplicateConsecutiveAssistantErrors,
-  parseCodeBlocks,
-  splitAroundCodeBlocks,
   turnId,
 } from './agent-chat/helpers'
+import { normalizeLatexProjectPath } from '../../../../lib/latex/project-paths'
 
 interface Props {
   files: LatexFile[]
@@ -205,7 +204,7 @@ export default function LatexAgentChat({
   }
 
   const handleApply = (turnIdKey: string, block: ParsedCodeBlock) => {
-    const target = block.path ?? activeFile
+    const target = normalizeLatexProjectPath(block.path ?? activeFile) || activeFile
     if (!filesRef.current.some((f) => f.path === target)) {
       toast.warn(`File "${target}" is not in the project.`)
       return

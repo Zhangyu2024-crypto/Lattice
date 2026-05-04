@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import '../../../../styles/latex-creator.css'
-import { Loader2, Play } from 'lucide-react'
+import { FileCode2, Loader2, Play } from 'lucide-react'
 import { useSessionStore } from '../../../../stores/session-store'
 import type { Artifact } from '../../../../types/artifact'
 import type {
@@ -28,25 +28,50 @@ import { CompileBadge } from './document-card/CompileBadge'
 import { LatexFileTabs } from './document-card/LatexFileTabs'
 import { FocusDrawer } from './document-card/FocusDrawer'
 import { FocusHeaderActions } from './document-card/FocusHeaderActions'
-import { AiPalette } from './document-card/AiPalette'
 import { CardRightPane } from './document-card/CardRightPane'
 import { runSelectionCommand } from './document-card/run-selection-command'
 import { useFocusShortcuts } from './document-card/use-focus-shortcuts'
 import { useDrawerResize } from './document-card/use-drawer-resize'
+import { ProjectRail } from './document-card/ProjectRail'
+import {
+  ensureLatexExtension,
+  kindFromLatexPath,
+  normalizeLatexProjectFiles,
+  normalizeLatexProjectPath,
+} from '../../../../lib/latex/project-paths'
 
 interface Props {
   artifact: Artifact
   sessionId: string
   /** 'card' (default) — legacy split layout used inside the canvas / artifact
-   *  editor. 'focus' — immersive Creator overlay: full-bleed editor, right
-   *  slide-in drawer for Preview/Errors/Details, AI moved to a centered
-   *  command palette behind Ctrl+K. */
+   *  editor. 'focus' — immersive Creator workbench: project rail, source
+   *  editor, and compile / AI panels in a right drawer. */
   variant?: 'card' | 'focus'
 }
 
 type RightTab = 'preview' | 'errors' | 'details'
+type FocusRightTab = RightTab | 'ai'
 
 const AUTO_COMPILE_DEBOUNCE_MS = 2000
+
+function defaultProjectFile(files: LatexFile[]): string {
+  return (
+    files.find((f) => f.kind === 'tex')?.path ??
+    files[0]?.path ??
+    'main.tex'
+  )
+}
+
+function resolveProjectFile(
+  files: LatexFile[],
+  requested: string | undefined,
+  fallback = defaultProjectFile(files),
+): string {
+  const normalized = normalizeLatexProjectPath(requested ?? '')
+  return normalized && files.some((f) => f.path === normalized)
+    ? normalized
+    : fallback
+}
 
 export default function LatexDocumentCard({
   artifact,
@@ -54,14 +79,32 @@ export default function LatexDocumentCard({
   variant = 'card',
 }: Props) {
   const payload = artifact.payload as unknown as LatexDocumentPayload
+  const normalizedInitialFiles = useMemo(
+    () => normalizeLatexProjectFiles(payload.files),
+    [payload.files],
+  )
+  const initialRootFile = resolveProjectFile(
+    normalizedInitialFiles,
+    payload.rootFile,
+  )
+  const initialActiveFile = resolveProjectFile(
+    normalizedInitialFiles,
+    payload.activeFile,
+    initialRootFile,
+  )
   const patchArtifact = useSessionStore((s) => s.patchArtifact)
 
-  const [files, setFiles] = useState<LatexFile[]>(payload.files)
-  const [activeFile, setActiveFile] = useState<string>(
-    payload.activeFile ||
-      payload.files.find((f) => f.path === payload.rootFile)?.path ||
-      payload.files[0]?.path ||
-      'main.tex',
+  const [files, setFiles] = useState<LatexFile[]>(normalizedInitialFiles)
+  const [activeFile, setActiveFile] = useState<string>(initialActiveFile)
+  const rootFile = resolveProjectFile(files, payload.rootFile)
+  const normalizedPayload = useMemo<LatexDocumentPayload>(
+    () => ({
+      ...payload,
+      files,
+      rootFile,
+      activeFile: resolveProjectFile(files, activeFile, rootFile),
+    }),
+    [payload, files, rootFile, activeFile],
   )
   // PDF bytes are intentionally kept only in component state — they're
   // expensive and easy to regenerate. See session-store's
@@ -69,15 +112,12 @@ export default function LatexDocumentCard({
   // never pdf/pdf-cache fields.
   const [pdf, setPdf] = useState<Uint8Array | null>(null)
   const [rightTab, setRightTab] = useState<RightTab>('preview')
-  // Focus-mode only: right slide-in drawer and centered AI palette. The
-  // drawer opens to Preview by default so the PDF surface is discoverable
-  // (pure-blank editor hides where the output goes); the user can close it
-  // for a fullscreen writing session and keep it closed. The AI palette
-  // stays closed until Ctrl+K — it's explicitly a command-palette affordance.
-  const [drawerTab, setDrawerTab] = useState<RightTab | null>(
+  // Focus-mode only: right drawer for compile output, diagnostics, AI, and
+  // project details. Preview is the default so the PDF surface is
+  // discoverable; Ctrl+K switches this drawer to AI.
+  const [drawerTab, setDrawerTab] = useState<FocusRightTab | null>(
     variant === 'focus' ? 'preview' : null,
   )
-  const [aiOpen, setAiOpen] = useState(false)
   const bodyRef = useRef<HTMLDivElement | null>(null)
   const {
     drawerWidth,
@@ -124,12 +164,25 @@ export default function LatexDocumentCard({
   const handlePatchPayload = useCallback(
     (partial: Partial<LatexDocumentPayload>) => {
       const cur = payloadRef.current
+      const nextFiles = normalizeLatexProjectFiles(
+        partial.files ?? filesRef.current,
+      )
+      const nextRoot = resolveProjectFile(
+        nextFiles,
+        partial.rootFile ?? cur.rootFile,
+      )
+      const nextActive = resolveProjectFile(
+        nextFiles,
+        partial.activeFile ?? activeFile,
+        nextRoot,
+      )
       patchArtifact(sessionId, artifact.id, {
         payload: {
           ...cur,
-          files: filesRef.current,
-          activeFile,
           ...partial,
+          files: nextFiles,
+          activeFile: nextActive,
+          rootFile: nextRoot,
         },
       } as never)
     },
@@ -139,14 +192,23 @@ export default function LatexDocumentCard({
   const flushFiles = useCallback(
     (nextFiles: LatexFile[], nextActive: string) => {
       const current = payloadRef.current
-      const sameFiles = JSON.stringify(nextFiles) === JSON.stringify(current.files)
-      const sameActive = nextActive === current.activeFile
-      if (sameFiles && sameActive) return
+      const normalizedFiles = normalizeLatexProjectFiles(nextFiles)
+      const nextRoot = resolveProjectFile(normalizedFiles, current.rootFile)
+      const normalizedActive = resolveProjectFile(
+        normalizedFiles,
+        nextActive,
+        nextRoot,
+      )
+      const sameFiles =
+        JSON.stringify(normalizedFiles) === JSON.stringify(current.files)
+      const sameActive = normalizedActive === current.activeFile
+      if (sameFiles && sameActive && nextRoot === current.rootFile) return
       patchArtifact(sessionId, artifact.id, {
         payload: {
           ...current,
-          files: nextFiles,
-          activeFile: nextActive,
+          files: normalizedFiles,
+          activeFile: normalizedActive,
+          rootFile: nextRoot,
         },
       } as never)
     },
@@ -198,25 +260,35 @@ export default function LatexDocumentCard({
   }
 
   const handleSwitchFile = (path: string) => {
-    if (path === activeFile) return
-    flushFiles(filesRef.current, path)
-    setActiveFile(path)
+    const normalized = normalizeLatexProjectPath(path)
+    if (!normalized || normalized === activeFile) return
+    if (!filesRef.current.some((f) => f.path === normalized)) {
+      toast.warn(`File "${normalized}" is not in the Creator project.`)
+      return
+    }
+    flushFiles(filesRef.current, normalized)
+    setActiveFile(normalized)
   }
 
   const handleBlur = () => flushFiles(filesRef.current, activeFile)
 
   const handleNewFile = async () => {
-    const raw = await asyncPrompt('New file path (e.g. chapters/methods.tex):')
+    const raw = await asyncPrompt({
+      message: 'New Creator file path',
+      placeholder: 'chapters/methods.tex',
+      okLabel: 'Create',
+    })
     if (!raw) return
-    const path = raw.trim()
-    if (!path) return
+    const path = ensureLatexExtension(normalizeLatexProjectPath(raw))
+    if (!path) {
+      toast.warn('Use a relative path inside this Creator project.')
+      return
+    }
     if (filesRef.current.some((f) => f.path === path)) {
       toast.warn(`File "${path}" already exists`)
       return
     }
-    const ext = path.split('.').pop()?.toLowerCase() ?? ''
-    const kind: LatexFile['kind'] =
-      ext === 'bib' ? 'bib' : ext === 'tex' ? 'tex' : 'asset'
+    const kind = kindFromLatexPath(path)
     const next = [...filesRef.current, { path, kind, content: '' }]
     setFiles(next)
     flushFiles(next, path)
@@ -227,41 +299,46 @@ export default function LatexDocumentCard({
    *  "Apply" button) and persist the update to the artifact store. */
   const applyFileContents = useCallback(
     (path: string, content: string) => {
+      const normalized = normalizeLatexProjectPath(path)
       const current = filesRef.current
-      if (!current.some((f) => f.path === path)) {
-        toast.warn(`File "${path}" is not in the project.`)
+      if (!normalized || !current.some((f) => f.path === normalized)) {
+        toast.warn(`File "${path}" is not in the Creator project.`)
         return
       }
       const next = current.map((f) =>
-        f.path === path ? { ...f, content } : f,
+        f.path === normalized ? { ...f, content } : f,
       )
       setFiles(next)
       // If we just overwrote the file the editor is currently showing,
       // bump the remount counter so CodeMirror picks up the new doc.
-      if (path === activeFile) {
-        applyVersionBumpRef.current = path
+      if (normalized === activeFile) {
+        applyVersionBumpRef.current = normalized
         setApplyVersion((v) => v + 1)
       } else {
         // Jump to the file we just changed so the user can see the new
         // contents immediately; also remount to load them.
-        setActiveFile(path)
-        applyVersionBumpRef.current = path
+        setActiveFile(normalized)
+        applyVersionBumpRef.current = normalized
         setApplyVersion((v) => v + 1)
       }
-      flushFiles(next, path)
+      flushFiles(next, normalized)
     },
     [flushFiles, activeFile],
   )
 
   const handleCloseFile = (path: string) => {
+    const normalized = normalizeLatexProjectPath(path)
+    if (!normalized) return
     if (filesRef.current.length <= 1) {
       toast.warn('A LaTeX project must contain at least one file')
       return
     }
     // eslint-disable-next-line no-alert
-    if (!window.confirm(`Remove "${path}" from the project?`)) return
-    const next = filesRef.current.filter((f) => f.path !== path)
-    const nextActive = path === activeFile ? next[0].path : activeFile
+    if (!window.confirm(`Remove "${normalized}" from the Creator project?`)) {
+      return
+    }
+    const next = filesRef.current.filter((f) => f.path !== normalized)
+    const nextActive = normalized === activeFile ? next[0].path : activeFile
     setFiles(next)
     flushFiles(next, nextActive)
     setActiveFile(nextActive)
@@ -274,7 +351,13 @@ export default function LatexDocumentCard({
       return
     }
     const current = payloadRef.current
-    const snapshot = filesRef.current
+    const snapshot = normalizeLatexProjectFiles(filesRef.current)
+    const compileRoot = resolveProjectFile(snapshot, current.rootFile)
+    if (!snapshot.some((f) => f.path === compileRoot)) {
+      toast.warn('This Creator project does not contain a compilable file.')
+      return
+    }
+    const compileActive = resolveProjectFile(snapshot, activeFile, compileRoot)
     compileInFlightRef.current = true
     setCompilingSince(Date.now())
     setCompileSnapshot((s) => ({ ...s, status: 'compiling' }))
@@ -282,7 +365,8 @@ export default function LatexDocumentCard({
       payload: {
         ...current,
         files: snapshot,
-        activeFile,
+        activeFile: compileActive,
+        rootFile: compileRoot,
         status: 'compiling' as const,
       },
     } as never)
@@ -291,7 +375,7 @@ export default function LatexDocumentCard({
       const runner = await getBusytexRunner()
       const result = await runner.compile({
         files: snapshot.map((f) => ({ path: f.path, contents: f.content })),
-        rootFile: current.rootFile,
+        rootFile: compileRoot,
       })
       const parsed = parseLatexLog(result.log)
       const logTail = result.log.slice(-64 * 1024)
@@ -317,7 +401,8 @@ export default function LatexDocumentCard({
         payload: {
           ...payloadRef.current,
           files: snapshot,
-          activeFile,
+          activeFile: compileActive,
+          rootFile: compileRoot,
           status: result.ok ? 'succeeded' : 'failed',
           lastCompileAt: Date.now(),
           durationMs: result.durationMs,
@@ -377,8 +462,6 @@ export default function LatexDocumentCard({
 
   useFocusShortcuts({
     enabled: variant === 'focus',
-    aiOpen,
-    setAiOpen,
     drawerTab,
     setDrawerTab,
     compile,
@@ -391,21 +474,16 @@ export default function LatexDocumentCard({
     return (
       <div className="latex-focus-root">
         <header className="latex-focus-header">
-          <LatexFileTabs
-            variant="focus"
-            files={files}
-            activeFile={activeFile}
-            rootFile={payload.rootFile}
-            onSwitchFile={handleSwitchFile}
-            onCloseFile={handleCloseFile}
-            onNewFile={handleNewFile}
-          />
+          <div className="latex-focus-source-title">
+            <FileCode2 size={14} aria-hidden />
+            <span className="latex-focus-source-path" title={activeFile}>
+              {activeFile}
+            </span>
+          </div>
           <FocusHeaderActions
             status={compileSnapshot.status}
             drawerTab={drawerTab}
             setDrawerTab={setDrawerTab}
-            aiOpen={aiOpen}
-            setAiOpen={setAiOpen}
             issueCount={issueCount}
             compilingSince={compilingSince}
             onCompile={() => void compile()}
@@ -413,6 +491,14 @@ export default function LatexDocumentCard({
         </header>
 
         <div className="latex-focus-body" ref={bodyRef}>
+          <ProjectRail
+            files={files}
+            activeFile={activeFile}
+            rootFile={rootFile}
+            onSwitchFile={handleSwitchFile}
+            onNewFile={handleNewFile}
+            onCloseFile={handleCloseFile}
+          />
           <div className="latex-focus-editor" onBlur={handleBlur}>
             {active ? (
               <LatexCodeMirror
@@ -453,30 +539,26 @@ export default function LatexDocumentCard({
                   warnings={compileSnapshot.warnings}
                   logTail={compileSnapshot.logTail}
                 />
+              ) : drawerTab === 'ai' ? (
+                <LatexAgentChat
+                  files={files}
+                  activeFile={activeFile}
+                  payload={normalizedPayload}
+                  errors={compileSnapshot.errors}
+                  warnings={compileSnapshot.warnings}
+                  sessionId={sessionId}
+                  onApplyFile={applyFileContents}
+                />
               ) : (
                 <LatexDetailsPane
                   documentTitle={artifact.title}
-                  payload={payload}
+                  payload={normalizedPayload}
                   onPatchPayload={handlePatchPayload}
                 />
               )}
             </FocusDrawer>
           ) : null}
         </div>
-
-        {aiOpen ? (
-          <AiPalette onClose={() => setAiOpen(false)}>
-            <LatexAgentChat
-              files={files}
-              activeFile={activeFile}
-              payload={payload}
-              errors={compileSnapshot.errors}
-              warnings={compileSnapshot.warnings}
-              sessionId={sessionId}
-              onApplyFile={applyFileContents}
-            />
-          </AiPalette>
-        ) : null}
       </div>
     )
   }
@@ -488,7 +570,7 @@ export default function LatexDocumentCard({
           variant="card"
           files={files}
           activeFile={activeFile}
-          rootFile={payload.rootFile}
+          rootFile={rootFile}
           onSwitchFile={handleSwitchFile}
           onCloseFile={handleCloseFile}
           onNewFile={handleNewFile}
@@ -553,7 +635,7 @@ export default function LatexDocumentCard({
           ) : (
             <LatexDetailsPane
               documentTitle={artifact.title}
-              payload={payload}
+              payload={normalizedPayload}
               onPatchPayload={handlePatchPayload}
             />
           )}
@@ -563,7 +645,7 @@ export default function LatexDocumentCard({
       <LatexAgentChat
         files={files}
         activeFile={activeFile}
-        payload={payload}
+        payload={normalizedPayload}
         errors={compileSnapshot.errors}
         warnings={compileSnapshot.warnings}
         sessionId={sessionId}

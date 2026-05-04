@@ -11,7 +11,7 @@ import { Button } from '../../../../ui'
 import { CompileBadge } from './CompileBadge'
 import { FocusToggle } from './FocusToggle'
 
-export type FocusDrawerTab = 'preview' | 'errors' | 'details'
+export type FocusDrawerTab = 'preview' | 'errors' | 'ai' | 'details'
 
 // Right-hand action cluster of the focus-mode header: compile-status pill,
 // drawer/AI toggles, primary Compile button with kbd hint. Lifted out of
@@ -21,8 +21,6 @@ export function FocusHeaderActions({
   status,
   drawerTab,
   setDrawerTab,
-  aiOpen,
-  setAiOpen,
   issueCount,
   compilingSince,
   onCompile,
@@ -30,8 +28,6 @@ export function FocusHeaderActions({
   status: LatexCompileStatus
   drawerTab: FocusDrawerTab | null
   setDrawerTab: (updater: (t: FocusDrawerTab | null) => FocusDrawerTab | null) => void
-  aiOpen: boolean
-  setAiOpen: (updater: (v: boolean) => boolean) => void
   issueCount: number
   compilingSince: number | null
   onCompile: () => void
@@ -68,11 +64,13 @@ export function FocusHeaderActions({
         title="Toggle the Details drawer"
       />
       <FocusToggle
-        active={aiOpen}
-        onClick={() => setAiOpen((v) => !v)}
+        active={drawerTab === 'ai'}
+        onClick={() =>
+          setDrawerTab((t) => (t === 'ai' ? null : 'ai'))
+        }
         icon={<MessageSquare size={12} aria-hidden />}
         label="AI"
-        title="Open the Creator AI palette (Ctrl+K)"
+        title="Toggle the Creator AI panel (Ctrl+K)"
         hint="⌘K"
       />
       <Button
