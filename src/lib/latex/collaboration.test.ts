@@ -63,7 +63,11 @@ describe('latex collaboration helpers', () => {
     expect(a.serverUrl).toBe(DEFAULT_LATEX_COLLABORATION_SERVER_URL)
     expect(a.enabled).toBe(true)
     expect(a.roomAccessKey).toMatch(/^[A-Za-z0-9_-]{32,256}$/)
+    expect(a.roomSecret).toMatch(/^[A-Za-z0-9_-]{32,256}$/)
+    expect(a.roomAccessKey).not.toBe(a.roomSecret)
+    expect(a.encryption).toBe('e2ee-v1')
     expect(a.roomAccessKey).not.toBe(b.roomAccessKey)
+    expect(a.roomSecret).not.toBe(b.roomSecret)
   })
 
   it('keeps old documents compatible when collaboration is absent', () => {
@@ -100,6 +104,9 @@ describe('latex collaboration helpers', () => {
     expect(normalized?.projectId).toMatch(/^latex-artifact-1-/)
     expect(normalized?.roomId).toMatch(/^LAT-/)
     expect(normalized?.roomAccessKey).toMatch(/^[A-Za-z0-9_-]{32,256}$/)
+    expect(normalized?.roomSecret).toMatch(/^[A-Za-z0-9_-]{32,256}$/)
+    expect(normalized?.roomSecret).toBe(normalized?.roomAccessKey)
+    expect(normalized?.encryption).toBe('e2ee-v1')
     expect(normalized?.localUserName).toBe('Local author')
     expect(normalized?.role).toBe('editor')
     expect(normalized?.serverUrl).toBeUndefined()

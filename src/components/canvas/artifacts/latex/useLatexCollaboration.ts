@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Extension } from '@codemirror/state'
 import * as Y from 'yjs'
+import * as awarenessProtocol from 'y-protocols/awareness'
 import { IndexeddbPersistence } from 'y-indexeddb'
-import { WebsocketProvider } from 'y-websocket'
 import { yCollab } from 'y-codemirror.next'
 import type {
   LatexCollaborationMember,
@@ -10,6 +10,8 @@ import type {
   LatexCollaborationRuntimeState,
 } from '../../../../types/collaboration'
 import { buildLatexCollaborationRoomName } from '../../../../lib/latex/collaboration'
+import { EncryptedLatexCollaborationClient } from '../../../../lib/latex/encrypted-collaboration-client'
+import { deriveRoomAccessKey } from '../../../../lib/latex/encrypted-collaboration'
 
 interface Args {
   collaboration?: LatexCollaborationMetadata
@@ -36,7 +38,13 @@ type AwarenessState = {
 type CollabTicketState =
   | { status: 'none' }
   | { status: 'loading' }
-  | { status: 'ready'; ticket: string; username?: string; userId?: string }
+  | {
+      status: 'ready'
+      ticket: string
+      username?: string
+      userId?: string
+      roomSecret: string
+    }
   | { status: 'error'; error: string }
 
 export function useLatexCollaboration({
@@ -75,22 +83,26 @@ export function useLatexCollaboration({
       })
       return
     }
-    if (!collaboration.roomAccessKey) {
+    if (!collaboration.roomSecret) {
       setTicketState({
         status: 'error',
-        error: 'Collaboration room access key is missing.',
+        error: 'Collaboration encryption key is missing.',
       })
       return
     }
+    const roomSecret = collaboration.roomSecret
     setTicketState({ status: 'loading' })
-    api.latticeAuthCollabTicket({
-      serverUrl: collaboration.serverUrl,
-      projectId: collaboration.projectId,
-      roomId: collaboration.roomId,
-      roomName,
-      roomAccessKey: collaboration.roomAccessKey,
-      role: collaboration.role,
-    })
+    deriveRoomAccessKey(roomSecret, roomName)
+      .then((roomAccessKey) =>
+        api.latticeAuthCollabTicket({
+          serverUrl: collaboration.serverUrl,
+          projectId: collaboration.projectId,
+          roomId: collaboration.roomId,
+          roomName,
+          roomAccessKey,
+          role: collaboration.role,
+        }),
+      )
       .then((result) => {
         if (cancelled) return
         if (result.ok) {
@@ -99,6 +111,7 @@ export function useLatexCollaboration({
             ticket: result.ticket,
             username: result.username,
             userId: result.userId,
+            roomSecret,
           })
         } else {
           setTicketState({ status: 'error', error: result.error })
@@ -120,7 +133,7 @@ export function useLatexCollaboration({
     collaboration?.serverUrl,
     collaboration?.projectId,
     collaboration?.roomId,
-    collaboration?.roomAccessKey,
+    collaboration?.roomSecret,
     collaboration?.role,
     roomName,
   ])
@@ -150,17 +163,24 @@ export function useLatexCollaboration({
     const ytext = ydoc.getText('latex')
     const undoManager = new Y.UndoManager(ytext)
     const persistence = new IndexeddbPersistence(`lattice:${roomName}`, ydoc)
+    const awareness = new awarenessProtocol.Awareness(ydoc)
     const provider =
-      collaboration.serverUrl != null
-        ? new WebsocketProvider(collaboration.serverUrl, roomName, ydoc, {
-            connect: true,
-            disableBc: false,
-            params: {
-              ticket: ticketState.status === 'ready' ? ticketState.ticket : '',
+      collaboration.serverUrl != null && collaboration.roomSecret
+        ? new EncryptedLatexCollaborationClient({
+            serverUrl: collaboration.serverUrl,
+            roomName,
+            ticket: ticketState.status === 'ready' ? ticketState.ticket : '',
+            roomSecret: ticketState.status === 'ready' ? ticketState.roomSecret : '',
+            doc: ydoc,
+            awareness,
+            onStatus: (status) => {
+              if (status === 'connected') markStatus('connected')
+              else if (status === 'connecting') markStatus('connecting')
+              else markStatus('disconnected')
             },
+            onError: (error) => markStatus('error', error),
           })
         : null
-    const awareness = provider?.awareness ?? null
     const localMemberId =
       ticketState.status === 'ready' && ticketState.userId
         ? ticketState.userId
@@ -171,7 +191,7 @@ export function useLatexCollaboration({
         : collaboration.localUserName
 
     const setLocalUser = () => {
-      awareness?.setLocalStateField('user', {
+      awareness.setLocalStateField('user', {
         id: localMemberId,
         name: localMemberName,
         role: collaboration.role,
@@ -189,7 +209,7 @@ export function useLatexCollaboration({
         isLocal: true,
         lastSeenAt: Date.now(),
       })
-      awareness?.getStates().forEach((state: AwarenessState, clientId) => {
+      awareness.getStates().forEach((state: AwarenessState, clientId) => {
         const user = state.user
         if (!user?.id || user.id === localMemberId) return
         members.set(user.id, {
@@ -249,15 +269,8 @@ export function useLatexCollaboration({
 
     ytext.observe(handleYText)
     setLocalUser()
-    awareness?.on('change', updateMembers)
-    provider?.on('status', ({ status }: { status: 'connected' | 'disconnected' | 'connecting' }) => {
-      if (status === 'connected') markStatus('connected')
-      else if (status === 'connecting') markStatus('connecting')
-      else markStatus('disconnected')
-    })
-    provider?.on('connection-error', (event: Event) => {
-      markStatus('error', event.type || 'Connection error')
-    })
+    awareness.on('change', updateMembers)
+    provider?.connect()
 
     markStatus(provider ? 'connecting' : 'local-only')
 
@@ -265,11 +278,12 @@ export function useLatexCollaboration({
       disposed = true
       setExtension((cur) => (cur === null ? cur : null))
       setEditorValue(null)
-      awareness?.off('change', updateMembers)
+      awareness.off('change', updateMembers)
       provider?.destroy()
       ytext.unobserve(handleYText)
       undoManager.destroy()
       void persistence.destroy()
+      awareness.destroy()
       ydoc.destroy()
     }
   }, [collaboration, roomName, filePath, onRemoteText, ticketState])

@@ -28,6 +28,8 @@ export interface LatexCollaborationMetadata {
   projectId: string
   roomId: string
   roomAccessKey?: string
+  roomSecret?: string
+  encryption?: 'e2ee-v1'
   role: LatexCollaborationRole
   initialSync: LatexCollaborationInitialSync
   localUserId: string

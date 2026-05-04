@@ -140,9 +140,13 @@ export default function LatexDetailsPane({
     const invite = [
       `Lattice LaTeX room: ${collaboration.roomId}`,
       `Project: ${collaboration.projectId}`,
-      collaboration.roomAccessKey ? `Access key: ${collaboration.roomAccessKey}` : null,
+      collaboration.roomSecret
+        ? `Room key: ${collaboration.roomSecret}`
+        : collaboration.roomAccessKey
+          ? `Room key: ${collaboration.roomAccessKey}`
+          : null,
       collaboration.serverUrl ? `Server: ${collaboration.serverUrl}` : null,
-      'Keep this invite private. Anyone with the access key can join the room.',
+      'Keep this invite private. Anyone with the room key can join and decrypt the room.',
     ]
       .filter(Boolean)
       .join('\n')
@@ -185,6 +189,10 @@ export default function LatexDetailsPane({
             <MetaRow label="Room" value={collaboration.roomId} mono />
             <MetaRow label="Project" value={collaboration.projectId} mono />
             <MetaRow
+              label="Encryption"
+              value={collaboration.encryption === 'e2ee-v1' ? 'End-to-end' : 'Local'}
+            />
+            <MetaRow
               label="Source layout"
               value={collaboration.workspaceRelDir ?? 'artifact files'}
               mono
@@ -205,8 +213,8 @@ export default function LatexDetailsPane({
                 </Button>
               </div>
               <span className="latex-details-toggle-hint">
-                Empty server keeps the document in local-only mode. The default
-                chaxiejun.xyz endpoint uses your Lattice desktop login.
+                Empty server keeps the document in local-only mode. Online rooms
+                send only encrypted LaTeX updates to the server.
               </span>
             </div>
             <div className="latex-collab-actions">
@@ -245,8 +253,8 @@ export default function LatexDetailsPane({
         ) : (
           <>
             <p className="latex-details-assistant-copy">
-              Create a shared room for this LaTeX artifact. Source files can be
-              synchronized through Yjs while compile output stays local.
+              Create an end-to-end encrypted room for this LaTeX artifact.
+              Source edits sync online; compile output stays local.
             </p>
             <div className="latex-details-field">
               <span className="latex-details-field-label">

@@ -4,6 +4,7 @@ import type {
   LatexCollaborationRole,
 } from '../../types/collaboration'
 import type { LatexDocumentPayload } from '../../types/latex'
+import { createRoomSecret } from './encrypted-collaboration'
 
 const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const ROOM_ACCESS_KEY_BYTES = 32
@@ -111,12 +112,15 @@ export function createLatexCollaborationMetadata(args: {
   const now = args.now ?? Date.now()
   const name = normalizeUserName(args.userName, 'Local author')
   const localUserId = `local-${stableHash(`${args.artifactId}:${name}`).slice(0, 10)}`
+  const roomSecret = createRoomSecret()
   return {
     enabled: true,
     provider: 'yjs-websocket',
     projectId: createLatexCollaborationProjectId(args.artifactId, now),
     roomId: createLatexCollaborationRoomId(now),
     roomAccessKey: createLatexCollaborationRoomAccessKey(),
+    roomSecret,
+    encryption: 'e2ee-v1',
     role: args.role ?? 'owner',
     initialSync: 'seed-from-artifact',
     localUserId,
@@ -157,12 +161,18 @@ export function normalizeLatexCollaborationMetadata(
     typeof cur.roomAccessKey === 'string' && validRoomAccessKey(cur.roomAccessKey)
       ? cur.roomAccessKey.trim()
       : createLatexCollaborationRoomAccessKey()
+  const roomSecret =
+    typeof cur.roomSecret === 'string' && validRoomAccessKey(cur.roomSecret)
+      ? cur.roomSecret.trim()
+      : roomAccessKey
   return {
     enabled: Boolean(cur.enabled),
     provider: 'yjs-websocket',
     projectId,
     roomId,
     roomAccessKey,
+    roomSecret,
+    encryption: 'e2ee-v1',
     role: cur.role ?? 'owner',
     initialSync: cur.initialSync ?? 'seed-from-artifact',
     localUserId,
