@@ -2728,7 +2728,6 @@
 .settings-modal-nav-item.is-active {
   background: var(--color-bg-active);
   color: var(--color-text-emphasis);
-  border-left-color: var(--color-accent);
 }
 
 .settings-modal-nav-icon {
