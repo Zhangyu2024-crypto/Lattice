@@ -6,6 +6,7 @@ interface Props {
   warnings: LatexCompileError[]
   logTail: string
   onFixWithAi?: () => void
+  onJumpToSource?: (err: LatexCompileError) => void
 }
 
 // BusyTeX only ships pdfTeX + bibtex8 — no biber, no shell-escape. When
@@ -37,6 +38,7 @@ export default function LatexErrorsPane({
   warnings,
   logTail,
   onFixWithAi,
+  onJumpToSource,
 }: Props) {
   const anything = errors.length + warnings.length > 0
   const showEngineHint = hasEngineLimitationSignal(errors, warnings, logTail)
@@ -60,10 +62,18 @@ export default function LatexErrorsPane({
       {anything ? (
         <ul className="latex-errors-list" role="list">
           {errors.map((e, i) => (
-            <ErrorRow key={`e-${i}`} err={e} />
+            <ErrorRow
+              key={`e-${i}`}
+              err={e}
+              onJumpToSource={onJumpToSource}
+            />
           ))}
           {warnings.map((w, i) => (
-            <ErrorRow key={`w-${i}`} err={w} />
+            <ErrorRow
+              key={`w-${i}`}
+              err={w}
+              onJumpToSource={onJumpToSource}
+            />
           ))}
         </ul>
       ) : (
@@ -102,7 +112,13 @@ function EngineHintBanner() {
   )
 }
 
-function ErrorRow({ err }: { err: LatexCompileError }) {
+function ErrorRow({
+  err,
+  onJumpToSource,
+}: {
+  err: LatexCompileError
+  onJumpToSource?: (err: LatexCompileError) => void
+}) {
   const Icon =
     err.severity === 'error'
       ? AlertCircle
@@ -119,16 +135,25 @@ function ErrorRow({ err }: { err: LatexCompileError }) {
     <li className={cls}>
       <Icon size={12} aria-hidden />
       <div className="latex-errors-row-main">
-        <div className="latex-errors-row-message">
-          {err.message}
+        <button
+          type="button"
+          className="latex-errors-row-message"
+          onClick={() => onJumpToSource?.(err)}
+          disabled={!onJumpToSource || err.line == null}
+          title={
+            err.line != null
+              ? `Open ${err.file ?? 'active file'} at line ${err.line}`
+              : undefined
+          }
+        >
+          <span>{err.message}</span>
           {err.line != null ? (
             <span className="latex-errors-row-loc">
-              {' '}
-              — line {err.line}
-              {err.file ? ` in ${err.file}` : ''}
+              line {err.line}
+              {err.file ? ` · ${err.file}` : ''}
             </span>
           ) : null}
-        </div>
+        </button>
         {err.excerpt ? (
           <pre className="latex-errors-row-excerpt">{err.excerpt}</pre>
         ) : null}

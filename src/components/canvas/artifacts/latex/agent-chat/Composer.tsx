@@ -6,7 +6,7 @@
 import { forwardRef } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { ArrowUp, Loader2 } from 'lucide-react'
-import { QUICK_ACTIONS } from './constants'
+import { QUICK_ACTIONS, type QuickAction } from './constants'
 
 interface Props {
   input: string
@@ -21,26 +21,29 @@ export const Composer = forwardRef<HTMLTextAreaElement, Props>(function Composer
   { input, busy, issueCount, onInputChange, onKeyDown, onSubmit },
   ref,
 ) {
+  const compileActions = QUICK_ACTIONS.filter((q) =>
+    q.id === 'fix' || q.id === 'explain',
+  )
+  const writingActions = QUICK_ACTIONS.filter((q) =>
+    q.id !== 'fix' && q.id !== 'explain',
+  )
   return (
     <div className="latex-agent-chat-footer">
-      <div className="latex-agent-chat-quick-row" aria-label="Quick prompts">
-        {QUICK_ACTIONS.map((q) => {
-          const Icon = q.icon
-          const disabled = busy || (q.id === 'fix' && issueCount === 0)
-          return (
-            <button
-              key={q.id}
-              type="button"
-              className="latex-agent-chat-quick-btn"
-              onClick={() => onSubmit(q.prompt)}
-              disabled={disabled}
-              title={q.prompt}
-            >
-              <Icon size={12} strokeWidth={2} aria-hidden />
-              <span>{q.label}</span>
-            </button>
-          )
-        })}
+      <div className="latex-agent-action-board">
+        <ActionGroup
+          label="Build"
+          actions={compileActions}
+          busy={busy}
+          issueCount={issueCount}
+          onSubmit={onSubmit}
+        />
+        <ActionGroup
+          label="Writing"
+          actions={writingActions}
+          busy={busy}
+          issueCount={issueCount}
+          onSubmit={onSubmit}
+        />
       </div>
 
       <div className="latex-agent-chat-inputwrap">
@@ -78,3 +81,42 @@ export const Composer = forwardRef<HTMLTextAreaElement, Props>(function Composer
     </div>
   )
 })
+
+function ActionGroup({
+  label,
+  actions,
+  busy,
+  issueCount,
+  onSubmit,
+}: {
+  label: string
+  actions: QuickAction[]
+  busy: boolean
+  issueCount: number
+  onSubmit: (prompt: string) => void
+}) {
+  return (
+    <div className="latex-agent-action-group">
+      <span className="latex-agent-action-label">{label}</span>
+      <div className="latex-agent-chat-quick-row" aria-label={`${label} actions`}>
+        {actions.map((q) => {
+          const Icon = q.icon
+          const disabled = busy || (q.id === 'fix' && issueCount === 0)
+          return (
+            <button
+              key={q.id}
+              type="button"
+              className="latex-agent-chat-quick-btn"
+              onClick={() => onSubmit(q.prompt)}
+              disabled={disabled}
+              title={q.prompt}
+            >
+              <Icon size={12} strokeWidth={2} aria-hidden />
+              <span>{q.label}</span>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}

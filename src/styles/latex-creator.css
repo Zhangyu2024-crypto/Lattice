@@ -347,6 +347,34 @@
   background: color-mix(in srgb, var(--color-accent) 25%, transparent);
 }
 
+.latex-errors-row-message {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  text-align: left;
+  word-break: break-word;
+}
+
+button.latex-errors-row-message:not(:disabled) {
+  cursor: pointer;
+}
+
+button.latex-errors-row-message:not(:disabled):hover span:first-child {
+  color: var(--color-accent-text, var(--color-accent));
+}
+
+button.latex-errors-row-message:disabled {
+  cursor: default;
+}
+
 /* === Details tab ===================================================== */
 .latex-details-pane {
   flex: 1 1 auto;
@@ -572,9 +600,31 @@
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   padding: 8px 12px 10px;
   background: color-mix(in srgb, var(--color-bg-base) 35%, transparent);
+}
+
+.latex-agent-action-board {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.latex-agent-action-group {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+}
+
+.latex-agent-action-label {
+  color: var(--color-text-muted);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .latex-agent-chat-quick-row {
@@ -592,7 +642,7 @@
 }
 
 .latex-agent-chat-quick-btn {
-  flex: 1 1 0;
+  flex: 1 1 92px;
   min-width: 0;
   display: inline-flex;
   align-items: center;
@@ -1235,8 +1285,22 @@
 }
 
 .latex-project-folder {
+  cursor: pointer;
   color: var(--color-text-muted);
   font-weight: 600;
+}
+
+.latex-project-folder:hover {
+  background: color-mix(in srgb, var(--color-text-primary) 5%, transparent);
+  color: var(--color-text-primary);
+}
+
+.latex-project-folder svg:first-child {
+  transition: transform 120ms ease;
+}
+
+.latex-project-folder svg:first-child.is-open {
+  transform: rotate(90deg);
 }
 
 .latex-project-file-row {
@@ -1289,7 +1353,7 @@
   letter-spacing: 0.04em;
 }
 
-.latex-project-remove {
+.latex-project-action {
   width: 20px;
   height: 20px;
   flex: 0 0 auto;
@@ -1304,9 +1368,15 @@
   cursor: pointer;
 }
 
-.latex-project-file-row:hover .latex-project-remove,
-.latex-project-file-row.is-active .latex-project-remove {
+.latex-project-file-row:hover .latex-project-action,
+.latex-project-file-row.is-active .latex-project-action,
+.latex-project-action:focus-visible {
   opacity: 1;
+}
+
+.latex-project-action:hover {
+  background: color-mix(in srgb, var(--color-text-primary) 8%, transparent);
+  color: var(--color-text-primary);
 }
 
 .latex-project-remove:hover {

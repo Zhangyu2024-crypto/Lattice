@@ -180,6 +180,11 @@ export default function LatexDocumentCard({
   // for a confirmed AI replacement.
   const [applyVersion, setApplyVersion] = useState(0)
   const applyVersionBumpRef = useRef<string | null>(null)
+  const [sourceJump, setSourceJump] = useState<{
+    path: string
+    line: number
+    seq: number
+  } | null>(null)
 
   useEffect(() => {
     if (workspaceHydrated) return
@@ -372,6 +377,80 @@ export default function LatexDocumentCard({
   }
 
   const handleBlur = () => flushFiles(filesRef.current, activeFile)
+
+  const handleSetRootFile = (path: string) => {
+    const normalized = normalizeLatexProjectPath(path)
+    if (!normalized || !filesRef.current.some((f) => f.path === normalized)) {
+      toast.warn(`File "${path}" is not in the Creator project.`)
+      return
+    }
+    handlePatchPayload({ rootFile: normalized })
+  }
+
+  const handleRenameFile = async (path: string) => {
+    const normalized = normalizeLatexProjectPath(path)
+    const current = filesRef.current.find((f) => f.path === normalized)
+    if (!normalized || !current) {
+      toast.warn(`File "${path}" is not in the Creator project.`)
+      return
+    }
+    const raw = await asyncPrompt({
+      message: 'Rename Creator file',
+      placeholder: normalized,
+      defaultValue: normalized,
+      okLabel: 'Rename',
+    })
+    if (!raw) return
+    const nextPath = ensureLatexExtension(normalizeLatexProjectPath(raw))
+    if (!nextPath) {
+      toast.warn('Use a relative path inside this Creator project.')
+      return
+    }
+    if (nextPath === normalized) return
+    if (filesRef.current.some((f) => f.path === nextPath)) {
+      toast.warn(`File "${nextPath}" already exists`)
+      return
+    }
+    const next = filesRef.current.map((f) =>
+      f.path === normalized
+        ? { ...f, path: nextPath, kind: kindFromLatexPath(nextPath) }
+        : f,
+    )
+    setFiles(next)
+    const nextActive = activeFile === normalized ? nextPath : activeFile
+    setActiveFile(nextActive)
+    const currentPayload = payloadRef.current
+    patchArtifact(sessionId, artifact.id, {
+      payload: {
+        ...currentPayload,
+        files: next,
+        activeFile: nextActive,
+        rootFile: currentPayload.rootFile === normalized
+          ? nextPath
+          : resolveProjectFile(next, currentPayload.rootFile),
+      },
+    } as never)
+  }
+
+  const handleJumpToSource = useCallback(
+    (err: LatexCompileError) => {
+      const target = normalizeLatexProjectPath(err.file ?? '') || activeFile
+      const targetFile = filesRef.current.some((f) => f.path === target)
+        ? target
+        : activeFile
+      if (!filesRef.current.some((f) => f.path === targetFile)) return
+      if (targetFile !== activeFile) {
+        flushFiles(filesRef.current, targetFile)
+        setActiveFile(targetFile)
+      }
+      setSourceJump((prev) => ({
+        path: targetFile,
+        line: Math.max(1, err.line ?? 1),
+        seq: (prev?.seq ?? 0) + 1,
+      }))
+    },
+    [activeFile, flushFiles],
+  )
 
   const handleNewFile = async () => {
     const raw = await asyncPrompt({
@@ -599,6 +678,8 @@ export default function LatexDocumentCard({
             onSwitchFile={handleSwitchFile}
             onNewFile={handleNewFile}
             onCloseFile={handleCloseFile}
+            onRenameFile={handleRenameFile}
+            onSetRootFile={handleSetRootFile}
           />
           <div className="latex-focus-editor" onBlur={handleBlur}>
             {active ? (
@@ -610,6 +691,12 @@ export default function LatexDocumentCard({
                 }
                 value={active.content}
                 onChange={handleEdit}
+                jumpToLine={
+                  sourceJump?.path === active.path ? sourceJump.line : null
+                }
+                jumpToken={
+                  sourceJump?.path === active.path ? sourceJump.seq : null
+                }
                 extraExtensions={[selectionMenuExtension]}
               />
             ) : null}
@@ -640,6 +727,7 @@ export default function LatexDocumentCard({
                   warnings={compileSnapshot.warnings}
                   logTail={compileSnapshot.logTail}
                   onFixWithAi={handleFixWithAi}
+                  onJumpToSource={handleJumpToSource}
                 />
               ) : drawerTab === 'ai' ? (
                 <LatexAgentChat
@@ -715,6 +803,12 @@ export default function LatexDocumentCard({
               }
               value={active.content}
               onChange={handleEdit}
+              jumpToLine={
+                sourceJump?.path === active.path ? sourceJump.line : null
+              }
+              jumpToken={
+                sourceJump?.path === active.path ? sourceJump.seq : null
+              }
               extraExtensions={[selectionMenuExtension]}
             />
           ) : null}
@@ -739,6 +833,7 @@ export default function LatexDocumentCard({
               warnings={compileSnapshot.warnings}
               logTail={compileSnapshot.logTail}
               onFixWithAi={handleFixWithAi}
+              onJumpToSource={handleJumpToSource}
             />
           ) : (
             <LatexDetailsPane

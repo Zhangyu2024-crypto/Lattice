@@ -322,11 +322,11 @@ export default function LatexAgentChat({
             </div>
           ) : (
             <div className="latex-agent-chat-empty">
-              <strong>Project-aware assistant</strong>
+              <strong>Project actions</strong>
               <span>
-                It reads the active file, project file list, outline, and last
-                compile diagnostics. Ask for a full-file patch, then review and
-                apply each proposed file.
+                Use the actions below to fix compiler output, polish the active
+                source, or draft paper sections. Proposed edits appear as
+                reviewable file replacements with Apply buttons.
               </span>
             </div>
           )}

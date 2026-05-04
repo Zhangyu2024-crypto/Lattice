@@ -1,5 +1,14 @@
-import { ChevronRight, FileCode2, FileText, Folder, Plus, Trash2 } from 'lucide-react'
-import type { CSSProperties } from 'react'
+import {
+  ChevronRight,
+  FileCode2,
+  FileText,
+  Folder,
+  Pencil,
+  Plus,
+  Star,
+  Trash2,
+} from 'lucide-react'
+import { useMemo, useState, type CSSProperties } from 'react'
 import type { LatexFile } from '../../../../../types/latex'
 
 interface Props {
@@ -9,6 +18,8 @@ interface Props {
   onSwitchFile: (path: string) => void
   onNewFile: () => void
   onCloseFile: (path: string) => void
+  onRenameFile: (path: string) => void
+  onSetRootFile: (path: string) => void
 }
 
 interface TreeNode {
@@ -61,36 +72,57 @@ function ProjectNode({
   depth,
   activeFile,
   rootFile,
+  collapsedFolders,
+  onToggleFolder,
   onSwitchFile,
   onCloseFile,
+  onRenameFile,
+  onSetRootFile,
 }: {
   node: TreeNode
   depth: number
   activeFile: string
   rootFile: string
+  collapsedFolders: Set<string>
+  onToggleFolder: (path: string) => void
   onSwitchFile: (path: string) => void
   onCloseFile: (path: string) => void
+  onRenameFile: (path: string) => void
+  onSetRootFile: (path: string) => void
 }) {
   if (!node.file) {
+    const collapsed = collapsedFolders.has(node.path)
     return (
       <div className="latex-project-group">
-        <div
+        <button
+          type="button"
           className="latex-project-folder"
           style={{ '--latex-project-depth': depth } as CSSProperties}
+          onClick={() => onToggleFolder(node.path)}
+          aria-expanded={!collapsed}
+          title={collapsed ? `Expand ${node.path}` : `Collapse ${node.path}`}
         >
-          <ChevronRight size={12} aria-hidden />
+          <ChevronRight
+            size={12}
+            aria-hidden
+            className={collapsed ? '' : 'is-open'}
+          />
           <Folder size={13} aria-hidden />
           <span>{node.name}</span>
-        </div>
-        {node.children.map((child) => (
+        </button>
+        {collapsed ? null : node.children.map((child) => (
           <ProjectNode
             key={child.path}
             node={child}
             depth={depth + 1}
             activeFile={activeFile}
             rootFile={rootFile}
+            collapsedFolders={collapsedFolders}
+            onToggleFolder={onToggleFolder}
             onSwitchFile={onSwitchFile}
             onCloseFile={onCloseFile}
+            onRenameFile={onRenameFile}
+            onSetRootFile={onSetRootFile}
           />
         ))}
       </div>
@@ -118,10 +150,31 @@ function ProjectNode({
         <span className="latex-project-file-name">{node.name}</span>
         {isRoot ? <span className="latex-project-root-chip">root</span> : null}
       </button>
+      {!isRoot ? (
+        <button
+          type="button"
+          className="latex-project-action"
+          aria-label={`Set ${node.file.path} as root file`}
+          title="Set as root file"
+          onClick={() => onSetRootFile(node.file!.path)}
+        >
+          <Star size={12} aria-hidden />
+        </button>
+      ) : null}
       <button
         type="button"
-        className="latex-project-remove"
+        className="latex-project-action"
+        aria-label={`Rename ${node.file.path}`}
+        title="Rename file"
+        onClick={() => onRenameFile(node.file!.path)}
+      >
+        <Pencil size={12} aria-hidden />
+      </button>
+      <button
+        type="button"
+        className="latex-project-action latex-project-remove"
         aria-label={`Remove ${node.file.path}`}
+        title="Remove file"
         onClick={() => onCloseFile(node.file!.path)}
       >
         <Trash2 size={12} aria-hidden />
@@ -137,8 +190,21 @@ export function ProjectRail({
   onSwitchFile,
   onNewFile,
   onCloseFile,
+  onRenameFile,
+  onSetRootFile,
 }: Props) {
-  const tree = buildTree(files)
+  const tree = useMemo(() => buildTree(files), [files])
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(
+    () => new Set(),
+  )
+  const toggleFolder = (path: string) => {
+    setCollapsedFolders((prev) => {
+      const next = new Set(prev)
+      if (next.has(path)) next.delete(path)
+      else next.add(path)
+      return next
+    })
+  }
   return (
     <aside className="latex-project-rail" aria-label="Creator project files">
       <div className="latex-project-rail-head">
@@ -161,8 +227,12 @@ export function ProjectRail({
             depth={0}
             activeFile={activeFile}
             rootFile={rootFile}
+            collapsedFolders={collapsedFolders}
+            onToggleFolder={toggleFolder}
             onSwitchFile={onSwitchFile}
             onCloseFile={onCloseFile}
+            onRenameFile={onRenameFile}
+            onSetRootFile={onSetRootFile}
           />
         ))}
       </div>

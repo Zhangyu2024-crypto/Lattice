@@ -10,6 +10,8 @@ interface Props {
   value: string
   onChange: (next: string) => void
   onCursorChange?: (cursor: number) => void
+  jumpToLine?: number | null
+  jumpToken?: number | null
   /** Additional extensions appended after the base stack. Phase B/C plugin
    *  points (selection menu, ghost text) flow through here without touching
    *  this host. */
@@ -24,6 +26,8 @@ export default function LatexCodeMirror({
   value,
   onChange,
   onCursorChange,
+  jumpToLine,
+  jumpToken,
   extraExtensions,
 }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null)
@@ -72,6 +76,22 @@ export default function LatexCodeMirror({
     // history per-file without a Compartment swap here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view || jumpToLine == null || !Number.isFinite(jumpToLine)) return
+    const lineNo = Math.max(1, Math.floor(jumpToLine))
+    const maxLine = view.state.doc.lines
+    const line = view.state.doc.line(Math.min(lineNo, maxLine))
+    view.dispatch({
+      selection: { anchor: line.from },
+      effects: EditorView.scrollIntoView(line.from, {
+        y: 'center',
+        x: 'nearest',
+      }),
+    })
+    view.focus()
+  }, [jumpToLine, jumpToken])
 
   return <div ref={hostRef} className="latex-editor-host" />
 }

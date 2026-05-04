@@ -5,7 +5,13 @@
 // component, and the bubble renderer without pulling React in.
 
 import type { ComponentType } from 'react'
-import { AlertOctagon, Sparkles, Wand2 } from 'lucide-react'
+import {
+  AlertOctagon,
+  BookOpenCheck,
+  Languages,
+  Sparkles,
+  Wand2,
+} from 'lucide-react'
 
 export interface ChatTurn {
   id: string
@@ -63,6 +69,20 @@ export const QUICK_ACTIONS: QuickAction[] = [
     prompt:
       'Polish the English in the ACTIVE FILE while preserving all LaTeX commands, citations, labels, and math. Return the full new contents of the active file.',
     icon: Sparkles,
+  },
+  {
+    id: 'abstract',
+    label: 'Abstract',
+    prompt:
+      'Draft a concise scientific abstract from the current project. Preserve the technical claims already present in the source; do not invent results. Return prose only unless a specific file change is needed.',
+    icon: BookOpenCheck,
+  },
+  {
+    id: 'translate',
+    label: 'Translate',
+    prompt:
+      'Translate the prose in the ACTIVE FILE into polished academic English while preserving all LaTeX commands, citations, labels, math, and environments. Return the full new contents of the active file.',
+    icon: Languages,
   },
   {
     id: 'format',
