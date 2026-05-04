@@ -13,6 +13,7 @@
 import { app, ipcMain } from 'electron'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { recordApiCall } from './api-call-audit'
 
 interface StoredComputeScript {
   name: string
@@ -135,13 +136,25 @@ export function registerComputeScriptsIpc(): void {
   registered = true
 
   ipcMain.handle('compute-scripts:save', async (_event, req: unknown) => {
+    const startedAt = Date.now()
     const body = (req ?? {}) as Record<string, unknown>
     const name = normalizeName(body.name)
     if (!name || typeof body.code !== 'string') {
-      return {
+      const result = {
         success: false,
         error: 'Invalid compute-scripts:save payload: name and code are required strings.',
       }
+      recordApiCall({
+        kind: 'creator.compute_script',
+        source: 'creator',
+        operation: 'compute-scripts:save',
+        status: 'error',
+        durationMs: Date.now() - startedAt,
+        request: { name, code: body.code },
+        response: result,
+        error: result.error,
+      })
+      return result
     }
     try {
       await ensureScriptsDir()
@@ -149,12 +162,39 @@ export function registerComputeScriptsIpc(): void {
       const record: StoredComputeScript = { name, code: body.code, modified }
       const filePath = scriptPath(name)
       await writeJsonAtomic(filePath, JSON.stringify(record, null, 2))
-      return { success: true, name, path: filePath, modified }
+      const result = { success: true, name, path: filePath, modified }
+      recordApiCall({
+        kind: 'creator.compute_script',
+        source: 'creator',
+        operation: 'compute-scripts:save',
+        status: 'ok',
+        durationMs: Date.now() - startedAt,
+        request: { name, code: body.code },
+        response: {
+          success: true,
+          name,
+          path: filePath,
+          modified,
+          bytes: Buffer.byteLength(body.code, 'utf8'),
+        },
+      })
+      return result
     } catch (err) {
-      return {
+      const result = {
         success: false,
         error: err instanceof Error ? err.message : String(err),
       }
+      recordApiCall({
+        kind: 'creator.compute_script',
+        source: 'creator',
+        operation: 'compute-scripts:save',
+        status: 'error',
+        durationMs: Date.now() - startedAt,
+        request: { name, code: body.code },
+        response: result,
+        error: err,
+      })
+      return result
     }
   })
 

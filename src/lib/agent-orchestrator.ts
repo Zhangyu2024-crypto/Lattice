@@ -58,6 +58,7 @@ import {
 } from './agent-orchestrator/control'
 import {
   assistantMessageFromResult,
+  summarizeToolOutput,
   toToolResultBlock,
 } from './agent-orchestrator/envelope'
 import { toolUi } from './agent-orchestrator/approval'
@@ -314,6 +315,44 @@ export async function runAgentTurn(
           signal,
           ui: toolUi,
           orchestratorCtx,
+          onAudit: (event) => {
+            const outputSummary = (() => {
+              if (event.output == null) return undefined
+              try {
+                return summarizeToolOutput(event.output)
+              } catch {
+                return undefined
+              }
+            })()
+            const auditApi =
+              typeof window !== 'undefined'
+                ? window.electronAPI?.auditRecord
+                : undefined
+            void auditApi?.({
+              kind: 'agent.tool_call',
+              source: 'agent',
+              operation: event.call.name,
+              status: event.status,
+              durationMs: event.durationMs,
+              sessionId: args.sessionId,
+              taskId,
+              stepId: event.stepId,
+              workspaceRoot: orchestratorCtx.workspaceRoot,
+              request: {
+                toolName: event.call.name,
+                toolUseId: event.call.id,
+                trustLevel: event.tool?.trustLevel ?? 'safe',
+                cardMode: event.tool?.cardMode,
+                input: event.input,
+              },
+              response: {
+                isError: event.status !== 'ok',
+                outputSummary,
+                output: event.output,
+              },
+              error: event.error,
+            })
+          },
         })
         toolSteps.push(step)
         if (step.name === 'tool_search' && !step.isError) {

@@ -24,6 +24,7 @@ import {
   useLLMConfigStore,
 } from '../stores/llm-config-store'
 import { useRuntimeStore } from '../stores/runtime-store'
+import { useWorkspaceStore } from '../stores/workspace-store'
 import { computeCost } from './token-estimator'
 import { maybeMicrocompactMessages } from './agent-compact'
 import { sendLlmStream } from './llm-stream-client'
@@ -280,6 +281,26 @@ export async function sendLlmChat(
     ...(effective.reasoningEffort
       ? { reasoningEffort: effective.reasoningEffort }
       : {}),
+    audit: {
+      source: req.audit?.source ?? req.mode,
+      sessionId: req.sessionId,
+      workspaceRoot: useWorkspaceStore.getState().rootPath,
+      metadata: {
+        userMessageChars: req.userMessage.length,
+        transcriptCount: req.transcript.length,
+        mentionCount: mentions.length,
+        imageCount: req.images?.length ?? 0,
+        assembledInputTokens: assembledContext.budget.estimatedInputTokens,
+        historyBudget: assembledContext.budget.historyBudget,
+        sourceMessageCount: assembledContext.budget.sourceMessageCount,
+        trimmedMessageCount: assembledContext.budget.trimmedMessageCount,
+        droppedMessages:
+          assembledContext.budget.sourceMessageCount -
+          assembledContext.budget.trimmedMessageCount,
+        microcompactCleared: compacted.cleared,
+        ...(req.audit?.metadata ?? {}),
+      },
+    },
   }
 
   // ── Transport selection ─────────────────────────────────────────

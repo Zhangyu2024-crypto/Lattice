@@ -147,6 +147,17 @@ export default function LatexAgentChat({
           userMessage,
           transcript: [],
           sessionId,
+          audit: {
+            source: 'creator',
+            metadata: {
+              module: 'latex-agent-chat',
+              activeFile: activeFileRef.current,
+              fileCount: filesRef.current.length,
+              compileErrors: errorsRef.current.length,
+              compileWarnings: warningsRef.current.length,
+              userPromptChars: trimmed.length,
+            },
+          },
         })
         if (!result.success) {
           setTurns((prev) =>

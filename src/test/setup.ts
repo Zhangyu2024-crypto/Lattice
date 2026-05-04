@@ -32,6 +32,7 @@ function makeStubElectronAPI(): Window['electronAPI'] {
       Promise.resolve({ ready: false, port: 0, token: '', baseUrl: '' }),
     startBackend: noopBool as never,
     onBackendStatus: () => () => {},
+    auditRecord: () => Promise.resolve({ ok: true }),
     platform: 'linux',
   } as unknown as Window['electronAPI']
 }

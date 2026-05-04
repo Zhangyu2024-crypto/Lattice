@@ -25,6 +25,12 @@ import {
 import { registerSyncIpc } from './ipc-sync'
 import { registerResearchIpc } from './ipc-research'
 import { registerMcpIpc, shutdownAllMcpClients } from './ipc-mcp'
+import {
+  configureApiCallAudit,
+  recordApiCall,
+  shutdownApiCallAudit,
+  type ApiCallAuditEvent,
+} from './api-call-audit'
 import { readManifest } from './sync/manifest'
 import {
   push as syncPush,
@@ -39,6 +45,11 @@ const DIST_ELECTRON_DIR = path.basename(__dirname) === 'chunks'
   : __dirname
 const PRELOAD_PATH = path.join(DIST_ELECTRON_DIR, 'preload.mjs')
 const RENDERER_INDEX_PATH = path.join(DIST_ELECTRON_DIR, '../dist/index.html')
+
+configureApiCallAudit({
+  dir: path.join(app.getPath('userData'), 'logs', 'api-calls'),
+  enabled: process.env.LATTICE_API_AUDIT_ENABLED !== '0',
+})
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -660,49 +671,85 @@ ipcMain.handle(
       approvalToken?: string
     },
   ) => {
+    const startedAt = Date.now()
     const plugin = typeof payload?.plugin === 'string' ? payload.plugin : ''
     const name = typeof payload?.name === 'string' ? payload.name : ''
-    if (!plugin || plugin.includes('/') || plugin.includes('\\')) {
-      throw new Error('Invalid plugin name')
-    }
-    if (!name) throw new Error('Tool name is required')
-    const tokenCheck = consumeApprovalToken(payload.approvalToken, 'plugin_call_tool', {
-      plugin,
-      name,
-      input: JSON.stringify(payload.input ?? {}),
-    })
-    if (!tokenCheck.ok) throw new Error(tokenCheck.error)
-
-    const root = path.join(app.getPath('userData'), 'plugins')
-    const { tools } = await readPluginTools(root)
-    const tool = tools.find((entry) => entry.plugin === plugin && entry.name === name)
-    if (!tool) throw new Error(`Plugin tool not found: ${plugin}/${name}`)
-    const pluginRoot = path.join(root, plugin)
-    const result = await runPluginTool({
-      pluginRoot,
-      tool,
-      input: payload.input ?? {},
-    })
-    if (result.code !== 0) {
-      throw new Error(
-        `Plugin tool failed (${result.code})${result.timedOut ? ' after timeout' : ''}: ${result.stderr || result.stdout}`,
-      )
-    }
-    const trimmed = result.stdout.trim()
-    if (!trimmed) return { output: null, stdout: '', stderr: result.stderr }
     try {
-      const parsed = JSON.parse(trimmed) as { ok?: boolean; output?: unknown; error?: string }
-      if (parsed && typeof parsed === 'object' && parsed.ok === false) {
-        throw new Error(parsed.error ?? 'Plugin tool returned ok=false')
+      if (!plugin || plugin.includes('/') || plugin.includes('\\')) {
+        throw new Error('Invalid plugin name')
       }
-      if (parsed && typeof parsed === 'object' && 'output' in parsed) {
-        return { output: parsed.output, stdout: result.stdout, stderr: result.stderr }
+      if (!name) throw new Error('Tool name is required')
+      const tokenCheck = consumeApprovalToken(payload.approvalToken, 'plugin_call_tool', {
+        plugin,
+        name,
+        input: JSON.stringify(payload.input ?? {}),
+      })
+      if (!tokenCheck.ok) throw new Error(tokenCheck.error)
+
+      const root = path.join(app.getPath('userData'), 'plugins')
+      const { tools } = await readPluginTools(root)
+      const tool = tools.find((entry) => entry.plugin === plugin && entry.name === name)
+      if (!tool) throw new Error(`Plugin tool not found: ${plugin}/${name}`)
+      const pluginRoot = path.join(root, plugin)
+      const result = await runPluginTool({
+        pluginRoot,
+        tool,
+        input: payload.input ?? {},
+      })
+      if (result.code !== 0) {
+        throw new Error(
+          `Plugin tool failed (${result.code})${result.timedOut ? ' after timeout' : ''}: ${result.stderr || result.stdout}`,
+        )
       }
-      return { output: parsed, stdout: result.stdout, stderr: result.stderr }
+      const trimmed = result.stdout.trim()
+      let out: { output: unknown; stdout: string; stderr: string }
+      if (!trimmed) {
+        out = { output: null, stdout: '', stderr: result.stderr }
+      } else {
+        try {
+          const parsed = JSON.parse(trimmed) as { ok?: boolean; output?: unknown; error?: string }
+          if (parsed && typeof parsed === 'object' && parsed.ok === false) {
+            throw new Error(parsed.error ?? 'Plugin tool returned ok=false')
+          }
+          if (parsed && typeof parsed === 'object' && 'output' in parsed) {
+            out = { output: parsed.output, stdout: result.stdout, stderr: result.stderr }
+          } else {
+            out = { output: parsed, stdout: result.stdout, stderr: result.stderr }
+          }
+        } catch (err) {
+          if (err instanceof SyntaxError) {
+            out = { output: result.stdout, stdout: result.stdout, stderr: result.stderr }
+          } else {
+            throw err
+          }
+        }
+      }
+      recordApiCall({
+        kind: 'plugin.call_tool',
+        source: 'extension',
+        operation: `${plugin}/${name}`,
+        status: 'ok',
+        durationMs: Date.now() - startedAt,
+        request: { plugin, name, input: payload.input ?? {} },
+        response: {
+          output: out.output,
+          exitCode: result.code,
+          timedOut: result.timedOut,
+          stdoutBytes: Buffer.byteLength(out.stdout, 'utf8'),
+          stderrBytes: Buffer.byteLength(out.stderr, 'utf8'),
+        },
+      })
+      return out
     } catch (err) {
-      if (err instanceof SyntaxError) {
-        return { output: result.stdout, stdout: result.stdout, stderr: result.stderr }
-      }
+      recordApiCall({
+        kind: 'plugin.call_tool',
+        source: 'extension',
+        operation: `${plugin || '<invalid>'}/${name || '<missing>'}`,
+        status: 'error',
+        durationMs: Date.now() - startedAt,
+        request: { plugin, name, input: payload?.input ?? {} },
+        error: err,
+      })
       throw err
     }
   },
@@ -919,6 +966,11 @@ ipcMain.handle(
 // IPC: LLM proxy (direct HTTP to Anthropic/OpenAI from main process)
 registerLlmIpc()
 registerLatticeAuthIpc()
+
+ipcMain.handle('audit:record', (_event, payload: ApiCallAuditEvent) => {
+  recordApiCall(payload)
+  return { ok: true }
+})
 
 // IPC: Docker-backed Python compute runner
 registerComputeIpc(() => mainWindow)
@@ -1145,6 +1197,7 @@ app.on('before-quit', async () => {
   await runAutoPush()
   await shutdownAllMcpClients()
   await shutdownBackends()
+  await shutdownApiCallAudit()
 })
 
 app.on('activate', () => {

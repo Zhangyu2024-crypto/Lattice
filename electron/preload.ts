@@ -126,6 +126,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   workerCall: (req: unknown) => ipcRenderer.invoke('worker:call', req),
   workerHealth: () => ipcRenderer.invoke('worker:health'),
   workerStop: () => ipcRenderer.invoke('worker:stop'),
+  auditRecord: (payload: unknown) =>
+    ipcRenderer.invoke('audit:record', payload),
   onWorkerStatus: (callback: (status: unknown) => void) =>
     subscribe('worker:status', callback),
   onWorkerEvent: (callback: (event: unknown) => void) =>

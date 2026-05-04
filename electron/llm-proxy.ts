@@ -128,6 +128,16 @@ export interface LlmInvokeRequest {
   contextBlocks?: LlmContextBlock[]
   /** Tool schemas exposed to the model this turn. */
   tools?: LlmToolSpec[]
+  /** Optional audit metadata supplied by the renderer. Never forwarded to
+   *  model providers; main-process audit logging consumes it only. */
+  audit?: {
+    source?: string
+    sessionId?: string | null
+    taskId?: string
+    stepId?: string
+    workspaceRoot?: string | null
+    metadata?: Record<string, unknown>
+  }
   /**
    * Extended thinking effort level. When 'medium' or 'high', the Anthropic
    * SDK client enables the `thinking` parameter so the model can use

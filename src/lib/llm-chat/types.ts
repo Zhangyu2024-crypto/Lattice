@@ -76,6 +76,12 @@ export interface LlmChatRequest {
   /** Optional cancellation signal. Streaming calls are aborted at the IPC
    *  layer; one-shot calls return early on abort and ignore the late result. */
   signal?: AbortSignal
+  /** Optional audit labels passed through to the Electron main process.
+   *  They are used only for local call logging, not forwarded to providers. */
+  audit?: {
+    source?: string
+    metadata?: Record<string, unknown>
+  }
 }
 
 export interface LlmChatResult {

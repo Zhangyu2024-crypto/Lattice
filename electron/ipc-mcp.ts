@@ -12,6 +12,7 @@
 
 import { ipcMain, type BrowserWindow as BrowserWindowType } from 'electron'
 import { consumeApprovalToken } from './ipc-approval-tokens'
+import { recordApiCall } from './api-call-audit'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 
@@ -219,19 +220,51 @@ export function registerMcpIpc(
         approvalToken?: string
       },
     ) => {
+      const startedAt = Date.now()
       const tokenCheck = consumeApprovalToken(payload.approvalToken, 'mcp_call_tool', {
         serverId: payload.serverId,
         name: payload.name,
         args: JSON.stringify(payload.args ?? {}),
       })
-      if (!tokenCheck.ok) throw new Error(tokenCheck.error)
-      const entry = running.get(payload.serverId)
-      if (!entry) throw new Error(`MCP server not running: ${payload.serverId}`)
-      const result = await entry.client.callTool({
-        name: payload.name,
-        arguments: payload.args,
-      })
-      return { result }
+      try {
+        if (!tokenCheck.ok) throw new Error(tokenCheck.error)
+        const entry = running.get(payload.serverId)
+        if (!entry) throw new Error(`MCP server not running: ${payload.serverId}`)
+        const result = await entry.client.callTool({
+          name: payload.name,
+          arguments: payload.args,
+        })
+        const out = { result }
+        recordApiCall({
+          kind: 'mcp.call_tool',
+          source: 'extension',
+          operation: `${payload.serverId}/${payload.name}`,
+          status: 'ok',
+          durationMs: Date.now() - startedAt,
+          request: {
+            serverId: payload.serverId,
+            name: payload.name,
+            args: payload.args ?? {},
+          },
+          response: out,
+        })
+        return out
+      } catch (err) {
+        recordApiCall({
+          kind: 'mcp.call_tool',
+          source: 'extension',
+          operation: `${payload.serverId}/${payload.name}`,
+          status: 'error',
+          durationMs: Date.now() - startedAt,
+          request: {
+            serverId: payload.serverId,
+            name: payload.name,
+            args: payload.args ?? {},
+          },
+          error: err,
+        })
+        throw err
+      }
     },
   )
 

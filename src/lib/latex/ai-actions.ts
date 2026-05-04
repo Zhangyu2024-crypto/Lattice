@@ -115,6 +115,16 @@ export async function runSelectionAction(
       userMessage,
       transcript: [],
       sessionId: req.sessionId ?? null,
+      audit: {
+        source: 'creator',
+        metadata: {
+          module: 'latex-selection-command',
+          verb: req.verb,
+          selectionChars: req.selection.length,
+          contextBeforeChars: req.contextBefore.length,
+          contextAfterChars: req.contextAfter.length,
+        },
+      },
     })
     if (!result.success) {
       return { ok: false, content: '', error: result.error ?? 'LLM call failed' }

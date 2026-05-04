@@ -12,6 +12,7 @@
 import { spawn } from 'child_process'
 import { ipcMain } from 'electron'
 import { consumeApprovalToken } from './ipc-approval-tokens'
+import { recordApiCall } from './api-call-audit'
 
 const MAX_BASH_OUTPUT_BYTES = 4 * 1024 * 1024
 const DEFAULT_BASH_TIMEOUT_MS = 120_000
@@ -24,8 +25,20 @@ export function registerWorkspaceIpc(): void {
   ipcMain.handle(
     'workspace:bash',
     async (event, req: unknown) => {
+      const startedAt = Date.now()
       if (!req || typeof req !== 'object') {
-        return { success: false, error: 'invalid request' }
+        const result = { success: false, error: 'invalid request' }
+        recordApiCall({
+          kind: 'workspace.bash',
+          source: 'workspace',
+          operation: 'workspace:bash',
+          status: 'error',
+          durationMs: Date.now() - startedAt,
+          request: { validPayload: false },
+          response: result,
+          error: result.error,
+        })
+        return result
       }
       const r = req as {
         workspaceDir?: unknown
@@ -35,13 +48,41 @@ export function registerWorkspaceIpc(): void {
         approvalToken?: unknown
       }
       if (typeof r.workspaceDir !== 'string' || typeof r.command !== 'string') {
-        return { success: false, error: 'workspaceDir and command required' }
+        const result = { success: false, error: 'workspaceDir and command required' }
+        recordApiCall({
+          kind: 'workspace.bash',
+          source: 'workspace',
+          operation: 'workspace:bash',
+          status: 'error',
+          durationMs: Date.now() - startedAt,
+          request: {
+            workspaceDir: typeof r.workspaceDir === 'string' ? r.workspaceDir : undefined,
+            command: typeof r.command === 'string' ? r.command : undefined,
+          },
+          response: result,
+          error: result.error,
+        })
+        return result
       }
       const tokenCheck = consumeApprovalToken(r.approvalToken, 'workspace_bash', {
         workspaceDir: r.workspaceDir,
         command: r.command,
       })
-      if (!tokenCheck.ok) return { success: false, error: tokenCheck.error }
+      if (!tokenCheck.ok) {
+        const result = { success: false, error: tokenCheck.error }
+        recordApiCall({
+          kind: 'workspace.bash',
+          source: 'workspace',
+          operation: 'workspace:bash',
+          status: 'error',
+          durationMs: Date.now() - startedAt,
+          workspaceRoot: r.workspaceDir,
+          request: { workspaceDir: r.workspaceDir, command: r.command },
+          response: result,
+          error: result.error,
+        })
+        return result
+      }
       const timeoutMs =
         typeof r.timeoutMs === 'number' && Number.isFinite(r.timeoutMs)
           ? Math.min(Math.max(1_000, Math.floor(r.timeoutMs)), 600_000)
@@ -161,7 +202,28 @@ export function registerWorkspaceIpc(): void {
           flushCompleteLines()
           flushPartial()
           sendDone('error', null)
-          resolve({ success: false, error: err.message, stdout, stderr })
+          const result = { success: false, error: err.message, stdout, stderr }
+          recordApiCall({
+            kind: 'workspace.bash',
+            source: 'workspace',
+            operation: 'workspace:bash',
+            status: 'error',
+            durationMs: Date.now() - startedAt,
+            workspaceRoot: r.workspaceDir as string,
+            request: {
+              workspaceDir: r.workspaceDir,
+              command: r.command,
+              timeoutMs,
+              invocationId,
+            },
+            response: {
+              success: false,
+              stdoutBytes: Buffer.byteLength(stdout, 'utf8'),
+              stderrBytes: Buffer.byteLength(stderr, 'utf8'),
+            },
+            error: err.message,
+          })
+          resolve(result)
         })
         child.on('close', (code) => {
           if (resolved) return
@@ -170,12 +232,35 @@ export function registerWorkspaceIpc(): void {
           flushCompleteLines()
           flushPartial()
           sendDone(timedOut ? 'timeout' : 'ok', code)
-          resolve({
+          const result = {
             success: code === 0,
             exitCode: code,
             stdout: stdout.slice(-MAX_BASH_OUTPUT_BYTES),
             stderr: stderr.slice(-MAX_BASH_OUTPUT_BYTES),
+          }
+          recordApiCall({
+            kind: 'workspace.bash',
+            source: 'workspace',
+            operation: 'workspace:bash',
+            status: timedOut ? 'cancelled' : code === 0 ? 'ok' : 'error',
+            durationMs: Date.now() - startedAt,
+            workspaceRoot: r.workspaceDir as string,
+            request: {
+              workspaceDir: r.workspaceDir,
+              command: r.command,
+              timeoutMs,
+              invocationId,
+            },
+            response: {
+              success: result.success,
+              exitCode: code,
+              timedOut,
+              stdoutBytes: Buffer.byteLength(stdout, 'utf8'),
+              stderrBytes: Buffer.byteLength(stderr, 'utf8'),
+            },
+            error: code === 0 ? undefined : stderr || stdout,
           })
+          resolve(result)
         })
       })
     },
