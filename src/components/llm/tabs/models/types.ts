@@ -3,7 +3,7 @@ import type {
   LLMProvider,
   LLMProviderType,
 } from '../../../../types/llm'
-import type { LlmListedModelPayload } from '../../../../types/electron'
+export { mergeFetchedModels } from '../../../../lib/llm-model-catalog'
 
 // ─── Shared helpers ─────────────────────────────────────────────────────
 
@@ -50,63 +50,6 @@ export type ConnectStatus =
   | { state: 'error'; message: string; status?: number }
 
 export const CONNECT_IDLE: ConnectStatus = { state: 'idle' }
-
-// Catalogue responses have no pricing/capability signal — use the same
-// conservative defaults the manual form used. Users can still edit pricing
-// later (future UI) or work from the label shown in the dropdown.
-const DEFAULT_CONTEXT_WINDOW = 128_000
-const DEFAULT_MAX_OUTPUT_TOKENS = 4096
-
-const buildDefaultModelFromCatalogue = (
-  listed: LlmListedModelPayload,
-  providerType: LLMProviderType,
-): LLMModel => ({
-  id: listed.id,
-  label: listed.displayName?.trim() || listed.id,
-  contextWindow: DEFAULT_CONTEXT_WINDOW,
-  maxOutputTokens: DEFAULT_MAX_OUTPUT_TOKENS,
-  pricing: { inputPerMillion: 0, outputPerMillion: 0 },
-  supportsTools:
-    providerType === 'anthropic' ||
-    providerType === 'openai' ||
-    providerType === 'openai-compatible',
-  supportsVision: false,
-  supportsCaching: providerType === 'anthropic',
-})
-
-export interface MergeOutcome {
-  models: LLMModel[]
-  added: number
-  updated: number
-}
-
-// Union-by-id merge: keep user-edited entries, refresh labels only when the
-// local label is still the raw id (i.e. user hasn't touched it), append
-// unknown ids. Full rationale was in the original implementation — kept here
-// because the invariant (never lose user-customised pricing) is non-obvious.
-export const mergeFetchedModels = (
-  existing: LLMModel[],
-  fetched: LlmListedModelPayload[],
-  providerType: LLMProviderType,
-): MergeOutcome => {
-  const byId = new Map<string, LLMModel>(existing.map((m) => [m.id, m]))
-  let added = 0
-  let updated = 0
-  for (const entry of fetched) {
-    const current = byId.get(entry.id)
-    if (!current) {
-      byId.set(entry.id, buildDefaultModelFromCatalogue(entry, providerType))
-      added += 1
-      continue
-    }
-    const newLabel = entry.displayName?.trim()
-    if (newLabel && current.label === current.id && newLabel !== current.label) {
-      byId.set(entry.id, { ...current, label: newLabel })
-      updated += 1
-    }
-  }
-  return { models: Array.from(byId.values()), added, updated }
-}
 
 export const clamp = (n: number, lo: number, hi: number) =>
   Math.max(lo, Math.min(hi, n))

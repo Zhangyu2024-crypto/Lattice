@@ -6,6 +6,7 @@ import LogConsole from './components/common/LogConsole'
 import ToastHost from './components/common/ToastHost'
 import PromptHost from './components/common/PromptHost'
 import ProWorkbenchStandaloneView from './components/canvas/ProWorkbenchStandaloneView'
+import StartupAuthGate from './components/startup/StartupAuthGate'
 import { DEMO_LIBRARY } from './stores/demo-library'
 import { preWarmRuntimePersist } from './stores/runtime-store'
 import { useArtifactDbStore } from './stores/artifact-db-store'
@@ -161,7 +162,11 @@ void Promise.all([
   mountRoot.render(
     <React.StrictMode>
       <AppErrorBoundary>
-        {boot === 'library' ? (
+        {boot === 'main' ? (
+          <StartupAuthGate>
+            <App />
+          </StartupAuthGate>
+        ) : boot === 'library' ? (
           <LibraryWindowApp />
         ) : boot === 'workbench' ? (
           <ProWorkbenchWindowApp />
@@ -169,9 +174,7 @@ void Promise.all([
           <PdfReaderWindowApp />
         ) : boot === 'data-manager' ? (
           <DataManagerWindowApp />
-        ) : (
-          <App />
-        )}
+        ) : null}
       </AppErrorBoundary>
     </React.StrictMode>,
   )

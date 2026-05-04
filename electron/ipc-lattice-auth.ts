@@ -1,6 +1,5 @@
-import { ipcMain, shell } from 'electron'
+import { BrowserWindow, ipcMain, shell } from 'electron'
 import crypto from 'node:crypto'
-import http from 'node:http'
 import {
   clearLatticeAuthSession,
   getLatticeAuthSessionSummary,
@@ -12,7 +11,7 @@ const CLIENT_ID = 'lattice-desktop'
 const CALLBACK_PATH = '/oauth/callback'
 const LOGIN_TIMEOUT_MS = 5 * 60_000
 const DEFAULT_AUTH_BASE_URL =
-  process.env.LATTICE_BLOG_AUTH_BASE_URL ?? 'https://blog.chaxiejun.xyz/_auth'
+  process.env.LATTICE_BLOG_AUTH_BASE_URL ?? 'https://chaxiejun.xyz/_auth'
 
 type LatticeAuthLoginResult =
   | (Extract<LatticeAuthSessionSummary, { authenticated: true }> & { ok: true })
@@ -54,6 +53,13 @@ function isLocalDevUrl(url: URL): boolean {
   )
 }
 
+function isLoopbackCallbackUrl(url: URL): boolean {
+  return (
+    (url.hostname === '127.0.0.1' || url.hostname === 'localhost') &&
+    url.pathname === CALLBACK_PATH
+  )
+}
+
 async function readJson(res: Response): Promise<Record<string, unknown>> {
   const text = await res.text()
   if (!text) return {}
@@ -67,17 +73,39 @@ async function readJson(res: Response): Promise<Record<string, unknown>> {
   }
 }
 
-function waitForCallback(
-  server: http.Server,
+function waitForEmbeddedCallback(
+  authorizeUrl: URL,
   expectedState: string,
+  expectedAuthOrigin: string,
+  parent: BrowserWindow | null,
 ): Promise<PendingCallback> {
   return new Promise((resolve, reject) => {
     let done = false
+    const authWindow = new BrowserWindow({
+      width: 980,
+      height: 760,
+      minWidth: 720,
+      minHeight: 560,
+      parent: parent ?? undefined,
+      modal: false,
+      title: 'Lattice sign in',
+      backgroundColor: '#1e1e1e',
+      autoHideMenuBar: true,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        sandbox: true,
+        partition: `lattice-auth-${Date.now()}-${crypto.randomUUID()}`,
+      },
+    })
+
     const finish = (err: Error | null, callback?: PendingCallback) => {
       if (done) return
       done = true
       clearTimeout(timer)
-      server.close()
+      if (!authWindow.isDestroyed()) {
+        authWindow.close()
+      }
       if (err) reject(err)
       else if (callback) resolve(callback)
     }
@@ -86,65 +114,74 @@ function waitForCallback(
       finish(new Error('Login timed out.'))
     }, LOGIN_TIMEOUT_MS)
 
-    server.on('request', (req, res) => {
-      const rawUrl = req.url ?? '/'
-      const url = new URL(rawUrl, 'http://127.0.0.1')
-      if (url.pathname !== CALLBACK_PATH) {
-        res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
-        res.end('Not found')
-        return
+    const handlePossibleCallback = (rawUrl: string): boolean => {
+      let url: URL
+      try {
+        url = new URL(rawUrl)
+      } catch {
+        return false
       }
+      if (!isLoopbackCallbackUrl(url)) return false
       const code = url.searchParams.get('code') ?? ''
       const state = url.searchParams.get('state') ?? ''
       if (!code || state !== expectedState) {
-        res.writeHead(400, { 'content-type': 'text/html; charset=utf-8' })
-        res.end(doneHtml('登录失败', '授权回调参数无效，可以关闭此页面。'))
         finish(new Error('Invalid authorization callback.'))
-        return
+        return true
       }
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
-      res.end(doneHtml('登录完成', '可以回到 Lattice 桌面应用继续使用。'))
       finish(null, { code, state })
-    })
+      return true
+    }
 
-    server.on('error', (err) => {
-      finish(err)
-    })
-
-    server.on('close', () => {
-      if (!done) finish(new Error('Login callback server closed.'))
-    })
-  })
-}
-
-function doneHtml(title: string, body: string): string {
-  return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;min-height:100vh;display:grid;place-items:center;background:#111;color:#f5f5f5}main{max-width:28rem;padding:2rem}h1{font-size:1.2rem;margin:0 0 .5rem}p{margin:0;color:#b5b5b5;line-height:1.6}</style></head><body><main><h1>${title}</h1><p>${body}</p></main></body></html>`
-}
-
-function listen(server: http.Server): Promise<number> {
-  return new Promise((resolve, reject) => {
-    server.once('error', reject)
-    server.listen(0, '127.0.0.1', () => {
-      const address = server.address()
-      if (!address || typeof address === 'string') {
-        reject(new Error('Could not allocate local callback port.'))
-        return
+    authWindow.webContents.on('will-navigate', (event, url) => {
+      if (handlePossibleCallback(url)) {
+        event.preventDefault()
       }
-      resolve(address.port)
     })
+
+    authWindow.webContents.on('will-redirect', (event, url) => {
+      if (handlePossibleCallback(url)) {
+        event.preventDefault()
+      }
+    })
+
+    authWindow.webContents.on('did-fail-load', (_event, _code, _desc, url) => {
+      handlePossibleCallback(url)
+    })
+
+    authWindow.webContents.setWindowOpenHandler(({ url }) => {
+      if (handlePossibleCallback(url)) return { action: 'deny' }
+      try {
+        const next = new URL(url)
+        if (next.origin === expectedAuthOrigin) {
+          authWindow.loadURL(url).catch((err) => finish(err))
+        } else {
+          shell.openExternal(url).catch(() => {})
+        }
+      } catch {
+        // Ignore malformed popup URLs from the auth page.
+      }
+      return { action: 'deny' }
+    })
+
+    authWindow.on('closed', () => {
+      if (!done) finish(new Error('Login window was closed.'))
+    })
+
+    authWindow.loadURL(authorizeUrl.toString()).catch((err) => finish(err))
   })
 }
 
-async function login(rawAuthBaseUrl: unknown): Promise<LatticeAuthLoginResult> {
-  let server: http.Server | null = null
+async function login(
+  rawAuthBaseUrl: unknown,
+  parent: BrowserWindow | null,
+): Promise<LatticeAuthLoginResult> {
   try {
     const authBaseUrl = normalizeAuthBase(rawAuthBaseUrl)
     const verifier = base64url(crypto.randomBytes(64)).slice(0, 96)
     const challenge = sha256Base64url(verifier)
     const state = base64url(crypto.randomBytes(32))
 
-    server = http.createServer()
-    const port = await listen(server)
+    const port = crypto.randomInt(20_000, 65_000)
     const redirectUri = `http://127.0.0.1:${port}${CALLBACK_PATH}`
 
     const beginRes = await fetch(`${authBaseUrl}/api/lattice/desktop/auth/begin`, {
@@ -167,9 +204,12 @@ async function login(rawAuthBaseUrl: unknown): Promise<LatticeAuthLoginResult> {
       throw new Error('Blog returned an authorization URL on a different origin.')
     }
 
-    const callbackPromise = waitForCallback(server, state)
-    await shell.openExternal(authorizeUrl.toString())
-    const callback = await callbackPromise
+    const callback = await waitForEmbeddedCallback(
+      authorizeUrl,
+      state,
+      expectedAuthOrigin,
+      parent,
+    )
 
     const tokenRes = await fetch(`${authBaseUrl}/api/lattice/desktop/auth/token`, {
       method: 'POST',
@@ -210,7 +250,6 @@ async function login(rawAuthBaseUrl: unknown): Promise<LatticeAuthLoginResult> {
     }
     return { ok: true, ...summary }
   } catch (err) {
-    if (server?.listening) server.close()
     const message = err instanceof Error ? err.message : String(err)
     return { ok: false, error: message }
   }
@@ -221,12 +260,13 @@ export function registerLatticeAuthIpc(): void {
     return getLatticeAuthSessionSummary()
   })
 
-  ipcMain.handle('lattice-auth:login', async (_event, payload: unknown) => {
+  ipcMain.handle('lattice-auth:login', async (event, payload: unknown) => {
     const authBaseUrl =
       payload && typeof payload === 'object'
         ? (payload as { authBaseUrl?: unknown }).authBaseUrl
         : undefined
-    return login(authBaseUrl)
+    const parent = BrowserWindow.fromWebContents(event.sender)
+    return login(authBaseUrl, parent)
   })
 
   ipcMain.handle('lattice-auth:logout', async () => {

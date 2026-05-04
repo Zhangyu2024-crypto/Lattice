@@ -28,14 +28,14 @@ const STORE_FILE = 'lattice-blog-auth.json'
 
 function electronRuntime(): {
   app: Electron.App
-  safeStorage: Electron.SafeStorage
+  safeStorage?: Electron.SafeStorage
 } {
   const runtime = electron as unknown as {
     app?: Electron.App
     safeStorage?: Electron.SafeStorage
   }
-  if (!runtime.app || !runtime.safeStorage) {
-    throw new Error('Electron secure credential storage is not available.')
+  if (!runtime.app) {
+    throw new Error('Electron app storage is not available.')
   }
   return { app: runtime.app, safeStorage: runtime.safeStorage }
 }
@@ -45,10 +45,12 @@ function storePath(): string {
   return path.join(app.getPath('userData'), STORE_FILE)
 }
 
-function ensureEncryptionAvailable(): void {
+function encryptionAvailable(): boolean {
   const { safeStorage } = electronRuntime()
-  if (!safeStorage.isEncryptionAvailable()) {
-    throw new Error('Secure credential storage is not available on this OS session.')
+  try {
+    return Boolean(safeStorage?.isEncryptionAvailable())
+  } catch {
+    return false
   }
 }
 
@@ -66,44 +68,77 @@ function summarize(session: LatticeAuthSession): LatticeAuthSessionSummary {
 export async function saveLatticeAuthSession(
   session: Omit<LatticeAuthSession, 'savedAt'>,
 ): Promise<LatticeAuthSessionSummary> {
-  ensureEncryptionAvailable()
   const { safeStorage } = electronRuntime()
   const filePath = storePath()
   const full: LatticeAuthSession = {
     ...session,
     savedAt: new Date().toISOString(),
   }
-  const encrypted = safeStorage.encryptString(JSON.stringify(full))
+  let payload: { version: 1; storage: 'safeStorage' | 'plaintext-file'; data: string | LatticeAuthSession }
+  if (encryptionAvailable() && safeStorage) {
+    try {
+      payload = {
+        version: 1,
+        storage: 'safeStorage',
+        data: safeStorage.encryptString(JSON.stringify(full)).toString('base64'),
+      }
+    } catch {
+      payload = {
+        version: 1,
+        storage: 'plaintext-file',
+        data: full,
+      }
+    }
+  } else {
+    payload = {
+      version: 1,
+      storage: 'plaintext-file',
+      data: full,
+    }
+  }
   await fs.mkdir(path.dirname(filePath), { recursive: true })
   await fs.writeFile(
     filePath,
-    JSON.stringify({ version: 1, data: encrypted.toString('base64') }),
+    JSON.stringify(payload),
     { encoding: 'utf-8', mode: 0o600 },
   )
   return summarize(full)
+}
+
+function parseSession(raw: unknown): LatticeAuthSession | null {
+  const session = raw as Partial<LatticeAuthSession>
+  if (
+    typeof session?.accessToken !== 'string' ||
+    typeof session.baseUrl !== 'string' ||
+    typeof session.username !== 'string' ||
+    typeof session.keyId !== 'string' ||
+    typeof session.keyPrefix !== 'string' ||
+    typeof session.savedAt !== 'string'
+  ) {
+    return null
+  }
+  return session as LatticeAuthSession
 }
 
 export async function loadLatticeAuthSession(): Promise<LatticeAuthSession | null> {
   try {
     const filePath = storePath()
     const raw = await fs.readFile(filePath, 'utf-8')
-    const parsed = JSON.parse(raw) as { data?: unknown }
+    const parsed = JSON.parse(raw) as { data?: unknown; storage?: unknown }
+    if (parsed.storage === 'plaintext-file') {
+      return parseSession(parsed.data)
+    }
     if (typeof parsed.data !== 'string' || !parsed.data) return null
-    ensureEncryptionAvailable()
     const { safeStorage } = electronRuntime()
-    const decrypted = safeStorage.decryptString(Buffer.from(parsed.data, 'base64'))
-    const session = JSON.parse(decrypted) as Partial<LatticeAuthSession>
-    if (
-      typeof session.accessToken !== 'string' ||
-      typeof session.baseUrl !== 'string' ||
-      typeof session.username !== 'string' ||
-      typeof session.keyId !== 'string' ||
-      typeof session.keyPrefix !== 'string' ||
-      typeof session.savedAt !== 'string'
-    ) {
+    if (!encryptionAvailable() || !safeStorage) {
       return null
     }
-    return session as LatticeAuthSession
+    try {
+      const decrypted = safeStorage.decryptString(Buffer.from(parsed.data, 'base64'))
+      return parseSession(JSON.parse(decrypted))
+    } catch {
+      return null
+    }
   } catch (err) {
     const code = (err as NodeJS.ErrnoException)?.code
     if (code === 'ENOENT') return null

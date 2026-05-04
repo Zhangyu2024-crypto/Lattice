@@ -12,6 +12,12 @@ import {
 } from '../../../lib/model-pricing'
 import type { LLMModel, LLMProvider } from '../../../types/llm'
 import type { LlmListModelsResultPayload } from '../../../types/electron'
+import {
+  LATTICE_AUTH_PROVIDER_ID,
+  connectLatticeAuthProviderModels,
+  disableLatticeAuthProvider,
+  upsertLatticeAuthProvider,
+} from '../../../lib/lattice-auth-client'
 import ActiveModelBanner from './models/ActiveModelBanner'
 import GenerationTabs from './models/GenerationTabs'
 import NewProviderForm from './models/NewProviderForm'
@@ -26,9 +32,6 @@ import {
   parseModelOptionKey,
   type ConnectStatus,
 } from './models/types'
-
-const LATTICE_AUTH_API_KEY_REF = 'lattice-secure-token'
-const LATTICE_BLOG_PROVIDER_ID = 'lattice-blog'
 
 // ─── Top-level tab ──────────────────────────────────────────────────────
 
@@ -445,37 +448,46 @@ function ProvidersSection() {
         toast.error(`Blog login failed: ${result.error}`)
         return
       }
-      const providerInput: Omit<LLMProvider, 'id'> = {
-        name: 'Lattice Blog',
-        type: 'openai-compatible',
-        baseUrl: result.baseUrl,
-        apiKey: LATTICE_AUTH_API_KEY_REF,
-        enabled: true,
-        mentionResolve: 'allow',
-        models: [],
-      }
-      const existing = providers.find((p) => p.id === LATTICE_BLOG_PROVIDER_ID)
-      const provider: LLMProvider = existing
-        ? {
-            ...existing,
-            ...providerInput,
-            id: existing.id,
-            models: existing.models,
-          }
-        : {
-            ...providerInput,
-            id: LATTICE_BLOG_PROVIDER_ID,
-          }
-      if (existing) {
-        updateProvider(existing.id, providerInput)
-      } else {
-        useLLMConfigStore.setState((s) => ({
-          providers: [...s.providers, provider],
-        }))
-      }
+      upsertLatticeAuthProvider(result)
       setBlogSession(result)
       toast.success(`Logged in as ${result.username}`)
-      await handleConnect(provider)
+      const connected = await connectLatticeAuthProviderModels(result)
+      if (!connected.ok) {
+        setStatus(connected.provider.id, {
+          state: 'error',
+          message: connected.message,
+          status: connected.status,
+        })
+        const suffix = connected.status ? ` (HTTP ${connected.status})` : ''
+        toast.warn(`Model setup did not finish: ${connected.message}${suffix}`)
+        return
+      }
+      if (connected.provider.models.length === 0) {
+        setStatus(connected.provider.id, {
+          state: 'ok',
+          durationMs: connected.durationMs,
+          fetched: 0,
+          added: 0,
+          updated: 0,
+        })
+        toast.warn('Logged in, but chaxiejun.xyz returned no models')
+        return
+      }
+      setStatus(connected.provider.id, {
+        state: 'ok',
+        durationMs: connected.durationMs,
+        fetched: connected.fetched,
+        added: connected.added,
+        updated: connected.updated,
+      })
+      const summary = [
+        `${connected.fetched} models`,
+        connected.added > 0 ? `${connected.added} new` : null,
+        connected.priced > 0 ? `${connected.priced} priced` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+      toast.success(`${connected.provider.name}: connected (${summary})`)
     } catch (err) {
       toast.error(`Blog login failed: ${errorMessage(err)}`)
     } finally {
@@ -487,9 +499,9 @@ function ProvidersSection() {
     try {
       await window.electronAPI?.latticeAuthLogout?.()
       setBlogSession(null)
-      const provider = providers.find((p) => p.id === LATTICE_BLOG_PROVIDER_ID)
+      const provider = providers.find((p) => p.id === LATTICE_AUTH_PROVIDER_ID)
       if (provider) {
-        updateProvider(provider.id, { apiKey: '', enabled: false })
+        disableLatticeAuthProvider()
         setStatus(provider.id, CONNECT_IDLE)
       }
       toast.info('Logged out of Lattice Blog')
