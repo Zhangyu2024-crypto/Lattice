@@ -9,6 +9,7 @@ import {
   SquareTerminal,
 } from 'lucide-react'
 import type { SidebarView } from '../../stores/prefs-store'
+import type { SettingsTabId } from './SettingsModal'
 import AccountStatsMenu from './AccountStatsMenu'
 
 const ACTIVITY_ICON_SIZE = 20
@@ -29,7 +30,7 @@ interface Props {
   onOpenCompute: () => void
   /** Highlights the Compute icon while the overlay is open. */
   computeOverlayOpen?: boolean
-  onOpenSettings: () => void
+  onOpenSettings: (tab?: SettingsTabId) => void
 }
 
 export default function ActivityBar({
@@ -139,7 +140,7 @@ export default function ActivityBar({
       <button
         type="button"
         className="activity-btn"
-        onClick={onOpenSettings}
+        onClick={() => onOpenSettings()}
         title="Settings (Ctrl+,)"
         aria-label="Settings"
       >

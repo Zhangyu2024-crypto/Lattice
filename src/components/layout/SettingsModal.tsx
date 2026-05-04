@@ -5,6 +5,7 @@ import SyncTab from './sync/SyncTab'
 import { useComputeConfigStore } from '../../stores/compute-config-store'
 import { toast } from '../../stores/toast-store'
 import { useEscapeKey } from '../../hooks/useEscapeKey'
+import AccountSettingsTab from './settings-modal/AccountSettingsTab'
 import GeneralSettingsTab from './settings-modal/GeneralSettingsTab'
 import ComputeSettingsTab from './settings-modal/ComputeSettingsTab'
 import ExtensionsSettingsTab from './settings-modal/ExtensionsSettingsTab'
@@ -84,6 +85,9 @@ export default function SettingsModal({
 
   let tabContent: React.ReactNode
   switch (activeTab) {
+    case 'account':
+      tabContent = <AccountSettingsTab />
+      break
     case 'general':
       tabContent = <GeneralSettingsTab />
       break

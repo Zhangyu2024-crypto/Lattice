@@ -793,9 +793,9 @@ export default function App() {
     )
   }, [])
 
-  const handleOpenSettings = useCallback(() => {
+  const handleOpenSettings = useCallback((tab: SettingsTabId = 'compute') => {
     prefetchSettingsModal()
-    setSettingsOpen(true, 'compute')
+    setSettingsOpen(true, tab)
   }, [setSettingsOpen])
 
   const openSettingsTab = useCallback(

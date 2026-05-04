@@ -244,7 +244,7 @@
   left: var(--account-popover-left);
   bottom: var(--account-popover-bottom);
   z-index: var(--z-popover, 1100);
-  width: 328px;
+  width: 260px;
   max-height: calc(100vh - 16px);
   overflow: auto;
   box-sizing: border-box;
@@ -258,6 +258,10 @@
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
   font-size: var(--text-xs);
+}
+
+.account-stats-popover--compact {
+  gap: 9px;
 }
 
 .account-stats-header {
@@ -287,9 +291,7 @@
 }
 
 .account-stats-name,
-.account-stats-subtitle,
-.account-stats-tile-value,
-.account-stats-tile-detail {
+.account-stats-subtitle {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -359,68 +361,10 @@
   color: var(--color-text-muted);
 }
 
-.account-stats-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 8px;
-}
-
-.account-stats-tile {
-  min-width: 0;
-  padding: 8px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-bg-sidebar);
-}
-
-.account-stats-tile-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  color: var(--color-text-muted);
-}
-
-.account-stats-tile-label svg {
-  flex: 0 0 auto;
-}
-
-.account-stats-tile-value {
-  margin-top: 6px;
-  color: var(--color-text-primary);
-  font-weight: 650;
-}
-
-.account-stats-tile-detail {
-  margin-top: 2px;
-  color: var(--color-text-muted);
-}
-
-.account-stats-section {
+.account-stats-compact-lines {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding-top: 10px;
-  border-top: 1px solid var(--color-border);
-}
-
-.account-stats-section-title {
-  color: var(--color-text-primary);
-  font-weight: 650;
-}
-
-.account-stats-progress {
-  height: 6px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--color-border);
-}
-
-.account-stats-progress-fill {
-  display: block;
-  width: var(--account-progress-width);
-  height: 100%;
-  background: var(--account-progress-bg);
 }
 
 .account-stats-row {
@@ -463,6 +407,10 @@
 
 .account-stats-settings:hover {
   background: var(--color-bg-hover);
+}
+
+.account-stats-settings--secondary {
+  color: var(--color-text-secondary);
 }
 
 /* === Status Bar Items ===

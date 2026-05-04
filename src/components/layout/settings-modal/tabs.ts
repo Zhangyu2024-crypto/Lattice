@@ -2,12 +2,14 @@ import {
   Cloud,
   Cpu,
   Puzzle,
+  CircleUserRound,
   Settings2,
   Sparkles,
   type LucideIcon,
 } from 'lucide-react'
 
 export type SettingsTabId =
+  | 'account'
   | 'general'
   | 'models'
   | 'compute'
@@ -22,6 +24,12 @@ export interface TabDef {
 }
 
 export const SETTINGS_TABS: readonly TabDef[] = [
+  {
+    id: 'account',
+    label: 'Account',
+    description: 'Login, provider status & usage',
+    icon: CircleUserRound,
+  },
   {
     id: 'general',
     label: 'General',

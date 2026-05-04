@@ -3277,6 +3277,199 @@
   line-height: 1.45;
 }
 
+/* ── Account tab: login + usage summary ────────────────────────────── */
+
+.settings-account-root {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-account-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-sidebar);
+}
+
+.settings-account-avatar {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-active);
+  color: var(--color-text-emphasis);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.settings-account-hero-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-account-name,
+.settings-account-subtitle,
+.settings-account-card-value,
+.settings-account-card-detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-account-name {
+  color: var(--color-text-primary);
+  font-size: var(--text-base);
+  font-weight: 650;
+}
+
+.settings-account-subtitle {
+  margin-top: 2px;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.settings-account-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-panel);
+  white-space: nowrap;
+}
+
+.settings-account-status--ok {
+  color: var(--color-green);
+  border-color: color-mix(in srgb, var(--color-green) 32%, var(--color-border));
+  background: color-mix(in srgb, var(--color-green) 8%, var(--color-bg-panel));
+}
+
+.settings-account-status--warn {
+  color: var(--color-yellow);
+  border-color: color-mix(in srgb, var(--color-yellow) 34%, var(--color-border));
+  background: color-mix(in srgb, var(--color-yellow) 9%, var(--color-bg-panel));
+}
+
+.settings-account-status--off {
+  color: var(--color-text-muted);
+}
+
+.settings-account-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.settings-account-card {
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--color-bg-sidebar);
+}
+
+.settings-account-card-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.settings-account-card-label svg {
+  flex: 0 0 auto;
+}
+
+.settings-account-card-value {
+  margin-top: 8px;
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+
+.settings-account-card-detail {
+  margin-top: 3px;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.settings-account-usage {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-sidebar);
+}
+
+.settings-account-progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.settings-account-progress-head strong {
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+}
+
+.settings-account-progress {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-border);
+}
+
+.settings-account-progress-fill {
+  display: block;
+  width: var(--settings-account-progress-width);
+  height: 100%;
+  background: var(--settings-account-progress-bg);
+}
+
+.settings-account-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+}
+
+.settings-account-detail-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+}
+
+.settings-account-detail-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-account-detail-row strong {
+  flex: 0 0 auto;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-weight: 650;
+}
+
 /* === Compute containers ===
    Styles for `ComputeContainerControls.tsx`, `ComputeResources.tsx`,
    `ComputePackages.tsx`, and `ComputePackageDetail.tsx`. All four live
