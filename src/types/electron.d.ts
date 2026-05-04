@@ -200,6 +200,18 @@ export type LatticeAuthLoginResultPayload =
     } & Extract<LatticeAuthSessionPayload, { authenticated: true }>)
   | { ok: false; error: string }
 
+export type LatticeCollabTicketResultPayload =
+  | {
+      ok: true
+      ticket: string
+      expiresAt: string
+      expiresIn: number
+      roomName: string
+      userId?: string
+      username?: string
+    }
+  | { ok: false; error: string }
+
 // ─── Literature search (OpenAlex + arXiv) ───────────────────────────
 //
 // Ported from lattice-cli's `_search_openalex` / `_search_arxiv`
@@ -838,6 +850,13 @@ declare global {
         authBaseUrl?: string
       }) => Promise<LatticeAuthLoginResultPayload>
       latticeAuthLogout: () => Promise<{ ok: true }>
+      latticeAuthCollabTicket: (payload: {
+        serverUrl?: string
+        projectId: string
+        roomId: string
+        roomName: string
+        role?: string
+      }) => Promise<LatticeCollabTicketResultPayload>
       onLlmStreamChunk: (
         callback: (event: LlmStreamChunkEvent) => void,
       ) => () => void

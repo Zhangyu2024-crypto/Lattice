@@ -65,6 +65,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('lattice-auth:login', payload ?? {}),
   latticeAuthLogout: () =>
     ipcRenderer.invoke('lattice-auth:logout'),
+  latticeAuthCollabTicket: (payload: unknown) =>
+    ipcRenderer.invoke('lattice-auth:collab-ticket', payload),
   onLlmStreamChunk: (cb: (payload: { streamId: string; textDelta: string }) => void) =>
     subscribe('llm:stream-chunk', cb),
   onLlmStreamToolUse: (cb: (payload: { streamId: string; toolUse: { id: string; name: string; input: Record<string, unknown> } }) => void) =>

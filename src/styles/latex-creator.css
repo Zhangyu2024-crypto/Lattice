@@ -419,6 +419,111 @@
   font-size: var(--text-sm);
 }
 
+.latex-details-input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-input);
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-family: inherit;
+}
+
+.latex-collab-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 9px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-bg-input) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+}
+
+.latex-collab-status-dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--color-text-muted);
+}
+
+.latex-collab-status-dot.is-connected {
+  background: #16a34a;
+}
+
+.latex-collab-status-dot.is-connecting {
+  background: #ca8a04;
+}
+
+.latex-collab-status-dot.is-error,
+.latex-collab-status-dot.is-disconnected {
+  background: var(--color-danger);
+}
+
+.latex-collab-status-dot.is-local-only {
+  background: #0891b2;
+}
+
+.latex-collab-status-copy {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.latex-collab-server-row,
+.latex-collab-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.latex-collab-server-row .ui-btn,
+.latex-collab-actions .ui-btn {
+  flex-shrink: 0;
+}
+
+.latex-collab-members {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.latex-collab-member {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.latex-collab-member-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.latex-collab-member-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+}
+
+.latex-collab-member-role {
+  color: var(--color-text-muted);
+  text-transform: capitalize;
+}
+
 .latex-details-section--assistant {
   border-bottom: none;
 }
@@ -1391,4 +1496,3 @@
   box-shadow: none;
   background: transparent;
 }
-

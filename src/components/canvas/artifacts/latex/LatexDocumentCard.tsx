@@ -9,6 +9,7 @@ import type {
   LatexDocumentPayload,
   LatexFile,
 } from '../../../../types/latex'
+import type { LatexCollaborationRuntimeState } from '../../../../types/collaboration'
 import { toast } from '../../../../stores/toast-store'
 import { Button } from '../../../ui'
 import LatexCodeMirror from './LatexCodeMirror'
@@ -33,6 +34,8 @@ import { CardRightPane } from './document-card/CardRightPane'
 import { runSelectionCommand } from './document-card/run-selection-command'
 import { useFocusShortcuts } from './document-card/use-focus-shortcuts'
 import { useDrawerResize } from './document-card/use-drawer-resize'
+import { normalizeLatexCollaborationMetadata } from '../../../../lib/latex/collaboration'
+import { useLatexCollaboration } from './useLatexCollaboration'
 
 interface Props {
   artifact: Artifact
@@ -55,6 +58,11 @@ export default function LatexDocumentCard({
 }: Props) {
   const payload = artifact.payload as unknown as LatexDocumentPayload
   const patchArtifact = useSessionStore((s) => s.patchArtifact)
+  const [collaborationRuntime, setCollaborationRuntime] =
+    useState<LatexCollaborationRuntimeState>({
+      status: 'disabled',
+      members: [],
+    })
 
   const [files, setFiles] = useState<LatexFile[]>(payload.files)
   const [activeFile, setActiveFile] = useState<string>(
@@ -106,6 +114,15 @@ export default function LatexDocumentCard({
   const active = useMemo(
     () => files.find((f) => f.path === activeFile) ?? files[0],
     [files, activeFile],
+  )
+  const normalizedCollaboration = useMemo(
+    () =>
+      normalizeLatexCollaborationMetadata(
+        payload,
+        artifact.id,
+        artifact.title,
+      ),
+    [payload.collaboration, artifact.id, artifact.title],
   )
 
   const filesRef = useRef(files)
@@ -162,6 +179,34 @@ export default function LatexDocumentCard({
     [activeFile],
   )
 
+  const handleRemoteEdit = useCallback(
+    (next: string) => {
+      const current = filesRef.current.find((f) => f.path === activeFile)
+      if (current?.content === next) return
+      const nextFiles = filesRef.current.map((f) =>
+        f.path === activeFile ? { ...f, content: next } : f,
+      )
+      setFiles(nextFiles)
+      flushFiles(nextFiles, activeFile)
+    },
+    [activeFile, flushFiles],
+  )
+
+  const {
+    extension: collaborationExtension,
+    editorValue: collaborationEditorValue,
+    runtime: liveCollaborationRuntime,
+  } = useLatexCollaboration({
+    collaboration: normalizedCollaboration,
+    filePath: active?.path ?? activeFile,
+    initialText: active?.content ?? '',
+    onRemoteText: handleRemoteEdit,
+  })
+
+  useEffect(() => {
+    setCollaborationRuntime(liveCollaborationRuntime)
+  }, [liveCollaborationRuntime])
+
   // Capture `handleSelectionCommand` in a ref so the CM6 extension (created
   // once via useMemo) always calls the latest closure — avoids rebuilding
   // the editor view on every state change just to refresh the handler.
@@ -175,6 +220,13 @@ export default function LatexDocumentCard({
         disabled: () => aiInFlightRef.current,
       }),
     [],
+  )
+  const editorExtensions = useMemo(
+    () =>
+      collaborationExtension
+        ? [selectionMenuExtension, collaborationExtension]
+        : [selectionMenuExtension],
+    [selectionMenuExtension, collaborationExtension],
   )
   handleSelectionCommandRef.current = async (
     ctx: SelectionMenuCommandCtx,
@@ -421,9 +473,9 @@ export default function LatexDocumentCard({
                     ? `${active.path}::${applyVersion}`
                     : active.path
                 }
-                value={active.content}
+                value={collaborationEditorValue ?? active.content}
                 onChange={handleEdit}
-                extraExtensions={[selectionMenuExtension]}
+                extraExtensions={editorExtensions}
               />
             ) : null}
           </div>
@@ -456,7 +508,10 @@ export default function LatexDocumentCard({
               ) : (
                 <LatexDetailsPane
                   documentTitle={artifact.title}
+                  artifactId={artifact.id}
                   payload={payload}
+                  collaboration={normalizedCollaboration}
+                  collaborationRuntime={collaborationRuntime}
                   onPatchPayload={handlePatchPayload}
                 />
               )}
@@ -524,9 +579,9 @@ export default function LatexDocumentCard({
                   ? `${active.path}::${applyVersion}`
                   : active.path
               }
-              value={active.content}
+              value={collaborationEditorValue ?? active.content}
               onChange={handleEdit}
-              extraExtensions={[selectionMenuExtension]}
+              extraExtensions={editorExtensions}
             />
           ) : null}
         </div>
@@ -553,7 +608,10 @@ export default function LatexDocumentCard({
           ) : (
             <LatexDetailsPane
               documentTitle={artifact.title}
+              artifactId={artifact.id}
               payload={payload}
+              collaboration={normalizedCollaboration}
+              collaborationRuntime={collaborationRuntime}
               onPatchPayload={handlePatchPayload}
             />
           )}

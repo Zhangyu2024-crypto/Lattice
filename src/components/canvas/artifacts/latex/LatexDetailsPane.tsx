@@ -1,10 +1,28 @@
-import { BookOpen, Cpu, Info, Sparkles } from 'lucide-react'
+import { BookOpen, Copy, Cpu, Info, Sparkles, Users } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { copyText } from '../../../../lib/clipboard-helper'
+import {
+  createLatexCollaborationMetadata,
+  DEFAULT_LATEX_COLLABORATION_SERVER_URL,
+  normalizeCollaborationServerUrl,
+} from '../../../../lib/latex/collaboration'
+import type {
+  LatexCollaborationMetadata,
+  LatexCollaborationRuntimeState,
+} from '../../../../types/collaboration'
 import type { LatexDocumentPayload, LatexMentionMode } from '../../../../types/latex'
+import { toast } from '../../../../stores/toast-store'
+import { Button } from '../../../ui'
 import MetaRow from '../../../ui/MetaRow'
+import { useLLMConfigStore } from '../../../../stores/llm-config-store'
+import { LATTICE_AUTH_PROVIDER_ID } from '../../../../lib/lattice-auth-client'
 
 interface Props {
   documentTitle: string
+  artifactId: string
   payload: LatexDocumentPayload
+  collaboration?: LatexCollaborationMetadata
+  collaborationRuntime: LatexCollaborationRuntimeState
   onPatchPayload: (partial: Partial<LatexDocumentPayload>) => void
 }
 
@@ -16,9 +34,35 @@ const MENTION_LABEL: Record<LatexMentionMode, string> = {
 
 export default function LatexDetailsPane({
   documentTitle,
+  artifactId,
   payload,
+  collaboration,
+  collaborationRuntime,
   onPatchPayload,
 }: Props) {
+  const latticeProvider = useLLMConfigStore((s) =>
+    s.providers.find((p) => p.id === LATTICE_AUTH_PROVIDER_ID),
+  )
+  const [desktopUserName, setDesktopUserName] = useState<string | undefined>()
+  const [serverInput, setServerInput] = useState(
+    collaboration?.serverUrl ?? DEFAULT_LATEX_COLLABORATION_SERVER_URL,
+  )
+  useEffect(() => {
+    setServerInput(collaboration?.serverUrl ?? DEFAULT_LATEX_COLLABORATION_SERVER_URL)
+  }, [collaboration?.serverUrl])
+  useEffect(() => {
+    let cancelled = false
+    window.electronAPI?.latticeAuthGetSession?.()
+      .then((session) => {
+        if (!cancelled && session.authenticated) {
+          setDesktopUserName(session.username)
+        }
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [])
   const tex = payload.files.filter((f) => f.kind === 'tex').length
   const bib = payload.files.filter((f) => f.kind === 'bib').length
   const assets = payload.files.filter((f) => f.kind === 'asset').length
@@ -36,6 +80,73 @@ export default function LatexDetailsPane({
       ? `${(payload.durationMs / 1000).toFixed(1)}s`
       : '—'
 
+  const collaborationStatus = useMemo(() => {
+    switch (collaborationRuntime.status) {
+      case 'connected':
+        return 'Connected'
+      case 'connecting':
+        return 'Connecting'
+      case 'disconnected':
+        return 'Disconnected'
+      case 'error':
+        return 'Connection issue'
+      case 'local-only':
+        return 'Local room'
+      case 'disabled':
+      default:
+        return 'Off'
+    }
+  }, [collaborationRuntime.status])
+
+  const handleCreateCollaboration = () => {
+    const next = createLatexCollaborationMetadata({
+      artifactId,
+      documentTitle,
+      userName: desktopUserName ?? (latticeProvider?.enabled ? 'Lattice user' : undefined),
+      serverUrl: serverInput,
+    })
+    onPatchPayload({ collaboration: next })
+  }
+
+  const handleToggleCollaboration = (enabled: boolean) => {
+    if (!collaboration) return
+    onPatchPayload({
+      collaboration: {
+        ...collaboration,
+        enabled,
+        updatedAt: Date.now(),
+      },
+    })
+  }
+
+  const handleApplyServer = () => {
+    if (!collaboration) return
+    const normalized = normalizeCollaborationServerUrl(serverInput)
+    if (serverInput.trim() && !normalized) {
+      toast.error('Use a ws:// or wss:// collaboration server URL')
+      return
+    }
+    onPatchPayload({
+      collaboration: {
+        ...collaboration,
+        serverUrl: normalized,
+        updatedAt: Date.now(),
+      },
+    })
+  }
+
+  const handleCopyInvite = () => {
+    if (!collaboration) return
+    const invite = [
+      `Lattice LaTeX room: ${collaboration.roomId}`,
+      `Project: ${collaboration.projectId}`,
+      collaboration.serverUrl ? `Server: ${collaboration.serverUrl}` : null,
+    ]
+      .filter(Boolean)
+      .join('\n')
+    void copyText(invite, 'Collaboration room copied')
+  }
+
   return (
     <div className="latex-details-pane">
       <section className="latex-details-section">
@@ -49,6 +160,108 @@ export default function LatexDetailsPane({
           label="Files"
           value={`${tex} TeX · ${bib} BibTeX · ${assets} other`}
         />
+      </section>
+
+      <section className="latex-details-section">
+        <h3 className="latex-details-section-title">
+          <Users size={14} strokeWidth={2} aria-hidden />
+          Collaboration
+        </h3>
+        {collaboration ? (
+          <>
+            <div className="latex-collab-status-row">
+              <span
+                className={`latex-collab-status-dot is-${collaborationRuntime.status}`}
+              />
+              <span className="latex-collab-status-copy">
+                {collaborationStatus}
+                {collaborationRuntime.error
+                  ? ` · ${collaborationRuntime.error}`
+                  : ''}
+              </span>
+            </div>
+            <MetaRow label="Room" value={collaboration.roomId} mono />
+            <MetaRow label="Project" value={collaboration.projectId} mono />
+            <MetaRow
+              label="Source layout"
+              value={collaboration.workspaceRelDir ?? 'artifact files'}
+              mono
+            />
+            <div className="latex-details-field">
+              <span className="latex-details-field-label">
+                Collaboration server
+              </span>
+              <div className="latex-collab-server-row">
+                <input
+                  className="latex-details-input"
+                  value={serverInput}
+                  placeholder={DEFAULT_LATEX_COLLABORATION_SERVER_URL}
+                  onChange={(e) => setServerInput(e.target.value)}
+                />
+                <Button variant="secondary" size="sm" onClick={handleApplyServer}>
+                  Apply
+                </Button>
+              </div>
+              <span className="latex-details-toggle-hint">
+                Empty server keeps the document in local-only mode. The default
+                chaxiejun.xyz endpoint uses your Lattice desktop login.
+              </span>
+            </div>
+            <div className="latex-collab-actions">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleCopyInvite}
+                leading={<Copy size={13} />}
+              >
+                Copy room
+              </Button>
+              <Button
+                variant={collaboration.enabled ? 'ghost' : 'primary'}
+                size="sm"
+                onClick={() => handleToggleCollaboration(!collaboration.enabled)}
+              >
+                {collaboration.enabled ? 'Turn off' : 'Turn on'}
+              </Button>
+            </div>
+            <div className="latex-collab-members">
+              {collaborationRuntime.members.map((member) => (
+                <div className="latex-collab-member" key={member.id}>
+                  <span
+                    className="latex-collab-member-color"
+                    style={{ background: member.color }}
+                  />
+                  <span className="latex-collab-member-name">
+                    {member.name}
+                    {member.isLocal ? ' (you)' : ''}
+                  </span>
+                  <span className="latex-collab-member-role">{member.role}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="latex-details-assistant-copy">
+              Create a shared room for this LaTeX artifact. Source files can be
+              synchronized through Yjs while compile output stays local.
+            </p>
+            <div className="latex-details-field">
+              <span className="latex-details-field-label">
+                Collaboration server
+              </span>
+              <input
+                className="latex-details-input"
+                value={serverInput}
+                placeholder={DEFAULT_LATEX_COLLABORATION_SERVER_URL}
+                onChange={(e) => setServerInput(e.target.value)}
+              />
+            </div>
+            <Button variant="primary" size="sm" onClick={handleCreateCollaboration}>
+              Create room
+            </Button>
+          </>
+        )}
       </section>
 
       <section className="latex-details-section">

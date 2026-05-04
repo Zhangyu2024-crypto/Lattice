@@ -2,6 +2,8 @@
 // first version so the schema doesn't need to migrate once Phase B / C land
 // real user data. See docs/plans/temporal-honking-hanrahan.md (architecture notes).
 
+import type { LatexCollaborationMetadata } from './collaboration'
+
 export type LatexCompileStatus =
   | 'idle'
   | 'compiling'
@@ -63,6 +65,9 @@ export interface LatexDocumentPayload {
   ghostEnabled: boolean
   autoCompile: boolean
   autoFixSuggest: boolean
+  /** Optional real-time collaboration metadata. Source text remains in
+   *  `files[]`; this block describes the shared room and local identity. */
+  collaboration?: LatexCollaborationMetadata
   /** Hash of last auto-fix attempt — used to break suggestion loops when the
    *  LLM keeps proposing the same patch for the same error. */
   lastAutoFixSig?: string
