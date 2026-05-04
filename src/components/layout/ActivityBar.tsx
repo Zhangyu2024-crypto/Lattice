@@ -22,9 +22,6 @@ interface Props {
   /** When provided, clicking the Library icon opens the full Library window
    *  (Electron) or modal (web) directly, skipping the sidebar-view step. */
   onOpenLibraryWindow?: () => void
-  /** Open the Writing/Creator surface directly. In Electron this opens a
-   *  dedicated workbench window; web falls back to sidebar-view switch. */
-  onOpenWritingWindow?: () => void
   /** Open the Compute overlay (full-screen page inside the current window).
    *  Compute no longer has a sidebar view — this is its only entry point. */
   onOpenCompute: () => void
@@ -38,7 +35,6 @@ export default function ActivityBar({
   activeView,
   onSelectView,
   onOpenLibraryWindow,
-  onOpenWritingWindow,
   onOpenCompute,
   computeOverlayOpen = false,
   onOpenSettings,
@@ -93,23 +89,15 @@ export default function ActivityBar({
           <SquareTerminal {...iconProps} />
         </button>
       )}
-      {false && (
-        <button
-          type="button"
-          className={`activity-btn ${isActiveView('writing') ? 'active' : ''}`}
-          onClick={() => {
-            if (onOpenWritingWindow) {
-              onOpenWritingWindow()
-              return
-            }
-            onSelectView('writing')
-          }}
-          title="Creator"
-          aria-label="Creator"
-        >
-          <Feather {...iconProps} />
-        </button>
-      )}
+      <button
+        type="button"
+        className={`activity-btn ${isActiveView('writing') ? 'active' : ''}`}
+        onClick={() => onSelectView('writing')}
+        title="Creator"
+        aria-label="Creator"
+      >
+        <Feather {...iconProps} />
+      </button>
 
       <button
         type="button"

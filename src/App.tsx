@@ -957,7 +957,6 @@ export default function App() {
             activeView={layout.activeView}
             onSelectView={selectSidebarView}
             onOpenLibraryWindow={handleOpenLibrary}
-            onOpenWritingWindow={handleOpenWriting}
             onOpenCompute={() => openComputeOverlay()}
             computeOverlayOpen={computeOverlayOpen}
             onOpenSettings={handleOpenSettings}
