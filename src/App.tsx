@@ -316,6 +316,27 @@ export default function App() {
 
   const handleOpenWriting = useCallback(async () => {
     const { sid, aid } = ensureLatexArtifact(DEMO_LATEX)
+    if (window.electronAPI?.openWorkbenchWindow) {
+      flushRuntimePersist()
+      try {
+        const result = await window.electronAPI.openWorkbenchWindow({
+          sessionId: sid,
+          artifactId: aid,
+        })
+        if (result && !result.success) {
+          toast.error(
+            `Could not open Creator: ${result.error ?? 'Unknown error'}`,
+          )
+          openCreatorInline(sid, aid)
+        }
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : 'Could not open Creator',
+        )
+        openCreatorInline(sid, aid)
+      }
+      return
+    }
     openCreatorInline(sid, aid)
   }, [ensureLatexArtifact, openCreatorInline])
 
@@ -977,6 +998,7 @@ export default function App() {
             activeView={layout.activeView}
             onSelectView={selectSidebarView}
             onOpenLibraryWindow={handleOpenLibrary}
+            onOpenWritingWindow={handleOpenWriting}
             onOpenCompute={() => openComputeOverlay()}
             computeOverlayOpen={computeOverlayOpen}
             onOpenSettings={handleOpenSettings}

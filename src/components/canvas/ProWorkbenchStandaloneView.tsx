@@ -8,6 +8,7 @@ import ArtifactActionMenu from './ArtifactActionMenu'
 import ParametersDrawer from './ParametersDrawer'
 import { renderArtifactBody } from './artifact-body'
 import ResearchProgressShell from '../research/ResearchProgressShell'
+import LatexDocumentCard from './artifacts/latex/LatexDocumentCard'
 
 /** Artifacts allowed in the satellite `#/workbench` BrowserWindow. */
 const STANDALONE_WORKBENCH_KINDS = new Set<Artifact['kind']>([
@@ -170,6 +171,18 @@ export default function ProWorkbenchStandaloneView({
           presentation="standalone"
           sessionId={session.id}
           onCloseWindow={onCloseWindow}
+        />
+      </div>
+    )
+  }
+
+  if (artifact.kind === 'latex-document') {
+    return (
+      <div className="pro-workbench-standalone-root">
+        <LatexDocumentCard
+          artifact={artifact}
+          sessionId={session.id}
+          variant="focus"
         />
       </div>
     )

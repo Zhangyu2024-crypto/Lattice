@@ -22,6 +22,8 @@ interface Props {
   /** When provided, clicking the Library icon opens the full Library window
    *  (Electron) or modal (web) directly, skipping the sidebar-view step. */
   onOpenLibraryWindow?: () => void
+  /** Opens Creator as its dedicated document surface. */
+  onOpenWritingWindow: () => void
   /** Open the Compute overlay (full-screen page inside the current window).
    *  Compute no longer has a sidebar view — this is its only entry point. */
   onOpenCompute: () => void
@@ -35,6 +37,7 @@ export default function ActivityBar({
   activeView,
   onSelectView,
   onOpenLibraryWindow,
+  onOpenWritingWindow,
   onOpenCompute,
   computeOverlayOpen = false,
   onOpenSettings,
@@ -91,8 +94,8 @@ export default function ActivityBar({
       )}
       <button
         type="button"
-        className={`activity-btn ${isActiveView('writing') ? 'active' : ''}`}
-        onClick={() => onSelectView('writing')}
+        className="activity-btn"
+        onClick={onOpenWritingWindow}
         title="Creator"
         aria-label="Creator"
       >

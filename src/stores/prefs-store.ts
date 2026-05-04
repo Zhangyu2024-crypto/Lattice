@@ -269,7 +269,7 @@ export const usePrefsStore = create<PrefsState>()(
     }),
     {
       name: 'lattice.prefs',
-      version: 16,
+      version: 17,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         ...state,
@@ -303,6 +303,8 @@ export const usePrefsStore = create<PrefsState>()(
       // merge/partialize so risky modes never persist across app restarts.
       // v16 adds `layout.editorPaneHeight` for the workspace editor/chat
       // vertical splitter.
+      // v17 retires Creator as a sidebar view. The activity-bar Creator
+      // button now opens the dedicated LaTeX document surface directly.
       // migrate-forward fills defaults via normalizeLayout so legacy
       // persisted states round-trip cleanly.
       migrate: (persistedState) => {
@@ -316,16 +318,18 @@ export const usePrefsStore = create<PrefsState>()(
           rest.composerMode === 'dialog' ? 'agent' : rest.composerMode ?? 'agent'
         // Legacy values map forward: `research` (v11) and `spectrum` (v14,
         // the floating Spectrum-analysis launcher) were both retired once
-        // the Pro workbench moved to its own window — route them to the
-        // file-first explorer so a persisted old preference doesn't land
-        // the user on a missing view at boot.
+        // the Pro workbench moved to its own window. `writing` (v17) is
+        // likewise a dedicated Creator surface now, not a sidebar. Route
+        // all retired sidebar preferences to the file-first explorer.
         const rawView = state.layout?.activeView as
           | SidebarView
           | 'research'
           | 'spectrum'
           | undefined
         const activeView =
-          rawView === 'research' || rawView === 'spectrum'
+          rawView === 'research' ||
+          rawView === 'spectrum' ||
+          rawView === 'writing'
             ? 'explorer'
             : rawView === 'session'
               ? 'explorer'
