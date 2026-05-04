@@ -10,6 +10,7 @@ import type {
   LatexFile,
 } from '../../../../types/latex'
 import { toast } from '../../../../stores/toast-store'
+import { useWorkspaceStore } from '../../../../stores/workspace-store'
 import { Button } from '../../../ui'
 import LatexCodeMirror from './LatexCodeMirror'
 import LatexPreviewPane from './LatexPreviewPane'
@@ -34,11 +35,17 @@ import { useFocusShortcuts } from './document-card/use-focus-shortcuts'
 import { useDrawerResize } from './document-card/use-drawer-resize'
 import { ProjectRail } from './document-card/ProjectRail'
 import {
+  LATEX_CREATOR_WORKSPACE_DIR,
   ensureLatexExtension,
   kindFromLatexPath,
   normalizeLatexProjectFiles,
   normalizeLatexProjectPath,
 } from '../../../../lib/latex/project-paths'
+import {
+  INITIAL_LATEX_WORKSPACE_SYNC,
+  syncLatexFilesToWorkspace,
+  type LatexWorkspaceSyncState,
+} from '../../../../lib/latex/workspace-sync'
 
 interface Props {
   artifact: Artifact
@@ -53,6 +60,9 @@ type RightTab = 'preview' | 'errors' | 'details'
 type FocusRightTab = RightTab | 'ai'
 
 const AUTO_COMPILE_DEBOUNCE_MS = 2000
+const WORKSPACE_SYNC_DEBOUNCE_MS = 800
+const FIX_WITH_AI_PROMPT =
+  'Fix every compile error and warning listed in COMPILE DIAGNOSTICS. Only change what is needed. Return the full corrected contents of any file you modify.'
 
 function defaultProjectFile(files: LatexFile[]): string {
   return (
@@ -79,6 +89,11 @@ export default function LatexDocumentCard({
   variant = 'card',
 }: Props) {
   const payload = artifact.payload as unknown as LatexDocumentPayload
+  const workspaceRootPath = useWorkspaceStore((s) => s.rootPath)
+  const workspaceHydrated = useWorkspaceStore((s) => s.hydrated)
+  const hydrateWorkspace = useWorkspaceStore((s) => s.hydrate)
+  const refreshWorkspaceDir = useWorkspaceStore((s) => s.refreshDir)
+  const workspaceFs = useWorkspaceStore((s) => s.getFs())
   const normalizedInitialFiles = useMemo(
     () => normalizeLatexProjectFiles(payload.files),
     [payload.files],
@@ -127,6 +142,10 @@ export default function LatexDocumentCard({
     onSplitterDoubleClick,
   } = useDrawerResize(bodyRef)
   const [compilingSince, setCompilingSince] = useState<number | null>(null)
+  const [workspaceSync, setWorkspaceSync] = useState<LatexWorkspaceSyncState>(
+    INITIAL_LATEX_WORKSPACE_SYNC,
+  )
+  const [aiAutoPrompt, setAiAutoPrompt] = useState<string | null>(null)
   // Snapshot of the compile output + parsed errors. Mirrors the payload's
   // status / errors fields but driven from the most recent compile — so
   // user reloads don't flash stale error lists while we wait for the first
@@ -161,6 +180,88 @@ export default function LatexDocumentCard({
   // for a confirmed AI replacement.
   const [applyVersion, setApplyVersion] = useState(0)
   const applyVersionBumpRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (workspaceHydrated) return
+    void hydrateWorkspace()
+  }, [workspaceHydrated, hydrateWorkspace])
+
+  const syncWorkspaceNow = useCallback(
+    async (opts: { showToast?: boolean } = {}) => {
+      if (!workspaceRootPath) {
+        setWorkspaceSync({
+          status: 'no-workspace',
+          savedAt: null,
+          error: 'Open a workspace folder first.',
+        })
+        if (opts.showToast) {
+          toast.warn('Open a workspace folder before syncing Creator files.')
+        }
+        return
+      }
+      try {
+        setWorkspaceSync((s) => ({ ...s, status: 'syncing', error: null }))
+        const written = await syncLatexFilesToWorkspace(
+          workspaceFs,
+          filesRef.current,
+        )
+        await refreshWorkspaceDir('')
+        await refreshWorkspaceDir(LATEX_CREATOR_WORKSPACE_DIR)
+        setWorkspaceSync({
+          status: 'synced',
+          savedAt: Date.now(),
+          error: null,
+        })
+        if (opts.showToast) {
+          toast.success(
+            `Synced ${written} Creator file${written === 1 ? '' : 's'}`,
+          )
+        }
+      } catch (err) {
+        const message = errorMessage(err)
+        setWorkspaceSync({
+          status: 'error',
+          savedAt: null,
+          error: message,
+        })
+        if (opts.showToast) toast.error(`Creator sync failed: ${message}`)
+      }
+    },
+    [workspaceRootPath, workspaceFs, refreshWorkspaceDir],
+  )
+
+  useEffect(() => {
+    if (!workspaceHydrated) return
+    if (!workspaceRootPath) {
+      setWorkspaceSync({
+        status: 'no-workspace',
+        savedAt: null,
+        error: 'Open a workspace folder first.',
+      })
+      return
+    }
+    setWorkspaceSync((s) =>
+      s.status === 'synced'
+        ? { ...s, status: 'idle', error: null }
+        : s.status === 'syncing'
+          ? s
+          : { ...s, status: 'idle', error: null },
+    )
+    const timer = window.setTimeout(() => {
+      void syncWorkspaceNow()
+    }, WORKSPACE_SYNC_DEBOUNCE_MS)
+    return () => window.clearTimeout(timer)
+  }, [files, workspaceHydrated, workspaceRootPath, syncWorkspaceNow])
+
+  const handleManualWorkspaceSync = useCallback(() => {
+    void syncWorkspaceNow({ showToast: true })
+  }, [syncWorkspaceNow])
+
+  const handleFixWithAi = useCallback(() => {
+    setDrawerTab('ai')
+    setAiAutoPrompt(FIX_WITH_AI_PROMPT)
+  }, [])
+
   const handlePatchPayload = useCallback(
     (partial: Partial<LatexDocumentPayload>) => {
       const cur = payloadRef.current
@@ -538,6 +639,7 @@ export default function LatexDocumentCard({
                   errors={compileSnapshot.errors}
                   warnings={compileSnapshot.warnings}
                   logTail={compileSnapshot.logTail}
+                  onFixWithAi={handleFixWithAi}
                 />
               ) : drawerTab === 'ai' ? (
                 <LatexAgentChat
@@ -548,12 +650,17 @@ export default function LatexDocumentCard({
                   warnings={compileSnapshot.warnings}
                   sessionId={sessionId}
                   onApplyFile={applyFileContents}
+                  initialPrompt={aiAutoPrompt}
+                  onInitialPromptConsumed={() => setAiAutoPrompt(null)}
                 />
               ) : (
                 <LatexDetailsPane
                   documentTitle={artifact.title}
                   payload={normalizedPayload}
                   onPatchPayload={handlePatchPayload}
+                  workspaceRootPath={workspaceRootPath}
+                  workspaceSync={workspaceSync}
+                  onSyncWorkspace={handleManualWorkspaceSync}
                 />
               )}
             </FocusDrawer>
@@ -631,12 +738,16 @@ export default function LatexDocumentCard({
               errors={compileSnapshot.errors}
               warnings={compileSnapshot.warnings}
               logTail={compileSnapshot.logTail}
+              onFixWithAi={handleFixWithAi}
             />
           ) : (
             <LatexDetailsPane
               documentTitle={artifact.title}
               payload={normalizedPayload}
               onPatchPayload={handlePatchPayload}
+              workspaceRootPath={workspaceRootPath}
+              workspaceSync={workspaceSync}
+              onSyncWorkspace={handleManualWorkspaceSync}
             />
           )}
         </CardRightPane>
@@ -650,6 +761,8 @@ export default function LatexDocumentCard({
         warnings={compileSnapshot.warnings}
         sessionId={sessionId}
         onApplyFile={applyFileContents}
+        initialPrompt={aiAutoPrompt}
+        onInitialPromptConsumed={() => setAiAutoPrompt(null)}
       />
     </div>
   )

@@ -1,11 +1,15 @@
-import { BookOpen, Cpu, Info, Sparkles } from 'lucide-react'
+import { BookOpen, Cpu, FolderSync, Info, Sparkles } from 'lucide-react'
 import type { LatexDocumentPayload, LatexMentionMode } from '../../../../types/latex'
+import type { LatexWorkspaceSyncState } from '../../../../lib/latex/workspace-sync'
 import MetaRow from '../../../ui/MetaRow'
 
 interface Props {
   documentTitle: string
   payload: LatexDocumentPayload
   onPatchPayload: (partial: Partial<LatexDocumentPayload>) => void
+  workspaceRootPath: string | null
+  workspaceSync: LatexWorkspaceSyncState
+  onSyncWorkspace: () => void
 }
 
 const MENTION_LABEL: Record<LatexMentionMode, string> = {
@@ -18,6 +22,9 @@ export default function LatexDetailsPane({
   documentTitle,
   payload,
   onPatchPayload,
+  workspaceRootPath,
+  workspaceSync,
+  onSyncWorkspace,
 }: Props) {
   const tex = payload.files.filter((f) => f.kind === 'tex').length
   const bib = payload.files.filter((f) => f.kind === 'bib').length
@@ -36,6 +43,19 @@ export default function LatexDetailsPane({
       ? `${(payload.durationMs / 1000).toFixed(1)}s`
       : '—'
 
+  const syncStatus =
+    workspaceSync.status === 'no-workspace'
+      ? 'No workspace open'
+      : workspaceSync.status === 'syncing'
+        ? 'Syncing'
+        : workspaceSync.status === 'synced' && workspaceSync.savedAt != null
+          ? `Saved ${new Date(workspaceSync.savedAt).toLocaleTimeString()}`
+          : workspaceSync.status === 'error'
+            ? workspaceSync.error ?? 'Sync failed'
+            : workspaceRootPath
+              ? 'Pending'
+              : 'No workspace open'
+
   return (
     <div className="latex-details-pane">
       <section className="latex-details-section">
@@ -49,6 +69,29 @@ export default function LatexDetailsPane({
           label="Files"
           value={`${tex} TeX · ${bib} BibTeX · ${assets} other`}
         />
+      </section>
+
+      <section className="latex-details-section">
+        <h3 className="latex-details-section-title">
+          <FolderSync size={14} strokeWidth={2} aria-hidden />
+          Workspace
+        </h3>
+        <MetaRow label="Folder" value="creator/" mono />
+        <MetaRow label="Status" value={syncStatus} />
+        {workspaceRootPath ? (
+          <MetaRow label="Root" value={workspaceRootPath} mono />
+        ) : null}
+        <button
+          type="button"
+          className="latex-details-action"
+          onClick={onSyncWorkspace}
+          disabled={
+            workspaceSync.status === 'syncing' ||
+            workspaceSync.status === 'no-workspace'
+          }
+        >
+          Sync now
+        </button>
       </section>
 
       <section className="latex-details-section">
@@ -146,9 +189,9 @@ export default function LatexDetailsPane({
           Assistant
         </h3>
         <p className="latex-details-assistant-copy">
-          Use the editor selection menu for quick actions on highlighted text.
-          Session-wide chat and deeper LaTeX assistance will plug in here in a
-          future update.
+          The AI panel reads this project, the active source file, and the last
+          compile diagnostics. It can return full-file replacements that you
+          review and apply per file.
         </p>
       </section>
     </div>

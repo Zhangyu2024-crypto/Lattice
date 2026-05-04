@@ -45,6 +45,8 @@ interface Props {
   /** Replace the full contents of `path` with `content`. Parent owns the
    *  artifact store write + the CodeMirror view switch. */
   onApplyFile: (path: string, content: string) => void
+  initialPrompt?: string | null
+  onInitialPromptConsumed?: () => void
 }
 
 export default function LatexAgentChat({
@@ -55,6 +57,8 @@ export default function LatexAgentChat({
   warnings,
   sessionId,
   onApplyFile,
+  initialPrompt,
+  onInitialPromptConsumed,
 }: Props) {
   const [expanded, setExpanded] = useState<boolean>(true)
   const [turns, setTurns] = useState<ChatTurn[]>([])
@@ -190,6 +194,14 @@ export default function LatexAgentChat({
     [busy, sessionId],
   )
 
+  useEffect(() => {
+    const prompt = initialPrompt?.trim()
+    if (!prompt) return
+    if (busy) return
+    onInitialPromptConsumed?.()
+    void submit(prompt)
+  }, [initialPrompt, busy, onInitialPromptConsumed, submit])
+
   const handleKeyDown = (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault()
@@ -204,20 +216,27 @@ export default function LatexAgentChat({
   }
 
   const handleApply = (turnIdKey: string, block: ParsedCodeBlock) => {
-    const target = normalizeLatexProjectPath(block.path ?? activeFile) || activeFile
+    const target =
+      normalizeLatexProjectPath(block.path ?? activeFile) || activeFile
     if (!filesRef.current.some((f) => f.path === target)) {
       toast.warn(`File "${target}" is not in the project.`)
       return
     }
     onApplyFile(target, block.content)
-    setAppliedBlocks((prev) => ({ ...prev, [`${turnIdKey}:${block.index}`]: true }))
+    setAppliedBlocks((prev) => ({
+      ...prev,
+      [`${turnIdKey}:${block.index}`]: true,
+    }))
     toast.success(`Applied to ${target}`)
   }
 
   const handleCopy = async (turnIdKey: string, block: ParsedCodeBlock) => {
     try {
       await navigator.clipboard.writeText(block.content)
-      setCopiedBlocks((prev) => ({ ...prev, [`${turnIdKey}:${block.index}`]: true }))
+      setCopiedBlocks((prev) => ({
+        ...prev,
+        [`${turnIdKey}:${block.index}`]: true,
+      }))
       const key = `${turnIdKey}:${block.index}`
       window.setTimeout(() => {
         setCopiedBlocks((prev) => {
@@ -301,7 +320,16 @@ export default function LatexAgentChat({
               ))}
               <div className="chat-messages-end-spacer" aria-hidden />
             </div>
-          ) : null}
+          ) : (
+            <div className="latex-agent-chat-empty">
+              <strong>Project-aware assistant</strong>
+              <span>
+                It reads the active file, project file list, outline, and last
+                compile diagnostics. Ask for a full-file patch, then review and
+                apply each proposed file.
+              </span>
+            </div>
+          )}
 
           <Composer
             ref={inputRef}

@@ -45,10 +45,17 @@ export const SYSTEM_PROMPT = [
 export const QUICK_ACTIONS: QuickAction[] = [
   {
     id: 'fix',
-    label: 'Fix errors',
+    label: 'Fix compile',
     prompt:
       'Fix every compile error and warning listed in COMPILE DIAGNOSTICS. Only change what is needed. Return the full corrected contents of any file you modify.',
     icon: AlertOctagon,
+  },
+  {
+    id: 'explain',
+    label: 'Explain errors',
+    prompt:
+      'Explain the current compile diagnostics in plain language. Point to the likely file and line for each issue. Do not modify files unless you are certain a one-file fix is needed.',
+    icon: Sparkles,
   },
   {
     id: 'polish',

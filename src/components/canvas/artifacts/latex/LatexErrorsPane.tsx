@@ -1,10 +1,11 @@
-import { AlertCircle, AlertTriangle, Info, Lightbulb } from 'lucide-react'
+import { AlertCircle, AlertTriangle, Info, Lightbulb, Sparkles } from 'lucide-react'
 import type { LatexCompileError } from '../../../../types/latex'
 
 interface Props {
   errors: LatexCompileError[]
   warnings: LatexCompileError[]
   logTail: string
+  onFixWithAi?: () => void
 }
 
 // BusyTeX only ships pdfTeX + bibtex8 — no biber, no shell-escape. When
@@ -31,12 +32,31 @@ function hasEngineLimitationSignal(
   return ENGINE_HINT_PATTERNS.some((re) => re.test(haystack))
 }
 
-export default function LatexErrorsPane({ errors, warnings, logTail }: Props) {
+export default function LatexErrorsPane({
+  errors,
+  warnings,
+  logTail,
+  onFixWithAi,
+}: Props) {
   const anything = errors.length + warnings.length > 0
   const showEngineHint = hasEngineLimitationSignal(errors, warnings, logTail)
   return (
     <div className="latex-errors-root">
       {showEngineHint ? <EngineHintBanner /> : null}
+      {anything && onFixWithAi ? (
+        <div className="latex-errors-ai-action">
+          <div>
+            <strong>Use project AI</strong>
+            <span>
+              Send these diagnostics and source files to the Creator assistant.
+            </span>
+          </div>
+          <button type="button" onClick={onFixWithAi}>
+            <Sparkles size={13} aria-hidden />
+            Fix with AI
+          </button>
+        </div>
+      ) : null}
       {anything ? (
         <ul className="latex-errors-list" role="list">
           {errors.map((e, i) => (

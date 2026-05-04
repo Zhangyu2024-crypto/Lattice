@@ -1,5 +1,7 @@
 import type { LatexFile, LatexFileKind } from '../../types/latex'
 
+export const LATEX_CREATOR_WORKSPACE_DIR = 'creator'
+
 export function normalizeLatexProjectPath(raw: string): string {
   const trimmed = raw.trim().replace(/\\/g, '/').replace(/^["'`]|["'`]$/g, '')
   if (
@@ -24,6 +26,11 @@ export function normalizeLatexProjectPath(raw: string): string {
     parts.push(part)
   }
   return parts.join('/')
+}
+
+export function creatorWorkspacePath(projectPath: string): string {
+  const normalized = normalizeLatexProjectPath(projectPath)
+  return normalized ? `${LATEX_CREATOR_WORKSPACE_DIR}/${normalized}` : ''
 }
 
 export function normalizeLatexProjectFiles(files: LatexFile[]): LatexFile[] {

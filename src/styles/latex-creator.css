@@ -298,6 +298,55 @@
   border-radius: var(--radius-sm);
 }
 
+.latex-errors-ai-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 28%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 9%, transparent);
+}
+
+.latex-errors-ai-action > div {
+  flex: 1 1 0%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.latex-errors-ai-action strong {
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+}
+
+.latex-errors-ai-action span {
+  color: var(--color-text-muted);
+  font-size: var(--text-xxs);
+  line-height: 1.4;
+}
+
+.latex-errors-ai-action button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.latex-errors-ai-action button:hover {
+  background: color-mix(in srgb, var(--color-accent) 25%, transparent);
+}
+
 /* === Details tab ===================================================== */
 .latex-details-pane {
   flex: 1 1 auto;
@@ -419,6 +468,32 @@
   font-size: var(--text-sm);
 }
 
+.latex-details-action {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  background: color-mix(in srgb, var(--color-bg-input) 55%, transparent);
+  color: var(--color-text-primary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.latex-details-action:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.latex-details-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .latex-details-section--assistant {
   border-bottom: none;
 }
@@ -468,6 +543,25 @@
   flex-direction: column;
   gap: 8px;
   scrollbar-width: thin;
+}
+
+.latex-agent-chat-empty {
+  flex: 1 1 auto;
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 16px;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 42%, transparent);
+}
+
+.latex-agent-chat-empty strong {
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
 }
 
 .latex-agent-chat.has-transcript .latex-agent-chat-footer {

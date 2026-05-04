@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  creatorWorkspacePath,
   ensureLatexExtension,
   normalizeLatexProjectFiles,
   normalizeLatexProjectPath,
@@ -47,5 +48,13 @@ describe('Creator project paths', () => {
       'chapters/intro.tex',
     )
     expect(resolveLatexInputPath('main.tex', '/tmp/escape')).toBe('')
+  })
+
+  it('maps project files into the workspace creator directory', () => {
+    expect(creatorWorkspacePath('main.tex')).toBe('creator/main.tex')
+    expect(creatorWorkspacePath('chapters/intro.tex')).toBe(
+      'creator/chapters/intro.tex',
+    )
+    expect(creatorWorkspacePath('/tmp/main.tex')).toBe('')
   })
 })
