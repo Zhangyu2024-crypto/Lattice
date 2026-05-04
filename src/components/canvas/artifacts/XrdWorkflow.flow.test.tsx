@@ -11,7 +11,10 @@ import type {
   XrdProArtifact,
   XrdProCif,
 } from '../../../types/artifact'
-import { renderArtifactBody } from '../artifact-body'
+import {
+  preloadArtifactBodyRenderer,
+  renderArtifactBody,
+} from '../artifact-body'
 import { fetchCifsForMaterialIds } from '../../../lib/xrd-cif-fetch'
 import { localProXrd } from '../../../lib/local-pro-xrd'
 
@@ -120,6 +123,7 @@ describe('XRD workflow', () => {
   })
 
   it('preserves selected phases when opening XRD Lab and can refine after auto-loading CIFs', async () => {
+    await preloadArtifactBodyRenderer()
     const mockFetchCifs = vi.mocked(fetchCifsForMaterialIds)
     const mockRefineDara = vi.mocked(localProXrd.refineDara)
 
@@ -174,7 +178,7 @@ describe('XRD workflow', () => {
     )
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Open in XRD Lab' }),
+      await screen.findByRole('button', { name: 'Open in XRD Lab' }),
     )
 
     const workbench = Object.values(
@@ -214,7 +218,7 @@ describe('XRD workflow', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refine' }))
+    fireEvent.click(await screen.findByTitle('Refine'))
     fireEvent.click(await screen.findByRole('button', { name: 'Run Refine' }))
 
     await waitFor(() => {

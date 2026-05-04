@@ -27,6 +27,12 @@ import {
   type DispatchHooks,
 } from '../../lib/slash-commands'
 import { rankCommands } from '../../lib/slash-commands/fuzzy'
+import {
+  ensureSlashCommandCachesWarm,
+  getSlashCommandWarmVersion,
+  subscribeSlashCommandWarm,
+  warmSlashCommandCaches,
+} from '../../lib/slash-commands/warm-on-demand'
 import SlashTypeahead from './SlashTypeahead'
 
 import {
@@ -259,6 +265,9 @@ export default function AgentComposer({
   // row in the dropdown.
   const [slashQuery, setSlashQuery] = useState<string | null>(null)
   const [slashIdx, setSlashIdx] = useState(0)
+  const [slashWarmVersion, setSlashWarmVersion] = useState(
+    getSlashCommandWarmVersion,
+  )
   const [isLoading, setIsLoading] = useState(false)
   const [pendingImages, setPendingImages] = useState<PendingComposerImage[]>(
     [],
@@ -365,7 +374,15 @@ export default function AgentComposer({
     if (slashQuery === null) return []
     const all = listCommands({ userInvocableOnly: true, enabledOnly: true })
     return rankCommands(all, slashQuery)
-  }, [slashQuery])
+  }, [slashQuery, slashWarmVersion])
+
+  useEffect(
+    () =>
+      subscribeSlashCommandWarm(() => {
+        setSlashWarmVersion(getSlashCommandWarmVersion())
+      }),
+    [],
+  )
 
   // Keep the highlighted row in range when the match list shrinks below
   // the current selection — otherwise Enter would commit against a stale
@@ -520,6 +537,7 @@ export default function AgentComposer({
       if (slashQuery === null && nextSlash !== null) setSlashIdx(0)
       setSlashQuery(nextSlash)
     }
+    if (nextSlash !== null) ensureSlashCommandCachesWarm()
   }
 
   // Track cursor moves that don't change the text (arrow keys, click). We
@@ -544,6 +562,7 @@ export default function AgentComposer({
       if (slashQuery === null && nextSlash !== null) setSlashIdx(0)
       setSlashQuery(nextSlash)
     }
+    if (nextSlash !== null) ensureSlashCommandCachesWarm()
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -944,8 +963,9 @@ export default function AgentComposer({
   // state and attaches an abort controller so a long-running prompt-type
   // command can be cancelled the same way a normal agent turn can.
   const runSlashCommand = useCallback(
-    (rawText: string) => {
+    async (rawText: string) => {
       if (!session) return
+      await warmSlashCommandCaches()
       const parsed = parseSlashCommand(rawText)
       if (!parsed) return
       const matched = findCommand(parsed.name)
@@ -1034,7 +1054,7 @@ export default function AgentComposer({
         })
         return
       }
-      runSlashCommand(`/${cmd.name}`)
+      void runSlashCommand(`/${cmd.name}`)
     },
     [runSlashCommand],
   )
@@ -1061,7 +1081,7 @@ export default function AgentComposer({
     // any attached images (the user typed `/` first, so the draft is the
     // command, not a caption); images stay pending for the next turn.
     if (imagesSnapshot.length === 0 && parseSlashCommand(text)) {
-      runSlashCommand(text)
+      void runSlashCommand(text)
       return
     }
 

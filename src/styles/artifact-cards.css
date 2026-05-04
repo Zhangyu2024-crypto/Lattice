@@ -4831,6 +4831,21 @@
   position: relative;
 }
 
+.structure-viewer-host {
+  position: absolute;
+  inset: 0;
+}
+
+.structure-viewer-status {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: color-mix(in srgb, var(--color-text-secondary) 82%, transparent);
+  font-size: var(--text-sm);
+  pointer-events: none;
+}
+
 .card-structure-transforms-row {
   /* StructureArtifactCard.tsx:424 — horizontal transforms timeline strip. */
   height: 44px;

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import '../../styles/log-console.css'
 import { ClipboardCopy, Filter, Trash2, X } from 'lucide-react'
 import {
   exportLogsAsJson,

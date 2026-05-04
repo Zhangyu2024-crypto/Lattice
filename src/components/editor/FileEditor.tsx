@@ -1,19 +1,24 @@
+import { lazy, Suspense } from 'react'
 import { fileKindFromName } from '../../lib/workspace/file-kind'
-import SpectrumFileEditor from './editors/SpectrumFileEditor'
-import AnalysisFileEditor from './editors/AnalysisFileEditor'
-import ChatFileEditor from './editors/ChatFileEditor'
-import MarkdownFileEditor from './editors/MarkdownFileEditor'
-import ScriptFileEditor from './editors/ScriptFileEditor'
-import PdfFileEditor from './editors/PdfFileEditor'
-import EnvelopeArtifactEditor from './editors/EnvelopeArtifactEditor'
-import CifFileEditor from './editors/CifFileEditor'
-import ImageFileEditor from './editors/ImageFileEditor'
-import TextFileEditor from './editors/TextFileEditor'
-import SpectralDataEditor from './editors/SpectralDataEditor'
-import CsvFileEditor from './editors/CsvFileEditor'
-import TexFileEditor from './editors/TexFileEditor'
-import BibFileEditor from './editors/BibFileEditor'
 import UnsupportedFileEditor from './editors/UnsupportedFileEditor'
+import EditorLoading from './editors/EditorLoading'
+
+const SpectrumFileEditor = lazy(() => import('./editors/SpectrumFileEditor'))
+const AnalysisFileEditor = lazy(() => import('./editors/AnalysisFileEditor'))
+const ChatFileEditor = lazy(() => import('./editors/ChatFileEditor'))
+const MarkdownFileEditor = lazy(() => import('./editors/MarkdownFileEditor'))
+const ScriptFileEditor = lazy(() => import('./editors/ScriptFileEditor'))
+const PdfFileEditor = lazy(() => import('./editors/PdfFileEditor'))
+const EnvelopeArtifactEditor = lazy(
+  () => import('./editors/EnvelopeArtifactEditor'),
+)
+const CifFileEditor = lazy(() => import('./editors/CifFileEditor'))
+const ImageFileEditor = lazy(() => import('./editors/ImageFileEditor'))
+const TextFileEditor = lazy(() => import('./editors/TextFileEditor'))
+const SpectralDataEditor = lazy(() => import('./editors/SpectralDataEditor'))
+const CsvFileEditor = lazy(() => import('./editors/CsvFileEditor'))
+const TexFileEditor = lazy(() => import('./editors/TexFileEditor'))
+const BibFileEditor = lazy(() => import('./editors/BibFileEditor'))
 
 interface Props {
   relPath: string
@@ -26,23 +31,30 @@ function basenameOf(relPath: string): string {
 export default function FileEditor({ relPath }: Props) {
   const kind = fileKindFromName(basenameOf(relPath))
 
+  let editor: React.ReactNode
   switch (kind) {
     case 'spectrum':
-      return <SpectrumFileEditor relPath={relPath} />
+      editor = <SpectrumFileEditor relPath={relPath} />
+      break
     case 'peakfit':
     case 'xrd':
     case 'xps':
     case 'raman':
     case 'curve':
-      return <AnalysisFileEditor relPath={relPath} kind={kind} />
+      editor = <AnalysisFileEditor relPath={relPath} kind={kind} />
+      break
     case 'chat':
-      return <ChatFileEditor relPath={relPath} />
+      editor = <ChatFileEditor relPath={relPath} />
+      break
     case 'markdown':
-      return <MarkdownFileEditor relPath={relPath} />
+      editor = <MarkdownFileEditor relPath={relPath} />
+      break
     case 'script':
-      return <ScriptFileEditor relPath={relPath} />
+      editor = <ScriptFileEditor relPath={relPath} />
+      break
     case 'pdf':
-      return <PdfFileEditor relPath={relPath} />
+      editor = <PdfFileEditor relPath={relPath} />
+      break
 
     case 'workbench':
     case 'job':
@@ -56,26 +68,34 @@ export default function FileEditor({ relPath }: Props) {
     case 'similarity':
     case 'structure-meta':
     case 'latex-document':
-      return <EnvelopeArtifactEditor relPath={relPath} kind={kind} />
+      editor = <EnvelopeArtifactEditor relPath={relPath} kind={kind} />
+      break
 
     case 'cif':
-      return <CifFileEditor relPath={relPath} />
+      editor = <CifFileEditor relPath={relPath} />
+      break
     case 'image':
-      return <ImageFileEditor relPath={relPath} />
+      editor = <ImageFileEditor relPath={relPath} />
+      break
     case 'csv':
-      return <CsvFileEditor relPath={relPath} />
+      editor = <CsvFileEditor relPath={relPath} />
+      break
     case 'tex':
-      return <TexFileEditor relPath={relPath} />
+      editor = <TexFileEditor relPath={relPath} />
+      break
     case 'bib':
-      return <BibFileEditor relPath={relPath} />
+      editor = <BibFileEditor relPath={relPath} />
+      break
 
     case 'spectral-data':
     case 'xrd-data':
-      return <SpectralDataEditor relPath={relPath} kind={kind} />
+      editor = <SpectralDataEditor relPath={relPath} kind={kind} />
+      break
 
     case 'text':
     case 'json':
-      return <TextFileEditor relPath={relPath} kind={kind} />
+      editor = <TextFileEditor relPath={relPath} kind={kind} />
+      break
 
     case 'unknown':
       return <UnsupportedFileEditor relPath={relPath} />
@@ -90,4 +110,10 @@ export default function FileEditor({ relPath }: Props) {
       return <UnsupportedFileEditor relPath={relPath} />
     }
   }
+
+  return (
+    <Suspense fallback={<EditorLoading relPath={relPath} />}>
+      {editor}
+    </Suspense>
+  )
 }

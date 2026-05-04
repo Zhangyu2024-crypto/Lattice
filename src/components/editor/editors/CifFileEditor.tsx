@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import '../../../styles/artifact-cards.css'
 import { Atom } from 'lucide-react'
 import type {
   StructureArtifact,

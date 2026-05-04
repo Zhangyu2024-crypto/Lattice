@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { lazy, type ReactNode } from 'react'
 import type {
   Artifact,
   PeakFitArtifact,
@@ -40,28 +40,53 @@ import { mockBatchExecutor } from '../../../lib/batch-executors/mock'
 import { cancelCompute, runCompute } from '../../../lib/compute-run'
 import { cancelComputeExperiment, runComputeExperiment } from '../../../lib/compute-experiment-runner'
 import { toast } from '../../../stores/toast-store'
-import SpectrumArtifactCard from '../artifacts/SpectrumArtifactCard'
-import PeakFitArtifactCard from '../artifacts/PeakFitArtifactCard'
-import XrdAnalysisCard from '../artifacts/XrdAnalysisCard'
-import XpsAnalysisCard from '../artifacts/XpsAnalysisCard'
-import RamanIdCard from '../artifacts/RamanIdCard'
-import JobMonitorCard from '../artifacts/JobMonitorCard'
-import ComputeArtifactCard from '../artifacts/ComputeArtifactCard'
-import ComputeExperimentCard from '../artifacts/ComputeExperimentCard'
-import StructureArtifactCard from '../artifacts/StructureArtifactCard'
-import PlotArtifactCard from '../artifacts/PlotArtifactCard'
-import ResearchReportWindowStub from '../artifacts/ResearchReportWindowStub'
-import BatchWorkflowCard from '../artifacts/BatchWorkflowCard'
-import MaterialComparisonCard from '../artifacts/MaterialComparisonCard'
-import PaperArtifactCard from '../artifacts/PaperArtifactCard'
-import SimilarityMatrixCard from '../artifacts/SimilarityMatrixCard'
-import OptimizationArtifactCard from '../artifacts/OptimizationArtifactCard'
-import HypothesisArtifactCard from '../artifacts/HypothesisArtifactCard'
-import CurveAnalysisCard from '../artifacts/CurveAnalysisCard'
-import ComputeProLauncherCard from '../artifacts/ComputeProLauncherCard'
-import LatexDocumentCard from '../artifacts/latex/LatexDocumentCard'
 import { findLatestByKind, resolveBatchLinkedArtifact } from './helpers'
 import type { MentionAddRequest } from '../../../lib/composer-bus'
+
+const SpectrumArtifactCard = lazy(
+  () => import('../artifacts/SpectrumArtifactCard'),
+)
+const PeakFitArtifactCard = lazy(
+  () => import('../artifacts/PeakFitArtifactCard'),
+)
+const XrdAnalysisCard = lazy(() => import('../artifacts/XrdAnalysisCard'))
+const XpsAnalysisCard = lazy(() => import('../artifacts/XpsAnalysisCard'))
+const RamanIdCard = lazy(() => import('../artifacts/RamanIdCard'))
+const JobMonitorCard = lazy(() => import('../artifacts/JobMonitorCard'))
+const ComputeArtifactCard = lazy(
+  () => import('../artifacts/ComputeArtifactCard'),
+)
+const ComputeExperimentCard = lazy(
+  () => import('../artifacts/ComputeExperimentCard'),
+)
+const StructureArtifactCard = lazy(
+  () => import('../artifacts/StructureArtifactCard'),
+)
+const PlotArtifactCard = lazy(() => import('../artifacts/PlotArtifactCard'))
+const ResearchReportWindowStub = lazy(
+  () => import('../artifacts/ResearchReportWindowStub'),
+)
+const BatchWorkflowCard = lazy(() => import('../artifacts/BatchWorkflowCard'))
+const MaterialComparisonCard = lazy(
+  () => import('../artifacts/MaterialComparisonCard'),
+)
+const PaperArtifactCard = lazy(() => import('../artifacts/PaperArtifactCard'))
+const SimilarityMatrixCard = lazy(
+  () => import('../artifacts/SimilarityMatrixCard'),
+)
+const OptimizationArtifactCard = lazy(
+  () => import('../artifacts/OptimizationArtifactCard'),
+)
+const HypothesisArtifactCard = lazy(
+  () => import('../artifacts/HypothesisArtifactCard'),
+)
+const CurveAnalysisCard = lazy(() => import('../artifacts/CurveAnalysisCard'))
+const ComputeProLauncherCard = lazy(
+  () => import('../artifacts/ComputeProLauncherCard'),
+)
+const LatexDocumentCard = lazy(
+  () => import('../artifacts/latex/LatexDocumentCard'),
+)
 
 /**
  * Bundled closures + session snapshot that each per-kind renderer needs. This

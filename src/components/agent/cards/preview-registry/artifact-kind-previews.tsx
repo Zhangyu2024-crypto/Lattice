@@ -1,10 +1,26 @@
+import { lazy, Suspense } from 'react'
 import type {
   Artifact,
   LatexDocumentArtifact,
 } from '../../../../types/artifact'
 import type { PreviewBlocks } from '../preview-registry'
-import PlotInlinePreview from './PlotInlinePreview'
 import ResearchReportInlinePreview from './ResearchReportInlinePreview'
+
+const PlotInlinePreview = lazy(() => import('./PlotInlinePreview'))
+
+function PlotInlinePreviewLazy({ artifact }: { artifact: Artifact }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="plot-inline-preview">
+          <div className="plot-inline-preview-chart" />
+        </div>
+      }
+    >
+      <PlotInlinePreview artifact={artifact} />
+    </Suspense>
+  )
+}
 
 type Meta = { label: string; value: string }
 
@@ -361,6 +377,6 @@ function renderPlotPreview(artifact: Artifact): PreviewBlocks {
       m('X axis', payload.xLabel),
       m('Y axis', payload.yLabel),
     ].filter((x): x is Meta => x != null),
-    compact: <PlotInlinePreview artifact={artifact} />,
+    compact: <PlotInlinePreviewLazy artifact={artifact} />,
   }
 }

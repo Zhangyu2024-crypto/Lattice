@@ -19,6 +19,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import '../../../styles/compute-notebook.css'
 import { ChevronDown, Plus } from 'lucide-react'
 import { useComputeRunner } from '../../../hooks/useComputeRunner'
 import { localProCompute } from '../../../lib/local-pro-compute'
@@ -1246,4 +1247,3 @@ function buildNewCell(
     updatedAt: now,
   }
 }
-

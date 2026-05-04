@@ -1,9 +1,11 @@
+import { lazy, Suspense } from 'react'
 import { usePrefsStore } from '../../stores/prefs-store'
-import DataView from '../data/DataView'
-import LibrarySidebarView from './views/LibrarySidebarView'
-import WritingSidebarView from './views/WritingSidebarView'
 import ExplorerView from '../explorer/ExplorerView'
-import ArtifactDbSidebarView from './views/ArtifactDbSidebarView'
+
+const DataView = lazy(() => import('../data/DataView'))
+const LibrarySidebarView = lazy(() => import('./views/LibrarySidebarView'))
+const WritingSidebarView = lazy(() => import('./views/WritingSidebarView'))
+const ArtifactDbSidebarView = lazy(() => import('./views/ArtifactDbSidebarView'))
 
 interface Props {
   onToggleSidebar?: () => void
@@ -36,36 +38,58 @@ export default function Sidebar({
 }: Props) {
   const activeView = usePrefsStore((s) => s.layout.activeView)
 
+  const fallback = (
+    <div className="sidebar-space-view">
+      <div className="sidebar-space-scroll">
+        <div className="sidebar-empty">Loading…</div>
+      </div>
+    </div>
+  )
+
   switch (activeView) {
     case 'library':
       return (
-        <LibrarySidebarView
-          onOpenPaper={onOpenPaper}
-          onOpenLibraryWindow={onOpenLibraryWindow}
-          onCollapseSidebar={onToggleSidebar}
-        />
+        <Suspense fallback={fallback}>
+          <LibrarySidebarView
+            onOpenPaper={onOpenPaper}
+            onOpenLibraryWindow={onOpenLibraryWindow}
+            onCollapseSidebar={onToggleSidebar}
+          />
+        </Suspense>
       )
     case 'knowledge':
       return (
-        <LibrarySidebarView
-          onOpenPaper={onOpenPaper}
-          onOpenLibraryWindow={onOpenLibraryWindow}
-          onCollapseSidebar={onToggleSidebar}
-        />
+        <Suspense fallback={fallback}>
+          <LibrarySidebarView
+            onOpenPaper={onOpenPaper}
+            onOpenLibraryWindow={onOpenLibraryWindow}
+            onCollapseSidebar={onToggleSidebar}
+          />
+        </Suspense>
       )
     case 'writing':
       return (
-        <WritingSidebarView
-          onLoadLatexDemo={onLoadLatexDemo}
-          onNewLatexDocument={onNewLatexDocument}
-          onLoadLatexTemplate={onLoadLatexTemplate}
-          onCollapseSidebar={onToggleSidebar}
-        />
+        <Suspense fallback={fallback}>
+          <WritingSidebarView
+            onLoadLatexDemo={onLoadLatexDemo}
+            onNewLatexDocument={onNewLatexDocument}
+            onLoadLatexTemplate={onLoadLatexTemplate}
+            onCollapseSidebar={onToggleSidebar}
+          />
+        </Suspense>
       )
     case 'data':
-      return <DataView />
+      return (
+        <Suspense fallback={fallback}>
+          <DataView />
+        </Suspense>
+      )
     case 'artifact-db':
-      return <ArtifactDbSidebarView onCollapseSidebar={onToggleSidebar} />
+      return (
+        <Suspense fallback={fallback}>
+          <ArtifactDbSidebarView onCollapseSidebar={onToggleSidebar} />
+        </Suspense>
+      )
     // Legacy 'session' view folds into the new file-first Explorer — see
     // Phase 6 refactor (workspace files are the single source of truth).
     case 'explorer':

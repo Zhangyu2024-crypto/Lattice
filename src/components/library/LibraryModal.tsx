@@ -13,6 +13,7 @@
 // an explicit "not implemented locally" toast until those pipelines land.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import '../../styles/artifact-cards.css'
 import {
   ArrowLeft,
   BookOpen,

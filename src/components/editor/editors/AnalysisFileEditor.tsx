@@ -1,4 +1,5 @@
 import PeakFitArtifactCard from '../../canvas/artifacts/PeakFitArtifactCard'
+import '../../../styles/artifact-cards.css'
 import XrdAnalysisCard from '../../canvas/artifacts/XrdAnalysisCard'
 import XpsAnalysisCard from '../../canvas/artifacts/XpsAnalysisCard'
 import RamanIdCard from '../../canvas/artifacts/RamanIdCard'

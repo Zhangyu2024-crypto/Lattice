@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef } from 'react'
+import '../../styles/artifact-cards.css'
 import {
   AlertTriangle,
   ExternalLink,

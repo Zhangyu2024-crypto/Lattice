@@ -1,4 +1,5 @@
 import SpectrumArtifactCard from '../../canvas/artifacts/SpectrumArtifactCard'
+import '../../../styles/artifact-cards.css'
 import type {
   SpectrumArtifact,
   SpectrumPayload,

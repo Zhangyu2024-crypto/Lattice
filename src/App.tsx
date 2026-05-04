@@ -48,7 +48,6 @@ import CommandPalette from './components/common/CommandPalette'
 import DragOverlay from './components/common/DragOverlay'
 import MigrationDialog from './components/common/MigrationDialog'
 import ProLauncherMenu from './components/common/ProLauncherMenu'
-import PaperReaderLauncherPanel from './components/layout/PaperReaderLauncherPanel'
 import Resizer from './components/common/Resizer'
 
 const LazyLatexDocumentCard = lazy(
@@ -56,6 +55,9 @@ const LazyLatexDocumentCard = lazy(
 )
 const LazyComputeNotebook = lazy(
   () => import('./components/compute/notebook/ComputeNotebook'),
+)
+const LazyPaperReaderLauncherPanel = lazy(
+  () => import('./components/layout/PaperReaderLauncherPanel'),
 )
 import {
   createProWorkbench,
@@ -174,43 +176,6 @@ export default function App() {
   const editorPaneHeightRef = useRef(layout.editorPaneHeight)
   const workspaceMainBodyRef = useRef<HTMLDivElement | null>(null)
   const [workspaceMainBodyHeight, setWorkspaceMainBodyHeight] = useState(0)
-
-  // Warm the slash-command caches (skills / plugins / MCP) from disk and
-  // re-warm whenever the main process reports a change. Also re-warm
-  // plugins + MCP when the user flips toggles in Settings → Extensions so
-  // the `/` typeahead updates without an app reload. Loaders no-op in
-  // Vite-only mode (no electronAPI).
-  useEffect(() => {
-    const unsubs: Array<() => void> = []
-    let cancelled = false
-    void Promise.all([
-      import('./lib/slash-commands'),
-      import('./stores/extensions-config-store'),
-    ]).then(([slash, store]) => {
-      if (cancelled) return
-      const warmSkills = () => void slash.warmSkillsCache()
-      const warmPlugins = () => void slash.warmPluginsCache()
-      const warmMcp = () => void slash.warmMcpCache()
-      warmSkills()
-      warmPlugins()
-      warmMcp()
-      const api = window.electronAPI
-      if (api?.onSkillsChanged) unsubs.push(api.onSkillsChanged(warmSkills))
-      if (api?.onPluginsChanged) unsubs.push(api.onPluginsChanged(warmPlugins))
-      if (api?.onMcpPromptsChanged)
-        unsubs.push(api.onMcpPromptsChanged(warmMcp))
-      unsubs.push(
-        store.useExtensionsConfigStore.subscribe((s, prev) => {
-          if (s.plugins !== prev.plugins) warmPlugins()
-          if (s.mcpServers !== prev.mcpServers) warmMcp()
-        }),
-      )
-    })
-    return () => {
-      cancelled = true
-      for (const u of unsubs) u()
-    }
-  }, [])
 
   // Keep draft + ref in sync when the persisted value changes from another
   // source (e.g. future layout preset picker, or store migration).
@@ -420,10 +385,18 @@ export default function App() {
   // The session-bridge will activate the correct session when the user
   // opens a `.chat.json` file; this is just the safety net.
   useEffect(() => {
-    const store = useRuntimeStore.getState()
-    if (!store.activeSessionId) {
-      store.createSession({ title: 'Session 1' })
+    const ensureSession = () => {
+      const store = useRuntimeStore.getState()
+      if (!store.activeSessionId) {
+        store.createSession({ title: 'Session 1' })
+      }
     }
+    if (useRuntimeStore.persist.hasHydrated()) {
+      ensureSession()
+      return
+    }
+    const unsub = useRuntimeStore.persist.onFinishHydration(ensureSession)
+    return unsub
   }, [])
 
   // Session ↔ file bridge: when the user switches to a `.chat.json` tab
@@ -1162,6 +1135,17 @@ export default function App() {
           focusCellId={computeFocusCellId}
           onFocusCellConsumed={consumeComputeFocusCell}
         />
+      )}
+
+      {paperReaderLauncher && (
+        <Suspense fallback={null}>
+          <LazyPaperReaderLauncherPanel
+            open
+            sessionId={paperReaderLauncher.sessionId}
+            artifactId={paperReaderLauncher.artifactId}
+            onClose={() => setPaperReaderLauncher(null)}
+          />
+        </Suspense>
       )}
     </>
   )

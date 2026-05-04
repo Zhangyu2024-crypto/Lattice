@@ -41,6 +41,8 @@ export default defineConfig({
               ],
               output: {
                 entryFileNames: 'main.mjs',
+                chunkFileNames: 'chunks/[name].mjs',
+                assetFileNames: 'assets/[name][extname]',
               },
             },
           },
@@ -73,6 +75,8 @@ export default defineConfig({
               external: ['electron'],
               output: {
                 entryFileNames: 'preload.mjs',
+                chunkFileNames: 'chunks/[name].mjs',
+                assetFileNames: 'assets/[name][extname]',
               },
             },
           },

@@ -1,4 +1,6 @@
 import type { Artifact } from '../../../types/artifact'
+import '../../../styles/artifact-cards.css'
+import '../../../styles/latex-creator.css'
 import type { LatticeFileKind } from '../../../lib/workspace/fs/types'
 import { useEnvelopeFile } from './useEnvelopeFile'
 import EditorLoading from './EditorLoading'

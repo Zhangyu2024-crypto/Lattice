@@ -34,6 +34,11 @@ import {
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+const DIST_ELECTRON_DIR = path.basename(__dirname) === 'chunks'
+  ? path.dirname(__dirname)
+  : __dirname
+const PRELOAD_PATH = path.join(DIST_ELECTRON_DIR, 'preload.mjs')
+const RENDERER_INDEX_PATH = path.join(DIST_ELECTRON_DIR, '../dist/index.html')
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -79,7 +84,7 @@ function createWindow() {
       // Electron's preload loader treats it as ESM (required when
       // package.json has `"type": "module"`) — a `.js` ESM file triggers
       // ERR_REQUIRE_ESM and silently drops `window.electronAPI`.
-      preload: path.join(__dirname, 'preload.mjs'),
+      preload: PRELOAD_PATH,
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
@@ -98,7 +103,7 @@ function createWindow() {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
     mainWindow.webContents.openDevTools({ mode: 'right' })
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
+    mainWindow.loadFile(RENDERER_INDEX_PATH)
   }
 
   // `webContents.send` does NOT buffer messages — if the renderer isn't
@@ -184,7 +189,7 @@ function createLibraryWindow() {
     backgroundColor: '#1e1e1e',
     titleBarStyle: 'hiddenInset',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.mjs'),
+      preload: PRELOAD_PATH,
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
@@ -195,7 +200,7 @@ function createLibraryWindow() {
   if (process.env.VITE_DEV_SERVER_URL) {
     void libraryWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}#/library`)
   } else {
-    void libraryWindow.loadFile(path.join(__dirname, '../dist/index.html'), {
+    void libraryWindow.loadFile(RENDERER_INDEX_PATH, {
       hash: 'library',
     })
   }
@@ -225,7 +230,7 @@ function createWorkbenchWindow(sessionId: string, artifactId: string) {
     backgroundColor: '#1e1e1e',
     titleBarStyle: 'hiddenInset',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.mjs'),
+      preload: PRELOAD_PATH,
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
@@ -237,7 +242,7 @@ function createWorkbenchWindow(sessionId: string, artifactId: string) {
   if (process.env.VITE_DEV_SERVER_URL) {
     void win.loadURL(`${process.env.VITE_DEV_SERVER_URL}#/workbench?${q}`)
   } else {
-    void win.loadFile(path.join(__dirname, '../dist/index.html'), {
+    void win.loadFile(RENDERER_INDEX_PATH, {
       hash: `workbench?${q}`,
     })
   }
@@ -270,7 +275,7 @@ function createPdfReaderWindow(relPath: string) {
     backgroundColor: '#1e1e1e',
     titleBarStyle: 'hiddenInset',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.mjs'),
+      preload: PRELOAD_PATH,
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
@@ -282,7 +287,7 @@ function createPdfReaderWindow(relPath: string) {
   if (process.env.VITE_DEV_SERVER_URL) {
     void win.loadURL(`${process.env.VITE_DEV_SERVER_URL}#/pdf-reader?${q}`)
   } else {
-    void win.loadFile(path.join(__dirname, '../dist/index.html'), {
+    void win.loadFile(RENDERER_INDEX_PATH, {
       hash: `pdf-reader?${q}`,
     })
   }
@@ -306,7 +311,7 @@ function createDataManagerWindow() {
     backgroundColor: '#1e1e1e',
     titleBarStyle: 'hiddenInset',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.mjs'),
+      preload: PRELOAD_PATH,
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
@@ -316,7 +321,7 @@ function createDataManagerWindow() {
   if (process.env.VITE_DEV_SERVER_URL) {
     void win.loadURL(`${process.env.VITE_DEV_SERVER_URL}#/data-manager`)
   } else {
-    void win.loadFile(path.join(__dirname, '../dist/index.html'), {
+    void win.loadFile(RENDERER_INDEX_PATH, {
       hash: 'data-manager',
     })
   }

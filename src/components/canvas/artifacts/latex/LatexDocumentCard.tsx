@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import '../../../../styles/latex-creator.css'
 import { Loader2, Play } from 'lucide-react'
 import { useSessionStore } from '../../../../stores/session-store'
 import type { Artifact } from '../../../../types/artifact'

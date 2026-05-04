@@ -95,7 +95,7 @@ const StructureViewer = forwardRef<
   } = props
 
   // Owns the host div + 3Dmol viewer ref + last-loaded atoms array.
-  const { hostRef, viewerRef, atomsRef } = useViewerLifecycle({
+  const { hostRef, viewerRef, atomsRef, loading, error } = useViewerLifecycle({
     cif,
     style,
     backgroundColor,
@@ -180,7 +180,16 @@ const StructureViewer = forwardRef<
     [viewerRef],
   )
 
-  return <div ref={hostRef} style={HOST_STYLE} />
+  return (
+    <div style={HOST_STYLE}>
+      <div ref={hostRef} className="structure-viewer-host" />
+      {(loading || error) && (
+        <div className="structure-viewer-status" role="status">
+          {error ? 'Could not load 3D viewer.' : 'Loading 3D viewer…'}
+        </div>
+      )}
+    </div>
+  )
 })
 
 export default StructureViewer

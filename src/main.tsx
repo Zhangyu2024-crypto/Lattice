@@ -5,10 +5,9 @@ import AppErrorBoundary from './components/common/AppErrorBoundary'
 import LogConsole from './components/common/LogConsole'
 import ToastHost from './components/common/ToastHost'
 import PromptHost from './components/common/PromptHost'
-import ProWorkbenchStandaloneView from './components/canvas/ProWorkbenchStandaloneView'
 import StartupAuthGate from './components/startup/StartupAuthGate'
 import { DEMO_LIBRARY } from './stores/demo-library'
-import { preWarmRuntimePersist } from './stores/runtime-store'
+import { preWarmRuntimePersist, useRuntimeStore } from './stores/runtime-store'
 import { useArtifactDbStore } from './stores/artifact-db-store'
 import { installGlobalErrorCapture } from './lib/global-error-capture'
 import './styles/index.css'
@@ -20,6 +19,13 @@ import './lib/polyfills/uint8array-tohex'
 installGlobalErrorCapture()
 
 const LibraryModal = lazy(() => import('./components/library/LibraryModal'))
+const ProWorkbenchStandaloneView = lazy(
+  () => import('./components/canvas/ProWorkbenchStandaloneView'),
+)
+const PdfReaderStandaloneView = lazy(
+  () => import('./components/pdf/PdfReaderStandaloneView'),
+)
+const DataView = lazy(() => import('./components/data/DataView'))
 
 function parseBootHash(): 'main' | 'library' | 'workbench' | 'pdf-reader' | 'data-manager' {
   const raw = window.location.hash.replace(/^#\/?/, '').split(/[?&]/)[0] ?? ''
@@ -85,16 +91,22 @@ function ProWorkbenchWindowApp() {
     <div className="app-satellite-host">
       <ToastHost />
       <LogConsole />
-      <ProWorkbenchStandaloneView
-        sessionId={parsed.sessionId}
-        artifactId={parsed.artifactId}
-        onCloseWindow={close}
-      />
+      <Suspense
+        fallback={
+          <div className="app-satellite-loading" role="status">
+            Loading workbench…
+          </div>
+        }
+      >
+        <ProWorkbenchStandaloneView
+          sessionId={parsed.sessionId}
+          artifactId={parsed.artifactId}
+          onCloseWindow={close}
+        />
+      </Suspense>
     </div>
   )
 }
-
-const PdfReaderStandaloneView = lazy(() => import('./components/pdf/PdfReaderStandaloneView'))
 
 function PdfReaderWindowApp() {
   const parsed = useMemo(() => {
@@ -124,8 +136,6 @@ function PdfReaderWindowApp() {
   )
 }
 
-const DataView = lazy(() => import('./components/data/DataView'))
-
 function DataManagerWindowApp() {
   return (
     <div className="app-satellite-host" style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#1e1e1e', color: '#ccc' }}>
@@ -146,36 +156,36 @@ function DataManagerWindowApp() {
   )
 }
 
+function hydrateRendererStores(): void {
+  void Promise.all([
+    preWarmRuntimePersist().then(() => useRuntimeStore.persist.rehydrate()),
+    useArtifactDbStore.getState().hydrate(),
+  ]).catch((err) => {
+    console.warn('[startup] background hydration failed:', err)
+  })
+}
+
 const boot = parseBootHash()
 const mountRoot = ReactDOM.createRoot(document.getElementById('root')!)
 
-// Hydrate the IndexedDB overflow back into localStorage before React
-// mounts. Zustand's persist middleware reads synchronously on store
-// creation, so a blob that outgrew localStorage (5 MB cap) in a prior
-// session would otherwise be invisible and the app would boot with no
-// sessions. Always await, even when IDB is empty — the resolve path is
-// microsecond-fast and keeps the boot path single.
-void Promise.all([
-  preWarmRuntimePersist(),
-  useArtifactDbStore.getState().hydrate(),
-]).then(() => {
-  mountRoot.render(
-    <React.StrictMode>
-      <AppErrorBoundary>
-        {boot === 'main' ? (
-          <StartupAuthGate>
-            <App />
-          </StartupAuthGate>
-        ) : boot === 'library' ? (
-          <LibraryWindowApp />
-        ) : boot === 'workbench' ? (
-          <ProWorkbenchWindowApp />
-        ) : boot === 'pdf-reader' ? (
-          <PdfReaderWindowApp />
-        ) : boot === 'data-manager' ? (
-          <DataManagerWindowApp />
-        ) : null}
-      </AppErrorBoundary>
-    </React.StrictMode>,
-  )
-})
+mountRoot.render(
+  <React.StrictMode>
+    <AppErrorBoundary>
+      {boot === 'main' ? (
+        <StartupAuthGate>
+          <App />
+        </StartupAuthGate>
+      ) : boot === 'library' ? (
+        <LibraryWindowApp />
+      ) : boot === 'workbench' ? (
+        <ProWorkbenchWindowApp />
+      ) : boot === 'pdf-reader' ? (
+        <PdfReaderWindowApp />
+      ) : boot === 'data-manager' ? (
+        <DataManagerWindowApp />
+      ) : null}
+    </AppErrorBoundary>
+  </React.StrictMode>,
+)
+
+hydrateRendererStores()

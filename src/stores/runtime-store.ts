@@ -1782,6 +1782,7 @@ export const useRuntimeStore = create<SessionState>()(
       // reset stale 'running' status on hydration (orphaned by crash).
       version: 6,
       storage: createJSONStorage(() => debouncedLocalStorage),
+      skipHydration: true,
       partialize: (state) => ({
         sessions: Object.fromEntries(
           Object.entries(state.sessions).map(([id, s]) => [id, prunedSessionForPersist(s)]),

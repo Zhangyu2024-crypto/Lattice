@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import '../../styles/artifact-cards.css'
 import { X } from 'lucide-react'
 import { useStableCallback } from '../../hooks/useStableCallback'
 import { useOutsideClickDismiss } from '../../hooks/useOutsideClickDismiss'

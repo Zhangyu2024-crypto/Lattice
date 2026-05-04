@@ -36,11 +36,7 @@
 @import "./chat.css";
 @import "./views.css";
 @import "./canvas.css";
-@import "./artifact-cards.css";
-@import "./latex-creator.css";
 @import "./llm-config.css";
 @import "./modals.css";
 @import "./modules.css";
-@import "./compute-notebook.css";
-@import "./log-console.css";
 @import "./startup-auth.css";

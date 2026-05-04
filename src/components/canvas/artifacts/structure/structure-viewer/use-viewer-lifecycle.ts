@@ -7,8 +7,8 @@
 // the host div, drive imperative ops (resetView / screenshot / rerender),
 // and read the current atoms array.
 
-import * as $3Dmol from '3dmol'
-import { useEffect, useRef, type MutableRefObject } from 'react'
+import { useEffect, useRef, useState, type MutableRefObject } from 'react'
+import type { AtomSpec, AtomStyleSpec, GLViewer } from '3dmol'
 import type {
   AtomInfo,
   Measurement,
@@ -41,8 +41,19 @@ export interface ViewerLifecycleArgs extends OverlayInputs {
 
 export interface ViewerLifecycleHandles {
   hostRef: MutableRefObject<HTMLDivElement | null>
-  viewerRef: MutableRefObject<$3Dmol.GLViewer | null>
+  viewerRef: MutableRefObject<GLViewer | null>
   atomsRef: MutableRefObject<AtomInfo[]>
+  loading: boolean
+  error: Error | null
+}
+
+type ThreeDmolModule = typeof import('3dmol')
+
+let threeDmolPromise: Promise<ThreeDmolModule> | null = null
+
+function loadThreeDmol(): Promise<ThreeDmolModule> {
+  if (!threeDmolPromise) threeDmolPromise = import('3dmol')
+  return threeDmolPromise
 }
 
 /**
@@ -64,8 +75,10 @@ export function useViewerLifecycle(
   } = args
 
   const hostRef = useRef<HTMLDivElement | null>(null)
-  const viewerRef = useRef<$3Dmol.GLViewer | null>(null)
+  const viewerRef = useRef<GLViewer | null>(null)
   const atomsRef = useRef<AtomInfo[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
 
   // Pin the latest callbacks in refs so the click handler installed once
   // on mount survives parent re-renders that change callback identity.
@@ -96,20 +109,34 @@ export function useViewerLifecycle(
   useEffect(() => {
     const host = hostRef.current
     if (!host) return
+    let disposed = false
 
-    const viewer = $3Dmol.createViewer(host, {
-      backgroundColor,
-    })
+    setLoading(true)
+    setError(null)
+    void loadThreeDmol()
+      .then(($3Dmol) => {
+        if (disposed) return
+        const viewer = $3Dmol.createViewer(host, {
+          backgroundColor,
+        })
+        viewerRef.current = viewer
+        setLoading(false)
+      })
+      .catch((err: unknown) => {
+        if (disposed) return
+        setError(err instanceof Error ? err : new Error(String(err)))
+        setLoading(false)
+      })
 
-    viewerRef.current = viewer
     return () => {
-      viewer.clear()
+      disposed = true
+      viewerRef.current?.clear()
       viewerRef.current = null
     }
     // backgroundColor seeded once; later changes go through the
     // dedicated setBackgroundColor call in the caller.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [backgroundColor])
 
   // ── Rebuild model when cif / style / replication change ──────────
   useEffect(() => {
@@ -137,7 +164,7 @@ export function useViewerLifecycle(
 
     // Apply atom style.
     const styleConfig = STYLE_CONFIGS[style] ?? STYLE_CONFIGS['ball-stick']
-    viewer.setStyle({}, styleConfig as $3Dmol.AtomStyleSpec)
+    viewer.setStyle({}, styleConfig as AtomStyleSpec)
 
     // Extract atom info for click matching and external consumption.
     const rawAtoms = viewer.selectedAtoms({})
@@ -153,7 +180,7 @@ export function useViewerLifecycle(
 
     // Set up click handler. Match by coordinate equality to find the
     // AtomInfo corresponding to the 3Dmol AtomSpec.
-    viewer.setClickable({}, true, (rawAtom: $3Dmol.AtomSpec) => {
+    viewer.setClickable({}, true, (rawAtom: AtomSpec) => {
       const match = atomsRef.current.find(
         (a) =>
           a.x === (rawAtom.x ?? 0) &&
@@ -179,7 +206,7 @@ export function useViewerLifecycle(
     viewer.zoomTo()
     viewer.render()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cif, style, replication?.nx, replication?.ny, replication?.nz])
+  }, [cif, loading, style, replication?.nx, replication?.ny, replication?.nz])
 
-  return { hostRef, viewerRef, atomsRef }
+  return { hostRef, viewerRef, atomsRef, loading, error }
 }
