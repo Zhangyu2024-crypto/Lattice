@@ -16,28 +16,21 @@
 //
 // Ref: public/busytex/busytex_worker.js + busytex_pipeline.js (compile at L441).
 
+import {
+  BUSYTEX_DATA_PACKAGE_FILES,
+  BUSYTEX_PRELOAD_PACKAGE_FILES,
+  busytexAssetUrl,
+  busytexAssetUrls,
+} from './busytex-assets'
+
 // All URLs use the full origin so Worker importScripts and Emscripten's
 // internal locateFile / XMLHttpRequest resolve correctly (relative paths
 // break inside Workers and blob: URLs break Emscripten's scriptDirectory).
-const ORIGIN = typeof window !== 'undefined' ? window.location.origin : ''
-const BASE_URL = `${ORIGIN}/busytex`
-
-const WORKER_URL = `${BASE_URL}/busytex_worker.js`
-const BUSYTEX_JS = `${BASE_URL}/busytex.js`
-const BUSYTEX_WASM = `${BASE_URL}/busytex.wasm`
-
-const PRELOAD_PACKAGES: readonly string[] = [
-  `${BASE_URL}/texlive-basic.js`,
-  `${BASE_URL}/ubuntu-texlive-latex-base.js`,
-  `${BASE_URL}/ubuntu-texlive-fonts-recommended.js`,
-]
-
-const DATA_PACKAGES: readonly string[] = [
-  ...PRELOAD_PACKAGES,
-  `${BASE_URL}/ubuntu-texlive-latex-recommended.js`,
-  `${BASE_URL}/ubuntu-texlive-latex-extra.js`,
-  `${BASE_URL}/ubuntu-texlive-science.js`,
-]
+const WORKER_URL = busytexAssetUrl('busytex_worker.js')
+const BUSYTEX_JS = busytexAssetUrl('busytex.js')
+const BUSYTEX_WASM = busytexAssetUrl('busytex.wasm')
+const PRELOAD_PACKAGES = busytexAssetUrls(BUSYTEX_PRELOAD_PACKAGE_FILES)
+const DATA_PACKAGES = busytexAssetUrls(BUSYTEX_DATA_PACKAGE_FILES)
 
 type Driver =
   | 'pdftex_bibtex8'

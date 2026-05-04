@@ -1,0 +1,23 @@
+{
+  "releaseTag": "build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1",
+  "coreFiles": [
+    "busytex_worker.js",
+    "busytex_pipeline.js",
+    "busytex.js",
+    "busytex.wasm"
+  ],
+  "supportFiles": [
+    "texmf.cnf",
+    "dvipdfmx.cfg"
+  ],
+  "preloadPackageFiles": [
+    "texlive-basic.js",
+    "ubuntu-texlive-latex-base.js",
+    "ubuntu-texlive-fonts-recommended.js"
+  ],
+  "lazyPackageFiles": [
+    "ubuntu-texlive-latex-recommended.js",
+    "ubuntu-texlive-latex-extra.js",
+    "ubuntu-texlive-science.js"
+  ]
+}

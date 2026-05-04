@@ -11,5 +11,9 @@ runtime (both dev and packaged Electron) is `/busytex/<file>`.
 
 ```
 BASE=https://github.com/busytex/busytex/releases/download/<TAG>
-# Plus each .wasm / .data / .js listed above.
+curl -L --fail -O "$BASE/<file>"
 ```
+
+The authoritative runtime file list is `src/lib/latex/busytex-assets.json`.
+Run `npm run setup` to download ignored large assets (`*.wasm` / `*.data`)
+after cloning.

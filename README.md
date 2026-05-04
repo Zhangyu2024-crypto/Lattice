@@ -221,7 +221,9 @@ npm install
 # Install Python worker dependencies (numpy, scipy, scikit-learn, pdfplumber, dara-xrd)
 pip install -r worker/requirements.txt
 
-# Download large data assets (~784 MB Materials Project XRD database)
+# Download large data assets:
+# - Materials Project XRD database (~784 MB)
+# - BusyTeX WASM/data runtime for LaTeX compilation (~214 MB)
 npm run setup
 ```
 
@@ -281,8 +283,9 @@ npm run check:data    # Validate bundled scientific databases
 | XRD reference patterns | `worker/data/xrd_references.json` | ~28 KB | In repo |
 | Raman reference spectra | `worker/data/raman_references.json` | ~54 KB | In repo |
 | Materials Project XRD database | `worker/data/mp_xrd_database.db` | ~784 MB | [Release v0.1.0-data](https://github.com/Zhangyu2024-crypto/Lattice/releases/tag/v0.1.0-data) |
+| BusyTeX runtime | `public/busytex/*.wasm`, `public/busytex/*.data` | ~214 MB | [busytex release](https://github.com/busytex/busytex/releases/tag/build_wasm_4499aa69fd3cf77ad86a47287d9a5193cf5ad993_7936974349_1) |
 
-Files larger than 100 MB are hosted as GitHub Release assets and downloaded via `npm run setup`.
+Large runtime assets are hosted as GitHub Release assets and downloaded via `npm run setup`.
 
 ---
 
