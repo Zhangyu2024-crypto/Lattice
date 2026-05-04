@@ -255,8 +255,13 @@ npm run setup
 ```bash
 npm run dev           # Vite dev server only (browser preview, no Electron)
 npm run electron:dev  # Full Electron app in dev mode
+npm run electron:dev:wsl  # WSL2/WSLg fallback if the Electron window is blank
 npm run build         # Production build + electron-builder → release/
 ```
+
+On WSL2/WSLg, Chromium's GPU process can fail and leave Electron showing only a
+blank dark window. `npm run electron:dev:wsl` sets `LATTICE_DISABLE_GPU=1`, which
+keeps software rasterization enabled while bypassing the broken GPU path.
 
 ### 5. Verify
 

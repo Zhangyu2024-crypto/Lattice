@@ -9,6 +9,7 @@
     "build": "tsc && vite build && electron-builder",
     "preview": "vite preview",
     "electron:dev": "vite --mode electron",
+    "electron:dev:wsl": "LATTICE_DISABLE_GPU=1 vite --mode electron",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

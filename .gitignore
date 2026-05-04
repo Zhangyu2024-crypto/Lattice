@@ -4,6 +4,7 @@ dist-electron/
 release/
 *.tsbuildinfo
 .vite/
+.cache/
 
 # SQLite WAL/SHM sidecars. Transient — SQLite creates them next to a DB
 # opened in WAL mode. Our bundled DBs open read-only (mode=ro&immutable=1)
