@@ -212,6 +212,259 @@
   color: inherit;
 }
 
+.activity-account-btn {
+  margin-top: -2px;
+}
+
+.activity-account-dot {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--color-text-muted);
+  box-shadow: 0 0 0 2px var(--color-bg-activitybar);
+}
+
+.activity-account-dot--ok {
+  background: var(--color-green);
+}
+
+.activity-account-dot--warn {
+  background: var(--color-yellow);
+}
+
+.activity-account-dot--off {
+  background: var(--color-text-muted);
+}
+
+.account-stats-popover {
+  position: fixed;
+  left: var(--account-popover-left);
+  bottom: var(--account-popover-bottom);
+  z-index: var(--z-popover, 1100);
+  width: 328px;
+  max-height: calc(100vh - 16px);
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--color-bg-panel);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-xs);
+}
+
+.account-stats-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.account-stats-avatar {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: var(--color-bg-active);
+  color: var(--color-text-emphasis);
+  border: 1px solid var(--color-border);
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+.account-stats-title-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.account-stats-name,
+.account-stats-subtitle,
+.account-stats-tile-value,
+.account-stats-tile-detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-stats-name {
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+
+.account-stats-subtitle {
+  margin-top: 2px;
+  color: var(--color-text-muted);
+}
+
+.account-stats-refresh {
+  width: 26px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.account-stats-refresh:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.account-stats-refresh:focus-visible,
+.account-stats-settings:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+.account-stats-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-sidebar);
+}
+
+.account-stats-state--ok {
+  color: var(--color-green);
+  border-color: color-mix(in srgb, var(--color-green) 32%, var(--color-border));
+  background: color-mix(in srgb, var(--color-green) 8%, var(--color-bg-panel));
+}
+
+.account-stats-state--warn {
+  color: var(--color-yellow);
+  border-color: color-mix(in srgb, var(--color-yellow) 34%, var(--color-border));
+  background: color-mix(in srgb, var(--color-yellow) 9%, var(--color-bg-panel));
+}
+
+.account-stats-state--off {
+  color: var(--color-text-muted);
+}
+
+.account-stats-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.account-stats-tile {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-sidebar);
+}
+
+.account-stats-tile-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--color-text-muted);
+}
+
+.account-stats-tile-label svg {
+  flex: 0 0 auto;
+}
+
+.account-stats-tile-value {
+  margin-top: 6px;
+  color: var(--color-text-primary);
+  font-weight: 650;
+}
+
+.account-stats-tile-detail {
+  margin-top: 2px;
+  color: var(--color-text-muted);
+}
+
+.account-stats-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+}
+
+.account-stats-section-title {
+  color: var(--color-text-primary);
+  font-weight: 650;
+}
+
+.account-stats-progress {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--color-border);
+}
+
+.account-stats-progress-fill {
+  display: block;
+  width: var(--account-progress-width);
+  height: 100%;
+  background: var(--account-progress-bg);
+}
+
+.account-stats-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.account-stats-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-stats-row strong {
+  flex: 0 0 auto;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-weight: 650;
+}
+
+.account-stats-settings {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--text-xs);
+}
+
+.account-stats-settings:hover {
+  background: var(--color-bg-hover);
+}
+
 /* === Status Bar Items ===
    `.status-chip` is the canonical class for chips rendered by StatusBar.
    `.status-item` is retained as a legacy alias so any older consumers keep

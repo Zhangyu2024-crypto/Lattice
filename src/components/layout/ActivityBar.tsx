@@ -9,6 +9,7 @@ import {
   SquareTerminal,
 } from 'lucide-react'
 import type { SidebarView } from '../../stores/prefs-store'
+import AccountStatsMenu from './AccountStatsMenu'
 
 const ACTIVITY_ICON_SIZE = 20
 const ACTIVITY_ICON_STROKE = 1.65
@@ -144,6 +145,7 @@ export default function ActivityBar({
       >
         <Settings {...iconProps} />
       </button>
+      <AccountStatsMenu onOpenSettings={onOpenSettings} />
     </div>
   )
 }
