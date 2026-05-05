@@ -54,7 +54,7 @@ export default function ModelsTab() {
   )
 }
 
-// ─── Active route section (banner + generation tabs) ────────────────────
+// ─── Active connection section (banner + generation tabs) ────────────────
 
 function ActiveModelSection() {
   const providers = useLLMConfigStore((s) => s.providers)
@@ -122,15 +122,15 @@ function ActiveModelSection() {
     if (totalOptions === 0) {
       return {
         variant: 'needs-connect',
-        title: 'No routes available yet',
+        title: 'Connection not ready yet',
         detail:
-          'Click "Connect" on a connection below to fetch its route catalog.',
+          'Click "Connect" on a connection below to finish setup.',
       }
     }
     if (currentKey && !validKeys.has(currentKey)) {
       return {
         variant: 'stale',
-        title: 'Selected route is no longer available',
+        title: 'Selected option is no longer available',
         detail:
           'The saved default is not in the fetched catalog. Pick a new one below.',
       }
@@ -138,15 +138,15 @@ function ActiveModelSection() {
     if (!currentKey) {
       return {
         variant: 'needs-pick',
-        title: 'Choose a default route',
-        detail: `${totalOptions} route${totalOptions === 1 ? '' : 's'} available across ${providers.length} connection${providers.length === 1 ? '' : 's'}.`,
+        title: 'Choose a default connection',
+        detail: `${totalOptions} option${totalOptions === 1 ? '' : 's'} available across ${providers.length} connection${providers.length === 1 ? '' : 's'}.`,
       }
     }
     if (selectedSummary && (!selectedSummary.providerEnabled || !anyEnabled)) {
       return {
         variant: 'stale',
         title: 'Selected connection is disabled',
-        detail: 'Enable it below, or pick another route.',
+        detail: 'Enable it below, or pick another option.',
       }
     }
     return {
@@ -160,9 +160,9 @@ function ActiveModelSection() {
     <section>
       <header className="llm-models-section-header">
         <div>
-          <div className="llm-models-heading">Active route</div>
+          <div className="llm-models-heading">Active connection</div>
           <div className="llm-models-subheading">
-            One route is used by default. Generation parameters are below.
+            One connection is used by default. Generation parameters are below.
           </div>
         </div>
       </header>
@@ -269,7 +269,7 @@ function ProvidersSection() {
     if (!CONNECTABLE_TYPES.has(provider.type)) {
       setStatus(provider.id, {
         state: 'error',
-        message: `Provider type "${provider.type}" does not expose a route catalog`,
+        message: `Provider type "${provider.type}" does not expose a compatible catalog`,
       })
       return
     }
@@ -337,7 +337,7 @@ function ProvidersSection() {
         added: 0,
         updated: 0,
       })
-      toast.warn(`${provider.name}: connected but no routes were returned`)
+      toast.warn(`${provider.name}: connected but no options were returned`)
       if (!provider.enabled) enableProvider(provider.id, true)
       return
     }
@@ -500,7 +500,7 @@ function ProvidersSection() {
           added: 0,
           updated: 0,
         })
-        toast.warn('Logged in, but chaxiejun.xyz returned no available routes')
+        toast.warn('Logged in, but chaxiejun.xyz returned no available options')
         return
       }
       setStatus(connected.provider.id, {
@@ -547,7 +547,7 @@ function ProvidersSection() {
           <div className="llm-models-heading">Connections</div>
           <div className="llm-models-subheading">
             Add a connection, enter an API key, click <strong>Connect</strong>.
-            Lattice fetches the route catalog, looks up pricing, and picks a
+            Lattice checks availability, looks up pricing, and picks a
             default for you.
           </div>
           <PricingCatalogStatus

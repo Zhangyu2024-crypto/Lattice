@@ -118,7 +118,7 @@ export default function AgentModelPickerPopover({
       }
     >
       <div className="agent-model-picker-head">
-        <span className="agent-model-picker-title">Agent route</span>
+        <span className="agent-model-picker-title">Agent connection</span>
         {resolved ? (
           <span className="agent-model-picker-current" title={selectedKey}>
             {publicModelLabel(resolved)}
@@ -130,10 +130,10 @@ export default function AgentModelPickerPopover({
         )}
       </div>
 
-      <div className="agent-model-picker-list" role="listbox" aria-label="Routes">
+      <div className="agent-model-picker-list" role="listbox" aria-label="Connection options">
         {modelOptions.length === 0 ? (
           <div className="agent-model-picker-empty">
-            No routes in catalog. Open settings to connect an account.
+            No options available. Open settings to connect an account.
           </div>
         ) : (
           modelOptions.map((opt) => {

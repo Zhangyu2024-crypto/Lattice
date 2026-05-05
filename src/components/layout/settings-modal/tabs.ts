@@ -39,7 +39,7 @@ export const SETTINGS_TABS: readonly TabDef[] = [
   {
     id: 'models',
     label: 'Connections',
-    description: 'Providers & default route',
+    description: 'Providers & default connection',
     icon: Sparkles,
   },
   {

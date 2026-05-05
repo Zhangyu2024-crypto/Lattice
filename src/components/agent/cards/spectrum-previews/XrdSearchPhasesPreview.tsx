@@ -131,11 +131,11 @@ function XrdSearchCompact({
         </div>
       ) : null}
 
-      {/* Route verdict */}
+      {/* Assessment */}
       {ident ? (
         <div style={S.verdictBox}>
           <div style={S.verdictHeader}>
-            <span>Route verdict</span>
+            <span>Assessment</span>
             <span>{((ident.confidence ?? 0) * 100).toFixed(0)}%</span>
             {ident.model ? (
               <span style={{ color: 'var(--color-text-muted)' }}>· {ident.model}</span>

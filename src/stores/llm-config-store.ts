@@ -160,9 +160,9 @@ function explainBrokenBinding(
   const p = providers.find((x) => x.id === cfg.providerId)
   if (!p) return `The saved ${label} connection no longer exists.`
   if (!p.models.some((m) => m.id === cfg.modelId)) {
-    return `The saved ${label} route is not in the connection list. Fetch routes again or pick a new default.`
+    return `The saved ${label} option is not in the connection list. Refresh the connection or pick a new default.`
   }
-  return `The saved ${label} route could not be resolved.`
+  return `The saved ${label} option could not be resolved.`
 }
 
 /**
@@ -186,7 +186,7 @@ export function getUnresolvedModelMessage(
   const dComplete = Boolean(dialog.providerId && dialog.modelId)
   const aComplete = Boolean(agent.providerId && agent.modelId)
   if (!dComplete && !aComplete) {
-    return `No default route is selected for Dialog or Agent. ${SETTINGS_MODELS_HINT}`
+    return `No default connection is selected for Dialog or Agent. ${SETTINGS_MODELS_HINT}`
   }
 
   const hints: string[] = []
@@ -198,7 +198,7 @@ export function getUnresolvedModelMessage(
     return `${hints.join(' ')} ${SETTINGS_MODELS_HINT}`
   }
 
-  return `Could not resolve a route for ${mode} mode. ${SETTINGS_MODELS_HINT}`
+  return `Could not resolve a connection for ${mode} mode. ${SETTINGS_MODELS_HINT}`
 }
 
 interface LLMConfigState {

@@ -71,7 +71,7 @@ export default function ProviderCard({
     : !hasKey
       ? 'Add an API key first'
       : !CONNECTABLE_TYPES.has(provider.type)
-        ? `Connection type "${provider.type}" does not expose a route catalog`
+        ? `Connection type "${provider.type}" does not expose a compatible catalog`
         : undefined
 
   const handleSaveKey = () => {
@@ -205,7 +205,7 @@ export default function ProviderCard({
             ) : (
               <ChevronRight size={12} />
             )}
-            {accountBacked ? 'Account connection' : `Routes (${provider.models.length})`}
+            {accountBacked ? 'Account connection' : `Options (${provider.models.length})`}
           </button>
         ) : null}
       </div>
@@ -252,7 +252,7 @@ export default function ProviderCard({
                   title={
                     isDefault
                       ? 'Already the default'
-                      : 'Use this route as default for Dialog and Agent'
+                      : 'Use this option as default for Dialog and Agent'
                   }
                 >
                   {isDefault ? 'Default' : 'Set default'}
@@ -309,11 +309,11 @@ function ConnectButton({
       title={
         running
           ? 'Contacting provider…'
-          : disabled
-            ? disabledReason
+            : disabled
+              ? disabledReason
             : hasModels
-              ? 'Re-fetch the route catalog'
-              : 'Validate the API key and fetch the route catalog'
+              ? 'Re-check available options'
+              : 'Validate the API key and check available options'
       }
       leading={
         running ? (
@@ -331,7 +331,7 @@ function ConnectButton({
 function ConnectStatusBadge({ status }: { status: ConnectStatus }) {
   if (status.state === 'idle' || status.state === 'running') return null
   if (status.state === 'ok') {
-    const parts = [`${status.fetched} routes`, `${status.durationMs}ms`]
+    const parts = [`${status.fetched} options`, `${status.durationMs}ms`]
     if (status.added > 0) parts.push(`${status.added} new`)
     if (status.updated > 0) parts.push(`${status.updated} updated`)
     return (

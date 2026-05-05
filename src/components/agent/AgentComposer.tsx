@@ -1399,16 +1399,16 @@ export default function AgentComposer({
               </div>
               {hasModeToolbar ? (
                 <div className="chat-input-model-row">
-                  <span className="chat-input-model-row-label">Route</span>
+                  <span className="chat-input-model-row-label">Connection</span>
                   <div
                     ref={modelChipAnchorRef}
                     className="chat-model-chip-wrap"
-                    aria-label="Agent route"
+                    aria-label="Agent connection"
                   >
                     <ModelChip
                       label={agentModelLabel}
                       tone={connectionReady ? 'accent' : 'muted'}
-                      title="Choose agent route"
+                      title="Choose agent connection"
                       hideDot
                       showChevron
                       onClick={() => setModelPickerOpen((o) => !o)}

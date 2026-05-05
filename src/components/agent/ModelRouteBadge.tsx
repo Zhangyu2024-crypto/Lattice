@@ -50,9 +50,9 @@ export default function ModelRouteBadge() {
       {hasModelOverride ? (
         <Badge
           variant="warning"
-          title={`Session route override: ${modelTooltip}`}
+          title={`Session connection override: ${modelTooltip}`}
         >
-          ROUTE
+          CONN
         </Badge>
       ) : null}
       {hasEffortOverride ? (
@@ -66,8 +66,8 @@ export default function ModelRouteBadge() {
       <button
         type="button"
         onClick={clear}
-        title="Clear all session route overrides"
-        aria-label="Clear route overrides"
+        title="Clear all session connection overrides"
+        aria-label="Clear connection overrides"
         className="model-route-badge-clear"
         style={{
           display: 'inline-flex',

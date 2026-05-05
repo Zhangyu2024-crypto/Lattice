@@ -129,7 +129,7 @@ export function useAccountStats() {
   const providerDetail = !authenticated
     ? 'Sign in to enable the account connection'
     : latticeProvider?.enabled
-      ? `${latticeProvider.models.length} account route${latticeProvider.models.length === 1 ? '' : 's'} available`
+      ? 'Connected through chaxiejun.xyz'
       : 'Open Connections to finish setup'
   const todayUsageLabel = `${formatTokens(totalTodayTokens)} tokens`
   const todayUsageDetail = `${today.calls} calls · ${formatUSD(today.costUSD)}`

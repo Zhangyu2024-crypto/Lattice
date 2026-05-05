@@ -7,7 +7,7 @@ import { LATTICE_AUTH_PROVIDER_ID } from '../../lib/lattice-auth-client'
 
 beforeEach(() => {
   useModelRouteStore.getState().clearAllOverrides()
-  // Seed the config store with one fake provider so the ROUTE tooltip
+  // Seed the config store with one fake provider so the connection tooltip
   // formatter has something to resolve against. A second test exercises
   // the "unknown ids" fallback where the provider is absent.
   useLLMConfigStore.setState((s) => ({
@@ -63,13 +63,13 @@ describe('ModelRouteBadge', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('shows ROUTE pill with resolved tooltip when override points at a known route', () => {
+  it('shows CONN pill with resolved tooltip when override points at a known connection', () => {
     useModelRouteStore.getState().setOverride({
       providerId: 'prov-a',
       modelId: 'model-x',
     })
     render(<ModelRouteBadge />)
-    const pill = screen.getByText('ROUTE')
+    const pill = screen.getByText('CONN')
     expect(pill).toBeInTheDocument()
     expect(pill.getAttribute('title')).toContain('Provider A -> Model X')
   })
@@ -80,7 +80,7 @@ describe('ModelRouteBadge', () => {
       modelId: 'phantom',
     })
     render(<ModelRouteBadge />)
-    const pill = screen.getByText('ROUTE')
+    const pill = screen.getByText('CONN')
     expect(pill.getAttribute('title')).toContain('ghost/phantom')
   })
 
@@ -90,7 +90,7 @@ describe('ModelRouteBadge', () => {
       modelId: 'secret-model',
     })
     render(<ModelRouteBadge />)
-    const pill = screen.getByText('ROUTE')
+    const pill = screen.getByText('CONN')
     expect(pill.getAttribute('title')).toContain('chaxiejun.xyz')
     expect(pill.getAttribute('title')).not.toContain('Hidden Model')
   })
@@ -109,7 +109,7 @@ describe('ModelRouteBadge', () => {
       reasoningEffort: 'high',
     })
     render(<ModelRouteBadge />)
-    fireEvent.click(screen.getByLabelText('Clear route overrides'))
+    fireEvent.click(screen.getByLabelText('Clear connection overrides'))
     expect(useModelRouteStore.getState().override).toEqual({})
   })
 })

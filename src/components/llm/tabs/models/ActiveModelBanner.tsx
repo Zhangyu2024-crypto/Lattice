@@ -70,7 +70,7 @@ export default function ActiveModelBanner({
         >
           <option value="">
             {variant === 'needs-pick' || variant === 'stale'
-              ? '— pick a route —'
+              ? '- pick an option -'
               : '(none)'}
           </option>
           {groups.map((g) => (
