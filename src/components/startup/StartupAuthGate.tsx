@@ -18,6 +18,8 @@ import {
   type AuthenticatedLatticeSession,
 } from '@/lib/lattice-auth-client'
 import { toast } from '@/stores/toast-store'
+import { usePrefsStore } from '@/stores/prefs-store'
+import { isCurrentAgreementAccepted } from '@/lib/audit-config-sync'
 import type { LatticeAuthSessionPayload } from '@/types/electron'
 
 type AuthState =
@@ -40,11 +42,20 @@ interface Props {
 export default function StartupAuthGate({ children }: Props) {
   const [state, setState] = useState<AuthState>({ status: 'checking' })
   const [loginRunning, setLoginRunning] = useState(false)
+  const acceptUserAgreement = usePrefsStore((s) => s.acceptUserAgreement)
+  const privacy = usePrefsStore((s) => s.privacy)
+
+  const acceptLoginNotice = () => {
+    if (!isCurrentAgreementAccepted(privacy)) {
+      acceptUserAgreement({ auditLoggingEnabled: false })
+    }
+  }
 
   const setupSession = async (
     session: AuthenticatedLatticeSession,
     cancelled?: () => boolean,
   ) => {
+    acceptLoginNotice()
     upsertLatticeAuthProvider(session)
     if (cancelled?.()) return
     setState({ status: 'setting-up', session })
@@ -111,6 +122,7 @@ export default function StartupAuthGate({ children }: Props) {
       })
       return
     }
+    acceptLoginNotice()
     setLoginRunning(true)
     setState({ status: 'missing' })
     try {
@@ -160,9 +172,9 @@ export default function StartupAuthGate({ children }: Props) {
           <div className="startup-auth-copy">
             <h1>Connect your research workspace</h1>
             <p>
-              Sign in on chaxiejun.xyz to issue a desktop credential for
-              Lattice. The local app stores the credential for later Lattice
-              service calls and can refresh model setup after login.
+              Sign in with chaxiejun.xyz once. Lattice will use that account
+              connection for AI service access without showing private
+              credential details or model names in the app.
             </p>
           </div>
 
@@ -218,6 +230,19 @@ export default function StartupAuthGate({ children }: Props) {
                 <ExternalLink size={13} />
               </a>
             </div>
+            <div className="startup-auth-terms">
+              By continuing, you agree to the Lattice terms and privacy notice
+              provided on chaxiejun.xyz. Local detailed records stay disabled
+              unless you enable them in Settings.
+              <a
+                href="https://chaxiejun.xyz"
+                target="_blank"
+                rel="noreferrer"
+              >
+                View terms
+                <ExternalLink size={12} aria-hidden />
+              </a>
+            </div>
 
             {statusMessage && (
               <div className="startup-auth-status" role="status">
@@ -251,10 +276,10 @@ export default function StartupAuthGate({ children }: Props) {
             <div className="startup-auth-step">
               <KeyRound size={15} />
               <div>
-                <strong>Browser authentication</strong>
+                <strong>Account sign-in</strong>
                 <span>
-                  Lattice opens a chaxiejun.xyz sign-in window and waits for
-                  authorization.
+                  chaxiejun.xyz handles the sign-in and returns an account
+                  connection to Lattice.
                 </span>
               </div>
             </div>
@@ -263,8 +288,8 @@ export default function StartupAuthGate({ children }: Props) {
               <div>
                 <strong>Secure sign-in</strong>
                 <span>
-                  Lattice saves the desktop session locally and never shows the
-                  private token in the app.
+                  Lattice keeps private credential details out of the visible
+                  interface.
                 </span>
               </div>
             </div>

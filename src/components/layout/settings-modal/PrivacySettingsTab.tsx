@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Download, ExternalLink, FileText, Trash2 } from 'lucide-react'
 import {
-  USER_AGREEMENT_SECTIONS,
-  USER_AGREEMENT_TITLE,
   USER_AGREEMENT_VERSION,
 } from '../../../lib/user-agreement'
 import {
@@ -41,7 +39,8 @@ export default function PrivacySettingsTab() {
 
   const updateAuditEnabled = (enabled: boolean) => {
     if (enabled && !accepted) {
-      toast.warn('Accept the current user agreement before enabling audit logs.')
+      acceptUserAgreement({ auditLoggingEnabled: false })
+      setPrivacyAudit({ auditLoggingEnabled: true })
       return
     }
     setPrivacyAudit({ auditLoggingEnabled: enabled })
@@ -66,37 +65,39 @@ export default function PrivacySettingsTab() {
     <>
       <Section title="User Agreement">
         <div className="settings-modal-compute-intro">
-          {USER_AGREEMENT_TITLE}. Current version: {USER_AGREEMENT_VERSION}.
-        </div>
-        <div className="settings-privacy-agreement">
-          {USER_AGREEMENT_SECTIONS.map((section) => (
-            <details key={section.title} className="settings-privacy-agreement-item">
-              <summary>{section.title}</summary>
-              <p>{section.body}</p>
-            </details>
-          ))}
+          Lattice uses the account and privacy terms provided on chaxiejun.xyz.
+          Current acknowledged version: {accepted ? USER_AGREEMENT_VERSION : 'not acknowledged'}.
         </div>
         <div className="settings-modal-test-row">
+          <a
+            className="settings-modal-btn-secondary"
+            href="https://chaxiejun.xyz"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <ExternalLink size={15} strokeWidth={1.75} aria-hidden />
+            Open chaxiejun.xyz
+          </a>
           <button
             type="button"
             className="settings-modal-btn-primary"
             onClick={() => {
               acceptUserAgreement({
-                auditLoggingEnabled: privacy.auditLoggingEnabled,
+                auditLoggingEnabled: false,
               })
-              toast.success('User agreement accepted')
+              toast.success('Account notice acknowledged')
             }}
           >
             <FileText size={15} strokeWidth={1.75} aria-hidden />
-            Accept current version
+            Acknowledge
           </button>
         </div>
       </Section>
 
-      <Section title="Local Audit Logs">
+      <Section title="Local Records">
         <div className="settings-modal-compute-intro">
-          Detailed call records stay on this computer and are written only
-          after the current agreement is accepted and logging is enabled.
+          Optional detailed records stay on this computer and remain disabled
+          unless you turn them on.
         </div>
 
         <Field label="Status">
@@ -106,19 +107,18 @@ export default function PrivacySettingsTab() {
             </span>
             {accepted
               ? `Accepted ${privacy.acceptedAt ? new Date(privacy.acceptedAt).toLocaleString() : ''}`
-              : 'Current agreement not accepted'}
+              : 'Not acknowledged'}
           </span>
         </Field>
 
-        <Field label="Audit logging">
+        <Field label="Local records">
           <label className="settings-modal-switch">
             <input
               type="checkbox"
               checked={accepted && privacy.auditLoggingEnabled}
-              disabled={!accepted}
               onChange={(event) => updateAuditEnabled(event.target.checked)}
             />
-            <span>Record detailed local call metadata</span>
+            <span>Record detailed local activity metadata</span>
           </label>
         </Field>
 
@@ -134,7 +134,7 @@ export default function PrivacySettingsTab() {
           <span className="settings-privacy-field-note">days</span>
         </Field>
 
-        <Field label="Log folder">
+        <Field label="Record folder">
           <code className="settings-privacy-path">
             {logDir || 'Electron userData/logs/api-calls'}
           </code>
@@ -148,7 +148,7 @@ export default function PrivacySettingsTab() {
             onClick={() =>
               void runAction('open', async () => {
                 const res = await window.electronAPI?.auditOpenLogDir?.()
-                if (!res?.ok) throw new Error(res?.error ?? 'Audit IPC unavailable')
+                if (!res?.ok) throw new Error(res?.error ?? 'Local record IPC unavailable')
               }).catch((err) => toast.error(err instanceof Error ? err.message : String(err)))
             }
           >
@@ -163,8 +163,8 @@ export default function PrivacySettingsTab() {
               void runAction('export', async () => {
                 await syncAuditConfigToMain(usePrefsStore.getState().privacy)
                 const res = await window.electronAPI?.auditExportLogs?.()
-                if (!res?.ok) throw new Error(res?.error ?? 'Audit IPC unavailable')
-                toast.success(`Exported ${res.fileCount} audit files`)
+                if (!res?.ok) throw new Error(res?.error ?? 'Local record IPC unavailable')
+                toast.success(`Exported ${res.fileCount} local record files`)
               }).catch((err) => toast.error(err instanceof Error ? err.message : String(err)))
             }
           >
@@ -178,8 +178,8 @@ export default function PrivacySettingsTab() {
             onClick={() =>
               void runAction('clear', async () => {
                 const res = await window.electronAPI?.auditClearLogs?.()
-                if (!res?.ok) throw new Error(res?.error ?? 'Audit IPC unavailable')
-                toast.success('Audit logs cleared')
+                if (!res?.ok) throw new Error(res?.error ?? 'Local record IPC unavailable')
+                toast.success('Local records cleared')
               }).catch((err) => toast.error(err instanceof Error ? err.message : String(err)))
             }
           >

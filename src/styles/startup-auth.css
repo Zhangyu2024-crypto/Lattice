@@ -84,6 +84,27 @@
   color: var(--color-text-emphasis);
 }
 
+.startup-auth-terms {
+  margin-top: var(--space-3);
+  max-width: 580px;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.55;
+}
+
+.startup-auth-terms a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.startup-auth-terms a:hover {
+  color: var(--color-text-emphasis);
+}
+
 .startup-auth-status {
   margin-top: var(--space-4);
   max-width: 620px;

@@ -4,34 +4,29 @@ export const USER_AGREEMENT_TITLE = 'Lattice User Agreement & Local Audit Notice
 
 export const USER_AGREEMENT_SECTIONS = [
   {
-    title: 'Local call audit logging',
+    title: 'Local activity records',
     body:
-      'Lattice can keep a local audit trail for model requests, workspace file operations, Creator/LaTeX AI actions, agent tool calls, plugins, MCP servers, workspace shell commands, and related app integrations.',
+      'Lattice may keep local records of actions that help explain how the app was used, including AI requests routed through configured providers, workspace file operations, Creator and LaTeX assistant actions, agent tool calls, plugin and MCP activity, workspace shell commands, and related app integrations.',
   },
   {
-    title: 'Storage location',
+    title: 'Where records are stored',
     body:
-      'Audit logs are stored on this computer under Electron userData/logs/api-calls as JSONL files. They are not uploaded by Lattice unless you explicitly export or share them.',
+      'These records are stored only on this computer under Electron userData/logs/api-calls as JSONL files. Lattice does not upload these local records unless you choose to export, share, sync, or otherwise transmit them.',
   },
   {
-    title: 'Sensitive data handling',
+    title: 'Sensitive information',
     body:
-      'Lattice redacts API keys, authorization headers, approval tokens, passwords, secrets, access tokens, cookies, and similarly named fields. Large text and binary payloads are summarized by byte length and SHA-256 instead of being written in full.',
+      'Lattice is designed to redact API keys, authorization headers, approval tokens, passwords, secrets, access tokens, cookies, and similarly named fields before they are written to local records. Large text and binary payloads are summarized with byte length and SHA-256 rather than being stored in full.',
   },
   {
     title: 'Third-party services',
     body:
-      'LLM providers, MCP servers, plugins, sync backends, and other integrations may be configured by you. Their data handling depends on the provider or tool you choose, not only on Lattice.',
+      'You may connect Lattice to LLM providers, MCP servers, plugins, sync backends, and other integrations. Data sent to those services is handled according to the provider, server, plugin, or tool you choose, in addition to Lattice settings.',
   },
   {
     title: 'Your controls',
     body:
-      'You can keep audit logging disabled, enable or disable it later from Settings, open the log folder, export the log folder, clear audit logs, and adjust retention. Clearing audit logs only removes the local audit log directory.',
-  },
-  {
-    title: 'Draft notice',
-    body:
-      'This engineering notice is intended to describe app behavior. It is not legal advice and should be reviewed before public distribution.',
+      'You can keep local activity records disabled, enable or disable them later from Settings, open the record folder, export the record folder, clear local records, and adjust retention. Clearing records removes only the local activity record directory.',
   },
 ] as const
 
