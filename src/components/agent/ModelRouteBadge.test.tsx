@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import ModelRouteBadge from './ModelRouteBadge'
 import { useModelRouteStore } from '../../lib/model-routing'
 import { useLLMConfigStore } from '../../stores/llm-config-store'
+import { LATTICE_AUTH_PROVIDER_ID } from '../../lib/lattice-auth-client'
 
 beforeEach(() => {
   useModelRouteStore.getState().clearAllOverrides()
@@ -12,6 +13,26 @@ beforeEach(() => {
   useLLMConfigStore.setState((s) => ({
     ...s,
     providers: [
+      {
+        id: LATTICE_AUTH_PROVIDER_ID,
+        name: 'chaxiejun.xyz',
+        type: 'openai-compatible',
+        apiKey: 'lattice-secure-token',
+        enabled: true,
+        baseUrl: 'https://chaxiejun.xyz/api/lattice/llm',
+        extraHeaders: [],
+        models: [
+          {
+            id: 'secret-model',
+            label: 'Hidden Model',
+            contextTokens: 100000,
+            supportsTools: true,
+            supportsImages: false,
+          },
+        ],
+      } as unknown as ReturnType<
+        typeof useLLMConfigStore.getState
+      >['providers'][number],
       {
         id: 'prov-a',
         name: 'Provider A',
@@ -50,7 +71,7 @@ describe('ModelRouteBadge', () => {
     render(<ModelRouteBadge />)
     const pill = screen.getByText('MODEL')
     expect(pill).toBeInTheDocument()
-    expect(pill.getAttribute('title')).toContain('Provider A → Model X')
+    expect(pill.getAttribute('title')).toContain('Provider A -> Model X')
   })
 
   it('falls back to raw ids in tooltip when override target is not in the catalog', () => {
@@ -61,6 +82,17 @@ describe('ModelRouteBadge', () => {
     render(<ModelRouteBadge />)
     const pill = screen.getByText('MODEL')
     expect(pill.getAttribute('title')).toContain('ghost/phantom')
+  })
+
+  it('does not expose chaxiejun.xyz model labels in override tooltip', () => {
+    useModelRouteStore.getState().setOverride({
+      providerId: LATTICE_AUTH_PROVIDER_ID,
+      modelId: 'secret-model',
+    })
+    render(<ModelRouteBadge />)
+    const pill = screen.getByText('MODEL')
+    expect(pill.getAttribute('title')).toContain('chaxiejun.xyz')
+    expect(pill.getAttribute('title')).not.toContain('Hidden Model')
   })
 
   it('shows EFFORT pill when effort override is set without fast mode', () => {

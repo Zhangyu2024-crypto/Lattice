@@ -27,6 +27,7 @@ import {
 } from '../../types/permission-mode'
 import StatusChip from './StatusChip'
 import UsagePopover from './UsagePopover'
+import { publicModelLabel } from '../../lib/model-display'
 import type { TokenWarningLevel } from '../../lib/context-window'
 
 interface UsageSnapshot {
@@ -68,9 +69,7 @@ export default function StatusBar({
   const resolved = useResolvedModel('agent')
   const permissionMode = usePrefsStore((s) => s.permissionMode)
 
-  const displayModel = resolved
-    ? `${resolved.provider.name} / ${resolved.model.label}`
-    : model || 'no model'
+  const displayModel = publicModelLabel(resolved, model || 'no model')
 
   const modelChipRef = useRef<HTMLDivElement | null>(null)
   const [popoverOpen, setPopoverOpen] = useState(false)

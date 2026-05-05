@@ -9,6 +9,7 @@
 import { X } from 'lucide-react'
 import { useModelRouteStore } from '../../lib/model-routing'
 import { useLLMConfigStore } from '../../stores/llm-config-store'
+import { publicModelOverrideLabel } from '../../lib/model-display'
 import Badge from '../ui/Badge'
 
 function formatEffort(effort: string | undefined): string {
@@ -33,10 +34,7 @@ export default function ModelRouteBadge() {
     const mid = override.modelId ?? ''
     const provider = providers.find((p) => p.id === pid)
     const model = provider?.models.find((m) => m.id === mid)
-    modelTooltip =
-      provider && model
-        ? `${provider.name} → ${model.label}`
-        : `${pid}/${mid}`
+    modelTooltip = publicModelOverrideLabel(provider, model, `${pid}/${mid}`)
   }
 
   return (

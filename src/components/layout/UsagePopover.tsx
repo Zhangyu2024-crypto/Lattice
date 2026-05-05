@@ -5,6 +5,10 @@ import { useUsageStore } from '../../stores/usage-store'
 import type { UsageAggregate } from '../../types/llm'
 import { TYPO } from '../../lib/typography-inline'
 import { useOutsideClickDismiss } from '../../hooks/useOutsideClickDismiss'
+import {
+  publicModelLabel,
+  publicProviderModelLabel,
+} from '../../lib/model-display'
 
 interface Props {
   anchorEl: HTMLElement | null
@@ -94,7 +98,7 @@ export default function UsagePopover({
           key: `${provider.id}::${model.id}`,
           providerId: provider.id,
           modelId: model.id,
-          label: `${provider.name} / ${model.label}`,
+          label: publicProviderModelLabel(provider, model),
           disabled: !provider.enabled,
         })
       }
@@ -125,11 +129,9 @@ export default function UsagePopover({
       </div>
 
       <section style={S.section}>
-        <div style={S.sectionLabel}>Current model</div>
+        <div style={S.sectionLabel}>AI service</div>
         <div style={S.modelLine}>
-          {resolved
-            ? `${resolved.provider.name} / ${resolved.model.label}`
-            : 'Not configured'}
+          {publicModelLabel(resolved, 'Not configured')}
         </div>
         <select
           value={selectedKey}

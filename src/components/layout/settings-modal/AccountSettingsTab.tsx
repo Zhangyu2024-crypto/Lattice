@@ -1,6 +1,5 @@
 import {
   Gauge,
-  KeyRound,
   MessageSquare,
   ShieldCheck,
   Sparkles,
@@ -38,13 +37,13 @@ export default function AccountSettingsTab() {
         </div>
       </Section>
 
-      <Section title="Identity and model">
+      <Section title="Connection">
         <div className="settings-account-grid">
           <MetricCard
-            icon={<KeyRound size={15} />}
-            label="Credential"
-            value={stats.credentialLabel}
-            detail={stats.credentialDetail}
+            icon={<ShieldCheck size={15} />}
+            label="Desktop session"
+            value={stats.sessionLabel}
+            detail={stats.sessionDetail}
           />
           <MetricCard
             icon={<ShieldCheck size={15} />}
@@ -54,9 +53,9 @@ export default function AccountSettingsTab() {
           />
           <MetricCard
             icon={<Sparkles size={15} />}
-            label="Default model"
-            value={stats.modelLabel}
-            detail={stats.modelDetail}
+            label="AI service"
+            value={stats.serviceLabel}
+            detail={stats.serviceDetail}
           />
           <MetricCard
             icon={<Gauge size={15} />}
@@ -102,8 +101,8 @@ export default function AccountSettingsTab() {
             value={stats.authenticated ? stats.authSession?.username ?? 'Signed in' : 'Not signed in'}
           />
           <DetailRow
-            label="Credential"
-            value={stats.credentialLabel}
+            label="Desktop session"
+            value={stats.sessionLabel}
           />
           <DetailRow
             label="Saved"

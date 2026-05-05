@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { errorMessage } from '../../lib/error-message'
 import { formatRelativeTime } from '../../lib/format-time'
 import { LATTICE_AUTH_PROVIDER_ID } from '../../lib/lattice-auth-client'
-import { useLLMConfigStore, useResolvedModel } from '../../stores/llm-config-store'
+import { useLLMConfigStore } from '../../stores/llm-config-store'
 import { useUsageStore } from '../../stores/usage-store'
 import type { LatticeAuthSessionPayload } from '../../types/electron'
 import type { BudgetConfig, UsageAggregate, UsageRecord } from '../../types/llm'
@@ -25,7 +25,6 @@ export function useAccountStats() {
 
   const providers = useLLMConfigStore((s) => s.providers)
   const budget = useLLMConfigStore((s) => s.budget)
-  const resolved = useResolvedModel('agent')
   const getTodayTotals = useUsageStore((s) => s.getTodayTotals)
   const getAllTimeTotals = useUsageStore((s) => s.getAllTimeTotals)
   const records = useUsageStore((s) => s.records)
@@ -112,12 +111,20 @@ export function useAccountStats() {
   const accountSubtitle = authenticated
     ? `Signed in via ${hostLabel(authSession.baseUrl)}`
     : sessionError ?? 'Desktop session not connected'
-  const credentialLabel = authenticated ? authSession.keyPrefix : 'No credential'
-  const credentialDetail = authenticated
-    ? `Saved ${formatRelativeDate(authSession.savedAt)}`
-    : 'Use chaxiejun.xyz sign-in to create one'
-  const modelLabel = resolved?.model.label ?? 'Not configured'
-  const modelDetail = resolved?.provider.name ?? 'Choose a model in Settings'
+  const sessionLabel = authenticated ? 'Connected' : 'Not connected'
+  const sessionDetail = authenticated
+    ? `Saved locally ${formatRelativeDate(authSession.savedAt)}`
+    : 'Sign in with chaxiejun.xyz to enable Lattice'
+  const serviceLabel = authenticated
+    ? latticeProvider?.enabled && latticeProvider.models.length > 0
+      ? 'chaxiejun.xyz ready'
+      : 'Setup pending'
+    : 'Connect chaxiejun.xyz'
+  const serviceDetail = authenticated
+    ? latticeProvider?.enabled && latticeProvider.models.length > 0
+      ? 'Lattice will route requests through your account'
+      : 'Open Models to finish account setup'
+    : 'Connect once, then use Lattice directly'
   const providerLabel = providerStatus
   const providerDetail = !authenticated
     ? 'Sign in to enable account models'
@@ -141,7 +148,6 @@ export function useAccountStats() {
     totalModels,
     budget,
     budgetPct,
-    resolved,
     today,
     allTime,
     totalTodayTokens,
@@ -151,10 +157,10 @@ export function useAccountStats() {
     providerStatus,
     accountName,
     accountSubtitle,
-    credentialLabel,
-    credentialDetail,
-    modelLabel,
-    modelDetail,
+    sessionLabel,
+    sessionDetail,
+    serviceLabel,
+    serviceDetail,
     providerLabel,
     providerDetail,
     todayUsageLabel,

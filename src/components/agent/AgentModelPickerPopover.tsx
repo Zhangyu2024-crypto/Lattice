@@ -7,6 +7,10 @@ import {
 import { Check, Settings } from 'lucide-react'
 import { useLLMConfigStore, useResolvedModel } from '../../stores/llm-config-store'
 import { useOutsideClickDismiss } from '../../hooks/useOutsideClickDismiss'
+import {
+  publicModelLabel,
+  publicProviderModelLabel,
+} from '../../lib/model-display'
 
 interface Props {
   anchorEl: HTMLElement | null
@@ -62,7 +66,7 @@ export default function AgentModelPickerPopover({
           key: `${provider.id}::${model.id}`,
           providerId: provider.id,
           modelId: model.id,
-          label: `${provider.name} / ${model.label}`,
+          label: publicProviderModelLabel(provider, model),
           disabled: !provider.enabled,
         })
       }
@@ -117,7 +121,7 @@ export default function AgentModelPickerPopover({
         <span className="agent-model-picker-title">Agent model</span>
         {resolved ? (
           <span className="agent-model-picker-current" title={selectedKey}>
-            {resolved.provider.name} / {resolved.model.label}
+            {publicModelLabel(resolved)}
           </span>
         ) : (
           <span className="agent-model-picker-current is-muted">

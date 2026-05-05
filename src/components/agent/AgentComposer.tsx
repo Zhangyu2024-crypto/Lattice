@@ -57,6 +57,7 @@ import {
   serializeSessionAsMarkdown,
 } from '../../lib/conversation-export'
 import { useResolvedModel } from '../../stores/llm-config-store'
+import { publicModelLabel } from '../../lib/model-display'
 import { generateMentionAnchor } from '../../types/mention'
 import type { Mentionable } from '../../types/mention-resolver'
 import type { TaskStep } from '../../types/session'
@@ -213,9 +214,7 @@ export default function AgentComposer({
   const createSession = useSessionStore((s) => s.createSession)
   const setActiveSession = useSessionStore((s) => s.setActiveSession)
   const resolvedModel = useResolvedModel('agent')
-  const agentModelLabel = resolvedModel
-    ? `${resolvedModel.provider.name} / ${resolvedModel.model.label}`
-    : 'no model'
+  const agentModelLabel = publicModelLabel(resolvedModel)
 
   // Mentionable source data — the store knows nothing about the UI; all
   // ranking / filtering lives in MentionPicker. The derivation is memoised

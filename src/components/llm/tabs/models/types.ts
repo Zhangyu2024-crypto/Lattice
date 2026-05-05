@@ -3,6 +3,7 @@ import type {
   LLMProvider,
   LLMProviderType,
 } from '../../../../types/llm'
+import { publicProviderModelLabel } from '../../../../lib/model-display'
 export { mergeFetchedModels } from '../../../../lib/llm-model-catalog'
 
 // ─── Shared helpers ─────────────────────────────────────────────────────
@@ -81,7 +82,7 @@ export const buildProviderGroups = (providers: LLMProvider[]): ProviderGroup[] =
       key: `${p.id}::${m.id}`,
       providerId: p.id,
       modelId: m.id,
-      modelLabel: m.label,
+      modelLabel: publicProviderModelLabel(p, m),
       providerDisabled: !p.enabled,
     })),
   }))

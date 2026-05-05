@@ -24,6 +24,7 @@ import {
   disableLatticeAuthProvider,
   upsertLatticeAuthProvider,
 } from '../../../lib/lattice-auth-client'
+import { publicProviderModelLabel } from '../../../lib/model-display'
 import { usePrefsStore } from '../../../stores/prefs-store'
 import { useWorkspaceStore } from '../../../stores/workspace-store'
 import ActiveModelBanner from './models/ActiveModelBanner'
@@ -88,7 +89,7 @@ function ActiveModelSection() {
     const model = provider.models.find((m) => m.id === currentModelId)
     return {
       providerName: provider.name,
-      modelLabel: model?.label ?? currentModelId,
+      modelLabel: model ? publicProviderModelLabel(provider, model) : currentModelId,
       providerEnabled: provider.enabled,
       modelKnown: Boolean(model),
     }
@@ -150,8 +151,8 @@ function ActiveModelSection() {
     }
     return {
       variant: 'ready',
-      title: 'Default model is set',
-      detail: 'Used for both Dialog and Agent. Generation parameters below.',
+      title: 'chaxiejun.xyz is connected',
+      detail: 'Lattice routes AI requests through the connected account.',
     }
   })()
 
@@ -395,7 +396,7 @@ function ProvidersSection() {
       `${result.models.length} models`,
       merged.added > 0 ? `${merged.added} new` : null,
       priced > 0 ? `${priced} priced` : null,
-      autoPicked ? `default: ${autoPicked.label}` : null,
+      autoPicked ? `default: ${publicProviderModelLabel(provider, autoPicked)}` : null,
     ]
       .filter(Boolean)
       .join(' · ')
@@ -439,7 +440,7 @@ function ProvidersSection() {
   const handleSetDefault = (provider: LLMProvider, model: LLMModel) => {
     if (!provider.enabled) enableProvider(provider.id, true)
     updateAgentConfig({ providerId: provider.id, modelId: model.id })
-    toast.success(`Default: ${provider.name} / ${model.label}`)
+    toast.success(`Default: ${publicProviderModelLabel(provider, model)}`)
   }
 
   const handleCreate = async (input: Omit<LLMProvider, 'id'>) => {
@@ -562,7 +563,7 @@ function ProvidersSection() {
               size="sm"
               onClick={handleBlogLogout}
               leading={<LogOut size={13} />}
-              title={`Logged in as ${blogSession.username} (${blogSession.keyPrefix})`}
+              title={`Logged in as ${blogSession.username}`}
             >
               Blog logout
             </Button>

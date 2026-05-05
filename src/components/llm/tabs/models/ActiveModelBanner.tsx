@@ -66,7 +66,7 @@ export default function ActiveModelBanner({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="llm-input llm-input--full llm-cursor-pointer llm-models-active-select"
-          aria-label="Default model"
+          aria-label="Default AI service"
         >
           <option value="">
             {variant === 'needs-pick' || variant === 'stale'

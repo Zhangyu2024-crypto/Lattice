@@ -17,7 +17,11 @@ import { toast } from '../../../../stores/toast-store'
 import { maskKey } from '../../llm-config-helpers'
 import type { LLMModel, LLMProvider } from '../../../../types/llm'
 import { CONNECTABLE_TYPES, isBuiltIn, truncate, type ConnectStatus } from './types'
-import { LATTICE_AUTH_API_KEY_REF } from '../../../../lib/lattice-auth-client'
+import {
+  LATTICE_AUTH_API_KEY_REF,
+  LATTICE_AUTH_PROVIDER_ID,
+} from '../../../../lib/lattice-auth-client'
+import { publicProviderModelLabel } from '../../../../lib/model-display'
 
 interface ProviderCardProps {
   provider: LLMProvider
@@ -47,6 +51,7 @@ export default function ProviderCard({
   const [modelsOpen, setModelsOpen] = useState(provider.models.length > 0)
 
   const builtIn = isBuiltIn(provider.id)
+  const accountBacked = provider.id === LATTICE_AUTH_PROVIDER_ID
   const hasKey = Boolean(provider.apiKey && provider.apiKey.trim())
   const keyStoredSecurely = provider.apiKey?.trim() === LATTICE_AUTH_API_KEY_REF
   const canConnect =
@@ -200,21 +205,21 @@ export default function ProviderCard({
             ) : (
               <ChevronRight size={12} />
             )}
-            Models ({provider.models.length})
+            {accountBacked ? 'Account AI service' : `Models (${provider.models.length})`}
           </button>
         ) : null}
       </div>
 
       {modelsOpen && provider.models.length > 0 ? (
         <div className="llm-models-models-list">
-          {provider.models.map((m) => {
+          {(accountBacked ? provider.models.slice(0, 1) : provider.models).map((m) => {
             const isDefault =
               isCurrentDefault && currentModelId === m.id
             return (
               <div key={m.id} className="llm-models-model-card-row">
                 <div className="llm-models-model-card-main">
                   <div className="llm-models-model-label">
-                    {m.label}
+                    {publicProviderModelLabel(provider, m)}
                     {isDefault ? (
                       <span
                         className="llm-models-type-chip"
@@ -226,12 +231,18 @@ export default function ProviderCard({
                     ) : null}
                   </div>
                   <div className="llm-models-model-meta">
-                    ctx {(m.contextWindow / 1000).toFixed(0)}k
+                    {accountBacked
+                      ? 'Connected through chaxiejun.xyz'
+                      : `ctx ${(m.contextWindow / 1000).toFixed(0)}k`}
                   </div>
                 </div>
-                <div className="llm-models-pricing">
-                  ${m.pricing.inputPerMillion}/${m.pricing.outputPerMillion} per 1M
-                </div>
+                {accountBacked ? (
+                  <div className="llm-models-pricing">Managed by account</div>
+                ) : (
+                  <div className="llm-models-pricing">
+                    ${m.pricing.inputPerMillion}/${m.pricing.outputPerMillion} per 1M
+                  </div>
+                )}
                 <Button
                   variant={isDefault ? 'secondary' : 'primary'}
                   size="sm"

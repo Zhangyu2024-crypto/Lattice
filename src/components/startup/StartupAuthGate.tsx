@@ -261,19 +261,20 @@ export default function StartupAuthGate({ children }: Props) {
             <div className="startup-auth-step">
               <CheckCircle2 size={15} />
               <div>
-                <strong>Credential handoff</strong>
+                <strong>Secure sign-in</strong>
                 <span>
-                  The desktop token is encrypted and never shown in the renderer.
+                  Lattice saves the desktop session locally and never shows the
+                  private token in the app.
                 </span>
               </div>
             </div>
             <div className="startup-auth-step">
               <CheckCircle2 size={15} />
               <div>
-                <strong>Provider setup</strong>
+                <strong>Account ready</strong>
                 <span>
-                  A chaxiejun.xyz provider is enabled; model catalog setup can
-                  be retried from Settings.
+                  chaxiejun.xyz is connected so Lattice can route AI requests
+                  through your account.
                 </span>
               </div>
             </div>

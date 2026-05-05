@@ -2,7 +2,6 @@ import {
   CircleUserRound,
   ExternalLink,
   Gauge,
-  KeyRound,
   RefreshCw,
   ShieldCheck,
   Sparkles,
@@ -124,16 +123,16 @@ export default function AccountStatsMenu({ onOpenSettings }: Props) {
 
           <div className="account-stats-summary">
             <InfoRow
-              icon={<KeyRound size={13} />}
-              label="Credential"
-              value={stats.credentialLabel}
-              detail={stats.credentialDetail}
+              icon={<ShieldCheck size={13} />}
+              label="Session"
+              value={stats.sessionLabel}
+              detail={stats.sessionDetail}
             />
             <InfoRow
               icon={<Sparkles size={13} />}
-              label="Default model"
-              value={stats.modelLabel}
-              detail={stats.modelDetail}
+              label="AI service"
+              value={stats.serviceLabel}
+              detail={stats.serviceDetail}
             />
             <InfoRow
               icon={<Gauge size={13} />}
