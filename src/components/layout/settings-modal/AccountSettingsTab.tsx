@@ -1,4 +1,4 @@
-import { ShieldCheck } from 'lucide-react'
+import { ExternalLink, ShieldCheck } from 'lucide-react'
 import {
   formatRelativeDate,
   lastCallLabel,
@@ -6,8 +6,14 @@ import {
 } from '../account-stats'
 import { Section } from './primitives'
 
+const CHAXIEJUN_ACCOUNT_URL = 'https://chaxiejun.xyz/admin'
+
 export default function AccountSettingsTab() {
   const stats = useAccountStats()
+
+  const openChaxiejun = () => {
+    window.open(CHAXIEJUN_ACCOUNT_URL, '_blank', 'noopener,noreferrer')
+  }
 
   return (
     <div className="settings-account-root">
@@ -51,6 +57,14 @@ export default function AccountSettingsTab() {
             label="Last used"
             value={lastCallLabel(stats.lastRecord)}
           />
+          <button
+            type="button"
+            className="account-stats-settings"
+            onClick={openChaxiejun}
+          >
+            <span>Open chaxiejun.xyz</span>
+            <ExternalLink size={12} aria-hidden />
+          </button>
         </div>
       </Section>
     </div>
