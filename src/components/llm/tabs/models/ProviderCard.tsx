@@ -334,6 +334,7 @@ function ConnectStatusBadge({ status }: { status: ConnectStatus }) {
     const parts = [`${status.fetched} options`, `${status.durationMs}ms`]
     if (status.added > 0) parts.push(`${status.added} new`)
     if (status.updated > 0) parts.push(`${status.updated} updated`)
+    if (status.removed > 0) parts.push(`${status.removed} removed`)
     return (
       <span className="llm-models-test-badge is-ok">
         <CheckCircle2 size={11} />

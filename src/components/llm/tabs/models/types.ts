@@ -47,6 +47,7 @@ export type ConnectStatus =
       fetched: number
       added: number
       updated: number
+      removed: number
     }
   | { state: 'error'; message: string; status?: number }
 

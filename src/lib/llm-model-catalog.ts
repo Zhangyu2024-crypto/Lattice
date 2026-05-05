@@ -28,30 +28,55 @@ export interface MergeFetchedModelsOutcome {
   models: LLMModel[]
   added: number
   updated: number
+  removed: number
 }
 
-// Union by id: preserve user-edited pricing/capabilities, refresh labels only
-// when the local label is still the raw id, append newly fetched ids.
+const preserveLocalModelSettings = (
+  serverModel: LLMModel,
+  localModel: LLMModel,
+): LLMModel => ({
+  ...serverModel,
+  contextWindow: localModel.contextWindow,
+  maxOutputTokens: localModel.maxOutputTokens,
+  pricing: { ...localModel.pricing },
+  supportsTools: localModel.supportsTools,
+  supportsVision: localModel.supportsVision,
+  supportsCaching: localModel.supportsCaching,
+  description: localModel.description,
+})
+
+// Server-authoritative sync by id: fetched ids define the next catalog.
+// Local rows that disappeared upstream are removed, while surviving rows keep
+// user-edited pricing/capability settings.
 export const mergeFetchedModels = (
   existing: LLMModel[],
   fetched: LlmListedModelPayload[],
   providerType: LLMProviderType,
 ): MergeFetchedModelsOutcome => {
-  const byId = new Map<string, LLMModel>(existing.map((m) => [m.id, m]))
+  const localById = new Map<string, LLMModel>(existing.map((m) => [m.id, m]))
+  const fetchedIds = new Set<string>()
+  const models: LLMModel[] = []
   let added = 0
   let updated = 0
   for (const entry of fetched) {
-    const current = byId.get(entry.id)
+    if (fetchedIds.has(entry.id)) continue
+    fetchedIds.add(entry.id)
+    const serverModel = buildDefaultModelFromCatalogue(entry, providerType)
+    const current = localById.get(entry.id)
     if (!current) {
-      byId.set(entry.id, buildDefaultModelFromCatalogue(entry, providerType))
+      models.push(serverModel)
       added += 1
       continue
     }
-    const newLabel = entry.displayName?.trim()
-    if (newLabel && current.label === current.id && newLabel !== current.label) {
-      byId.set(entry.id, { ...current, label: newLabel })
+    if (current.label !== serverModel.label) {
       updated += 1
     }
+    models.push(preserveLocalModelSettings(serverModel, current))
   }
-  return { models: Array.from(byId.values()), added, updated }
+  return {
+    models,
+    added,
+    updated,
+    removed: existing.filter((m) => !fetchedIds.has(m.id)).length,
+  }
 }

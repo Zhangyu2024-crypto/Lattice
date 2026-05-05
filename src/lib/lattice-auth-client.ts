@@ -34,6 +34,7 @@ export type LatticeProviderConnectResult =
       fetched: number
       added: number
       updated: number
+      removed: number
       priced: number
       durationMs: number
       selectedModelId: string | null
@@ -178,6 +179,11 @@ export async function connectLatticeAuthProviderModels(
         modelId: firstModel.id,
       })
       selectedModelId = firstModel.id
+    } else if (agent.providerId === provider.id) {
+      useLLMConfigStore.getState().updateAgentConfig({
+        providerId: null,
+        modelId: null,
+      })
     }
   }
 
@@ -195,6 +201,7 @@ export async function connectLatticeAuthProviderModels(
     fetched: result.models.length,
     added: merged.added,
     updated: merged.updated,
+    removed: merged.removed,
     priced,
     durationMs: result.durationMs,
     selectedModelId,

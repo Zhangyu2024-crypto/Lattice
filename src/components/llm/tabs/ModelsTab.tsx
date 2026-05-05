@@ -254,9 +254,9 @@ function ProvidersSection() {
     }
   }, [])
 
-  // Runs the full connect flow: validate inputs → fetch catalog → merge
-  // into provider.models → enable → if nothing is currently selected, pin
-  // the first returned model as default. Single call the user has to make.
+  // Runs the full connect flow: validate inputs → fetch catalog → sync
+  // provider.models to that catalog → enable → if nothing is currently
+  // selected, pin the first returned model as default.
   const handleConnect = async (provider: LLMProvider) => {
     if (!provider.apiKey || !provider.apiKey.trim()) {
       setStatus(provider.id, { state: 'error', message: 'No API key set' })
@@ -330,15 +330,25 @@ function ProvidersSection() {
     }
 
     if (result.models.length === 0) {
+      const removed = provider.models.length
+      updateProvider(provider.id, { models: [] })
+      if (!provider.enabled) enableProvider(provider.id, true)
+      if (agent.providerId === provider.id) {
+        updateAgentConfig({ providerId: null, modelId: null })
+      }
       setStatus(provider.id, {
         state: 'ok',
         durationMs: result.durationMs,
         fetched: 0,
         added: 0,
         updated: 0,
+        removed,
       })
-      toast.warn(`${provider.name}: connected but no options were returned`)
-      if (!provider.enabled) enableProvider(provider.id, true)
+      toast.warn(
+        `${provider.name}: connected but no options were returned${
+          removed > 0 ? ` (${removed} stale removed)` : ''
+        }`,
+      )
       return
     }
 
@@ -382,6 +392,8 @@ function ProvidersSection() {
         providerId: provider.id,
         modelId: autoPicked.id,
       })
+    } else if (agent.providerId === provider.id && !currentlyValid) {
+      updateAgentConfig({ providerId: null, modelId: null })
     }
 
     setStatus(provider.id, {
@@ -390,11 +402,13 @@ function ProvidersSection() {
       fetched: result.models.length,
       added: merged.added,
       updated: merged.updated,
+      removed: merged.removed,
     })
 
     const summary = [
       `${result.models.length} models`,
       merged.added > 0 ? `${merged.added} new` : null,
+      merged.removed > 0 ? `${merged.removed} removed` : null,
       priced > 0 ? `${priced} priced` : null,
       autoPicked ? `default: ${publicProviderModelLabel(provider, autoPicked)}` : null,
     ]
@@ -499,8 +513,13 @@ function ProvidersSection() {
           fetched: 0,
           added: 0,
           updated: 0,
+          removed: connected.removed,
         })
-        toast.warn('Logged in, but chaxiejun.xyz returned no available options')
+        toast.warn(
+          `Logged in, but chaxiejun.xyz returned no available options${
+            connected.removed > 0 ? ` (${connected.removed} stale removed)` : ''
+          }`,
+        )
         return
       }
       setStatus(connected.provider.id, {
@@ -509,10 +528,12 @@ function ProvidersSection() {
         fetched: connected.fetched,
         added: connected.added,
         updated: connected.updated,
+        removed: connected.removed,
       })
       const summary = [
         `${connected.fetched} models`,
         connected.added > 0 ? `${connected.added} new` : null,
+        connected.removed > 0 ? `${connected.removed} removed` : null,
         connected.priced > 0 ? `${connected.priced} priced` : null,
       ]
         .filter(Boolean)
