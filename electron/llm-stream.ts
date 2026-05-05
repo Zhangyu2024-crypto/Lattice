@@ -21,12 +21,7 @@ import type {
   ToolCallRequest,
 } from './llm-proxy'
 import { resolveLatticeApiKeyForRequest } from './lattice-auth-store'
-import { summarizePayloadForAudit, writeAuditEvent } from './audit-writer'
-import {
-  buildLatticeTraceContext,
-  latticeTraceAuditMetadata,
-  latticeTraceHeaders,
-} from './lattice-trace'
+import { recordApiCall } from './api-call-audit'
 
 // ── Stream bookkeeping ──────────────────────────────────────────────
 
@@ -102,7 +97,6 @@ async function runStream(
   sender: Electron.WebContents,
 ): Promise<void> {
   const start = Date.now()
-  const trace = buildLatticeTraceContext(req)
 
   try {
     const apiKey = await resolveLatticeApiKeyForRequest(req.apiKey, req.baseUrl)
@@ -143,10 +137,7 @@ async function runStream(
         messages: req.messages.map(toSdkMessage),
         ...(tools ? { tools } : {}),
       },
-      {
-        signal: controller.signal,
-        headers: latticeTraceHeaders(trace),
-      },
+      { signal: controller.signal },
     )
 
     // ── Wire up incremental events ──────────────────────────────
@@ -204,55 +195,69 @@ async function runStream(
       ...(assistantMessage ? { messages: [assistantMessage] } : {}),
     }
 
-    if (!sender.isDestroyed()) {
-      sender.send('llm:stream-end', { streamId, result })
-    }
-    writeAuditEvent({
-      category: 'llm',
-      action: 'stream_complete',
-      status: 'success',
-      durationMs,
-      traceId: trace.traceId,
-      metadata: {
-        streamId,
-        ...latticeTraceAuditMetadata(trace),
-        provider: req.provider,
-        baseUrl: req.baseUrl,
-        model: req.model,
-        mode: req.mode ?? 'dialog',
-        inputTokens: result.usage.inputTokens,
-        outputTokens: result.usage.outputTokens,
-        toolCallCount: toolCalls.length,
-        response: summarizePayloadForAudit(content),
-      },
-    })
-  } catch (err) {
-    const durationMs = Date.now() - start
-    const result = toStreamError(err, durationMs)
+    recordStreamEnd(req, result, streamId)
 
     if (!sender.isDestroyed()) {
       sender.send('llm:stream-end', { streamId, result })
     }
-    writeAuditEvent({
-      category: 'llm',
-      action: 'stream_complete',
-      status: 'error',
-      durationMs,
-      traceId: trace.traceId,
-      metadata: {
-        streamId,
-        ...latticeTraceAuditMetadata(trace),
-        provider: req.provider,
-        baseUrl: req.baseUrl,
-        model: req.model,
-        mode: req.mode ?? 'dialog',
-        status: result.success ? undefined : result.status,
-      },
-      error: result.success ? undefined : result.error,
-    })
+  } catch (err) {
+    const durationMs = Date.now() - start
+    const result = toStreamError(err, durationMs)
+
+    recordStreamEnd(req, result, streamId)
+
+    if (!sender.isDestroyed()) {
+      sender.send('llm:stream-end', { streamId, result })
+    }
   } finally {
     activeStreams.delete(streamId)
   }
+}
+
+function recordStreamEnd(
+  req: LlmInvokeRequest,
+  result: LlmInvokeResult,
+  streamId: string,
+): void {
+  recordApiCall({
+    kind: 'llm.stream_end',
+    source: req.audit?.source ?? 'agent',
+    operation: `${req.provider}:${req.model}`,
+    status: result.success ? 'ok' : 'error',
+    durationMs: result.durationMs,
+    sessionId: req.audit?.sessionId,
+    taskId: req.audit?.taskId,
+    stepId: req.audit?.stepId,
+    workspaceRoot: req.audit?.workspaceRoot,
+    request: {
+      provider: req.provider,
+      baseUrl: req.baseUrl,
+      model: req.model,
+      mode: req.mode ?? 'dialog',
+      messageCount: req.messages.length,
+      contextBlockCount: req.contextBlocks?.length ?? 0,
+      toolCount: req.tools?.length ?? 0,
+      tools: req.tools?.map((tool) => tool.name).slice(0, 120),
+      streamId,
+    },
+    response: result.success
+      ? {
+          success: true,
+          durationMs: result.durationMs,
+          contentChars: result.content.length,
+          usage: result.usage,
+          toolCalls: result.toolCalls?.map((call) => call.name),
+          toolCallCount: result.toolCalls?.length ?? 0,
+        }
+      : {
+          success: false,
+          durationMs: result.durationMs,
+          status: result.status,
+          error: result.error,
+        },
+    error: result.success ? undefined : result.error,
+    meta: req.audit?.metadata,
+  })
 }
 
 // ── Helpers (duplicated from anthropic-client.ts) ───────────────────

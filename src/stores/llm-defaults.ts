@@ -1,4 +1,4 @@
-import type { LLMModel, LLMProvider } from '../types/llm'
+import type { LLMProvider } from '../types/llm'
 
 // ── System prompts ─────────────────────────────────────────────────
 //
@@ -115,95 +115,10 @@ export const DEFAULT_AGENT_SYSTEM_PROMPT = [
 export const genLLMId = (prefix: string): string =>
   `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`
 
-// Anthropic Claude models — pricing in USD per 1M tokens.
-// Numbers are baseline out-of-box defaults; users may override per model
-// in the LLM Config modal. Keep these separate from the provider objects so
-// tests / future provider forks can reuse the model specs directly.
-const CLAUDE_OPUS_4_6: LLMModel = {
-  id: 'claude-opus-4-6',
-  label: 'Claude Opus 4.6',
-  contextWindow: 200_000,
-  maxOutputTokens: 32_000,
-  pricing: {
-    inputPerMillion: 15,
-    outputPerMillion: 75,
-    cacheReadPerMillion: 1.5,
-    cacheCreatePerMillion: 18.75,
-  },
-  supportsTools: true,
-  supportsVision: true,
-  supportsCaching: true,
-  description: 'Flagship reasoning model — best for complex agent workflows',
-}
-
-const CLAUDE_SONNET_4_6: LLMModel = {
-  id: 'claude-sonnet-4-6',
-  label: 'Claude Sonnet 4.6',
-  contextWindow: 200_000,
-  maxOutputTokens: 64_000,
-  pricing: {
-    inputPerMillion: 3,
-    outputPerMillion: 15,
-    cacheReadPerMillion: 0.3,
-    cacheCreatePerMillion: 3.75,
-  },
-  supportsTools: true,
-  supportsVision: true,
-  supportsCaching: true,
-  description: 'Balanced model — strong quality at lower cost than Opus',
-}
-
-const CLAUDE_HAIKU_4_5: LLMModel = {
-  id: 'claude-haiku-4-5-20251001',
-  label: 'Claude Haiku 4.5',
-  contextWindow: 200_000,
-  maxOutputTokens: 8192,
-  pricing: {
-    inputPerMillion: 1,
-    outputPerMillion: 5,
-    cacheReadPerMillion: 0.1,
-    cacheCreatePerMillion: 1.25,
-  },
-  supportsTools: true,
-  supportsVision: true,
-  supportsCaching: true,
-  description: 'Fast, affordable model — ideal for dialog and lightweight calls',
-}
-
-// OpenAI GPT-4o family.
-const GPT_4O: LLMModel = {
-  id: 'gpt-4o',
-  label: 'GPT-4o',
-  contextWindow: 128_000,
-  maxOutputTokens: 16_384,
-  pricing: {
-    inputPerMillion: 5,
-    outputPerMillion: 15,
-  },
-  supportsTools: true,
-  supportsVision: true,
-  supportsCaching: false,
-  description: 'OpenAI multimodal flagship — broad tool + vision support',
-}
-
-const GPT_4O_MINI: LLMModel = {
-  id: 'gpt-4o-mini',
-  label: 'GPT-4o mini',
-  contextWindow: 128_000,
-  maxOutputTokens: 16_384,
-  pricing: {
-    inputPerMillion: 0.15,
-    outputPerMillion: 0.6,
-  },
-  supportsTools: true,
-  supportsVision: true,
-  supportsCaching: false,
-  description: 'Small, low-cost OpenAI model — good dialog / draft baseline',
-}
-
 // Built-in provider templates. Both ship disabled + keyless so the app is
-// safe to launch on a clean install; the user must explicitly enable a
-// provider and paste a key before any network call is possible.
+// safe to launch on a clean install. Model catalogs intentionally start empty:
+// the only source of selectable models is the provider's `/models` endpoint
+// after the user connects a URL/key.
 //
 // Consumers MUST NOT mutate this frozen array directly. Use
 // `createDefaultProviders()` to obtain a fresh, mutable copy.
@@ -216,7 +131,7 @@ export const BUILT_IN_PROVIDERS: readonly LLMProvider[] = Object.freeze([
     apiKey: undefined,
     enabled: false,
     mentionResolve: 'allow',
-    models: [CLAUDE_OPUS_4_6, CLAUDE_SONNET_4_6, CLAUDE_HAIKU_4_5],
+    models: [],
   },
   {
     id: 'openai-default',
@@ -226,7 +141,7 @@ export const BUILT_IN_PROVIDERS: readonly LLMProvider[] = Object.freeze([
     apiKey: undefined,
     enabled: false,
     mentionResolve: 'allow',
-    models: [GPT_4O, GPT_4O_MINI],
+    models: [],
   },
 ])
 

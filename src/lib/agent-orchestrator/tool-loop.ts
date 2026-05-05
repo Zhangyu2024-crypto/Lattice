@@ -39,6 +39,16 @@ export interface ExecuteToolCallArgs {
   signal: AbortSignal
   ui: ToolUserInterface
   orchestratorCtx: OrchestratorCtx
+  onAudit?: (event: {
+    call: ToolCallRequest
+    stepId: string
+    status: 'ok' | 'error' | 'cancelled'
+    durationMs: number
+    input: unknown
+    output?: unknown
+    error?: unknown
+    tool?: LocalTool
+  }) => void
 }
 
 /**
@@ -57,6 +67,9 @@ export async function executeToolCall(
 ): Promise<AgentToolStep> {
   const { call, stepId, taskId, sessionId, tools, signal, ui, orchestratorCtx } =
     args
+  const startedAt = Date.now()
+  let auditTool: LocalTool | undefined
+  let auditInput: unknown = call.input
 
   throwIfAborted(signal)
 
@@ -76,6 +89,7 @@ export async function executeToolCall(
   // by name so we can reject cleanly (vs silently dropping). Use the
   // full catalog for lookup.
   const tool = tools.find((entry) => entry.name === call.name)
+  auditTool = tool
   let step: AgentToolStep
   try {
     if (!tool) throw new Error(`Unknown tool: ${call.name}`)
@@ -88,6 +102,7 @@ export async function executeToolCall(
       )
     }
     const injected = injectContext(tool, call.input, { sessionId })
+    auditInput = injected
     const approval = await checkApproval(tool, injected)
     if (!approval.allow) {
       throw new Error(approval.reason ?? 'user_denied')
@@ -145,6 +160,17 @@ export async function executeToolCall(
       isError: true,
     }
   }
+
+  args.onAudit?.({
+    call,
+    stepId,
+    status: step.isError ? 'error' : 'ok',
+    durationMs: Date.now() - startedAt,
+    input: auditInput,
+    output: step.output,
+    error: step.isError ? step.output : undefined,
+    tool: auditTool,
+  })
 
   wsClient.dispatch('tool_result', {
     task_id: taskId,

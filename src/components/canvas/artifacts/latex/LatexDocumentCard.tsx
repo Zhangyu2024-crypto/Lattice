@@ -11,6 +11,7 @@ import type {
   LatexFile,
   LatexVersionReason,
 } from '../../../../types/latex'
+import type { LatexCollaborationRuntimeState } from '../../../../types/collaboration'
 import { toast } from '../../../../stores/toast-store'
 import { useWorkspaceStore } from '../../../../stores/workspace-store'
 import { Button } from '../../../ui'
@@ -50,17 +51,13 @@ import {
   type LatexWorkspaceSyncState,
 } from '../../../../lib/latex/workspace-sync'
 import {
-  createLatexCollabClient,
-  type LatexCollabClient,
-  type LatexCollabConnectionStatus,
-  type LatexCollabPeer,
-} from '../../../../lib/latex/collab-client'
-import {
   appendLatexVersion,
   createLatexVersion,
   defaultLatexVersionLabel,
   restoreLatexVersionPayload,
 } from '../../../../lib/latex/versions'
+import { normalizeLatexCollaborationMetadata } from '../../../../lib/latex/collaboration'
+import { useLatexCollaboration } from './useLatexCollaboration'
 
 interface Props {
   artifact: Artifact
@@ -123,6 +120,11 @@ export default function LatexDocumentCard({
     initialRootFile,
   )
   const patchArtifact = useSessionStore((s) => s.patchArtifact)
+  const [collaborationRuntime, setCollaborationRuntime] =
+    useState<LatexCollaborationRuntimeState>({
+      status: 'disabled',
+      members: [],
+    })
 
   const [files, setFiles] = useState<LatexFile[]>(normalizedInitialFiles)
   const [activeFile, setActiveFile] = useState<string>(initialActiveFile)
@@ -160,10 +162,6 @@ export default function LatexDocumentCard({
   const [workspaceSync, setWorkspaceSync] = useState<LatexWorkspaceSyncState>(
     INITIAL_LATEX_WORKSPACE_SYNC,
   )
-  const [collabStatus, setCollabStatus] =
-    useState<LatexCollabConnectionStatus>('idle')
-  const [collabError, setCollabError] = useState<string | null>(null)
-  const [collabPeers, setCollabPeers] = useState<LatexCollabPeer[]>([])
   const [aiAutoPrompt, setAiAutoPrompt] = useState<string | null>(null)
   // Snapshot of the compile output + parsed errors. Mirrors the payload's
   // status / errors fields but driven from the most recent compile — so
@@ -185,13 +183,20 @@ export default function LatexDocumentCard({
     () => files.find((f) => f.path === activeFile) ?? files[0],
     [files, activeFile],
   )
+  const normalizedCollaboration = useMemo(
+    () =>
+      normalizeLatexCollaborationMetadata(
+        payload,
+        artifact.id,
+        artifact.title,
+      ),
+    [payload.collaboration, artifact.id, artifact.title],
+  )
 
   const filesRef = useRef(files)
   filesRef.current = files
   const payloadRef = useRef(payload)
   payloadRef.current = payload
-  const collabClientRef = useRef<LatexCollabClient | null>(null)
-  const collabApplyingRemoteRef = useRef(false)
   const aiInFlightRef = useRef(false)
   const [aiBusy, setAiBusy] = useState(false)
   // Bumped whenever a file is overwritten from outside CodeMirror (AI
@@ -211,13 +216,6 @@ export default function LatexDocumentCard({
     if (workspaceHydrated) return
     void hydrateWorkspace()
   }, [workspaceHydrated, hydrateWorkspace])
-
-  useEffect(() => {
-    return () => {
-      collabClientRef.current?.disconnect()
-      collabClientRef.current = null
-    }
-  }, [])
 
   const syncWorkspaceNow = useCallback(
     async (opts: { showToast?: boolean } = {}) => {
@@ -387,15 +385,6 @@ export default function LatexDocumentCard({
     setRightTab('versions')
   }, [saveVersion])
 
-  const syncSnapshotToCollab = useCallback((snapshotFiles: LatexFile[], root: string) => {
-    const client = collabClientRef.current
-    if (!client) return
-    for (const file of snapshotFiles) {
-      client.replaceFile(file.path, file.content)
-    }
-    client.setRootFile(root)
-  }, [])
-
   const handleRestoreVersion = useCallback(
     (version: LatexDocumentVersion) => {
       // eslint-disable-next-line no-alert
@@ -417,7 +406,6 @@ export default function LatexDocumentCard({
       setActiveFile(restored.activeFile)
       applyVersionBumpRef.current = restored.activeFile
       setApplyVersion((v) => v + 1)
-      syncSnapshotToCollab(restored.files, restored.rootFile)
       patchArtifact(sessionId, artifact.id, {
         payload: {
           ...restored,
@@ -426,15 +414,12 @@ export default function LatexDocumentCard({
       } as never)
       toast.success(`Restored ${version.label}`)
     },
-    [activeFile, artifact.id, patchArtifact, sessionId, syncSnapshotToCollab],
+    [activeFile, artifact.id, patchArtifact, sessionId],
   )
 
   const handleEdit = useCallback(
     (next: string) => {
       const editedPath = activeFile
-      if (collabClientRef.current && !collabApplyingRemoteRef.current) {
-        collabClientRef.current.replaceFile(editedPath, next)
-      }
       setFiles((cur) => {
         const updated = cur.map((f) =>
           f.path === editedPath ? { ...f, content: next } : f,
@@ -445,6 +430,34 @@ export default function LatexDocumentCard({
     },
     [activeFile],
   )
+
+  const handleRemoteEdit = useCallback(
+    (next: string) => {
+      const current = filesRef.current.find((f) => f.path === activeFile)
+      if (current?.content === next) return
+      const nextFiles = filesRef.current.map((f) =>
+        f.path === activeFile ? { ...f, content: next } : f,
+      )
+      setFiles(nextFiles)
+      flushFiles(nextFiles, activeFile)
+    },
+    [activeFile, flushFiles],
+  )
+
+  const {
+    extension: collaborationExtension,
+    editorValue: collaborationEditorValue,
+    runtime: liveCollaborationRuntime,
+  } = useLatexCollaboration({
+    collaboration: normalizedCollaboration,
+    filePath: active?.path ?? activeFile,
+    initialText: active?.content ?? '',
+    onRemoteText: handleRemoteEdit,
+  })
+
+  useEffect(() => {
+    setCollaborationRuntime(liveCollaborationRuntime)
+  }, [liveCollaborationRuntime])
 
   // Capture `handleSelectionCommand` in a ref so the CM6 extension (created
   // once via useMemo) always calls the latest closure — avoids rebuilding
@@ -459,6 +472,13 @@ export default function LatexDocumentCard({
         disabled: () => aiInFlightRef.current,
       }),
     [],
+  )
+  const editorExtensions = useMemo(
+    () =>
+      collaborationExtension
+        ? [selectionMenuExtension, collaborationExtension]
+        : [selectionMenuExtension],
+    [selectionMenuExtension, collaborationExtension],
   )
   handleSelectionCommandRef.current = async (
     ctx: SelectionMenuCommandCtx,
@@ -500,7 +520,6 @@ export default function LatexDocumentCard({
       toast.warn(`File "${path}" is not in the Creator project.`)
       return
     }
-    collabClientRef.current?.setRootFile(normalized)
     handlePatchPayload({ rootFile: normalized })
   }
 
@@ -534,7 +553,6 @@ export default function LatexDocumentCard({
         : f,
     )
     setFiles(next)
-    collabClientRef.current?.renameFile(normalized, nextPath)
     const nextActive = activeFile === normalized ? nextPath : activeFile
     setActiveFile(nextActive)
     const currentPayload = payloadRef.current
@@ -589,7 +607,6 @@ export default function LatexDocumentCard({
     const kind = kindFromLatexPath(path)
     const next = [...filesRef.current, { path, kind, content: '' }]
     setFiles(next)
-    collabClientRef.current?.replaceFile(path, '')
     flushFiles(next, path)
     setActiveFile(path)
   }
@@ -610,7 +627,6 @@ export default function LatexDocumentCard({
       saveVersion('Before AI apply', 'ai-apply')
       setFiles(next)
       filesRef.current = next
-      collabClientRef.current?.replaceFile(normalized, content)
       // If we just overwrote the file the editor is currently showing,
       // bump the remount counter so CodeMirror picks up the new doc.
       if (normalized === activeFile) {
@@ -642,123 +658,8 @@ export default function LatexDocumentCard({
     const next = filesRef.current.filter((f) => f.path !== normalized)
     const nextActive = normalized === activeFile ? next[0].path : activeFile
     setFiles(next)
-    collabClientRef.current?.removeFile(normalized)
     flushFiles(next, nextActive)
     setActiveFile(nextActive)
-  }
-
-  const connectCollab = useCallback(
-    async (collab: NonNullable<LatexDocumentPayload['collab']>) => {
-      if (!window.electronAPI?.latticeCollabCreateTicket) {
-        toast.error('Collaboration requires the Electron desktop shell.')
-        return
-      }
-      collabClientRef.current?.disconnect()
-      collabClientRef.current = null
-      setCollabPeers([])
-      setCollabError(null)
-      setCollabStatus('connecting')
-      const ticket = await window.electronAPI.latticeCollabCreateTicket({
-        projectId: collab.projectId,
-        roomId: collab.roomId,
-        roomName: collab.roomName,
-        role: collab.role,
-      })
-      if (!ticket.ok) {
-        setCollabStatus('error')
-        setCollabError(ticket.error)
-        toast.error(`Collaboration failed: ${ticket.error}`)
-        return
-      }
-      const client = await createLatexCollabClient({
-        roomName: collab.roomName,
-        wsUrl: ticket.wsUrl,
-        initialFiles: filesRef.current,
-        rootFile: resolveProjectFile(filesRef.current, payloadRef.current.rootFile),
-        username: ticket.username,
-        userId: ticket.userId,
-        onStatus: (status, error) => {
-          setCollabStatus(status)
-          if (error) setCollabError(error)
-        },
-        onPeers: setCollabPeers,
-        onSnapshot: (snapshot) => {
-          const nextFiles = normalizeLatexProjectFiles(snapshot.files)
-          if (nextFiles.length === 0) return
-          collabApplyingRemoteRef.current = true
-          setFiles(nextFiles)
-          filesRef.current = nextFiles
-          const nextRoot = resolveProjectFile(
-            nextFiles,
-            snapshot.rootFile ?? payloadRef.current.rootFile,
-          )
-          const nextActive = resolveProjectFile(nextFiles, activeFile, nextRoot)
-          setActiveFile(nextActive)
-          applyVersionBumpRef.current = nextActive
-          setApplyVersion((v) => v + 1)
-          patchArtifact(sessionId, artifact.id, {
-            payload: {
-              ...payloadRef.current,
-              files: nextFiles,
-              rootFile: nextRoot,
-              activeFile: nextActive,
-            },
-          } as never)
-          window.setTimeout(() => {
-            collabApplyingRemoteRef.current = false
-          }, 0)
-        },
-      })
-      collabClientRef.current = client
-      client.connect()
-    },
-    [activeFile, artifact.id, patchArtifact, sessionId],
-  )
-
-  useEffect(() => {
-    if (!payload.collab?.enabled) return
-    if (collabClientRef.current) return
-    void connectCollab(payload.collab)
-  }, [payload.collab, connectCollab])
-
-  const handleStartCollab = async () => {
-    const current = payloadRef.current.collab
-    const fallback = current?.roomName || `latex.${artifact.id}`
-    const raw = await asyncPrompt({
-      message: 'Collaboration room name',
-      placeholder: fallback,
-      defaultValue: fallback,
-      okLabel: 'Join',
-    })
-    if (!raw) return
-    const roomName = raw.trim()
-    if (!/^[A-Za-z0-9._:@-]{1,240}$/.test(roomName)) {
-      toast.warn('Use letters, numbers, dot, dash, underscore, colon, or @.')
-      return
-    }
-    const collab = {
-      enabled: true,
-      projectId: artifact.id.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 120),
-      roomId: roomName.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 120),
-      roomName,
-      role: 'editor' as const,
-      joinedAt: Date.now(),
-    }
-    handlePatchPayload({ collab })
-    await connectCollab(collab)
-  }
-
-  const handleLeaveCollab = () => {
-    collabClientRef.current?.disconnect()
-    collabClientRef.current = null
-    setCollabStatus('idle')
-    setCollabError(null)
-    setCollabPeers([])
-    handlePatchPayload({
-      collab: payloadRef.current.collab
-        ? { ...payloadRef.current.collab, enabled: false }
-        : undefined,
-    })
   }
 
   const compileInFlightRef = useRef(false)
@@ -904,8 +805,8 @@ export default function LatexDocumentCard({
             issueCount={issueCount}
             compilingSince={compilingSince}
             onCompile={() => void compile()}
-            collabActive={Boolean(normalizedPayload.collab?.enabled)}
-            collabConnected={collabStatus === 'connected'}
+            collabActive={Boolean(normalizedCollaboration?.enabled)}
+            collabConnected={collaborationRuntime.status === 'connected'}
             onOpenCollab={() => setDrawerTab('details')}
           />
         </header>
@@ -929,7 +830,7 @@ export default function LatexDocumentCard({
                     ? `${active.path}::${applyVersion}`
                     : active.path
                 }
-                value={active.content}
+                value={collaborationEditorValue ?? active.content}
                 onChange={handleEdit}
                 jumpToLine={
                   sourceJump?.path === active.path ? sourceJump.line : null
@@ -937,7 +838,7 @@ export default function LatexDocumentCard({
                 jumpToken={
                   sourceJump?.path === active.path ? sourceJump.seq : null
                 }
-                extraExtensions={[selectionMenuExtension]}
+                extraExtensions={editorExtensions}
               />
             ) : null}
           </div>
@@ -991,16 +892,14 @@ export default function LatexDocumentCard({
               ) : (
                 <LatexDetailsPane
                   documentTitle={artifact.title}
+                  artifactId={artifact.id}
                   payload={normalizedPayload}
+                  collaboration={normalizedCollaboration}
+                  collaborationRuntime={collaborationRuntime}
                   onPatchPayload={handlePatchPayload}
                   workspaceRootPath={workspaceRootPath}
                   workspaceSync={workspaceSync}
                   onSyncWorkspace={handleManualWorkspaceSync}
-                  collabStatus={collabStatus}
-                  collabError={collabError}
-                  collabPeers={collabPeers}
-                  onStartCollab={handleStartCollab}
-                  onLeaveCollab={handleLeaveCollab}
                 />
               )}
             </FocusDrawer>
@@ -1053,7 +952,7 @@ export default function LatexDocumentCard({
                   ? `${active.path}::${applyVersion}`
                   : active.path
               }
-              value={active.content}
+              value={collaborationEditorValue ?? active.content}
               onChange={handleEdit}
               jumpToLine={
                 sourceJump?.path === active.path ? sourceJump.line : null
@@ -1061,7 +960,7 @@ export default function LatexDocumentCard({
               jumpToken={
                 sourceJump?.path === active.path ? sourceJump.seq : null
               }
-              extraExtensions={[selectionMenuExtension]}
+              extraExtensions={editorExtensions}
             />
           ) : null}
         </div>
@@ -1096,16 +995,14 @@ export default function LatexDocumentCard({
           ) : (
             <LatexDetailsPane
               documentTitle={artifact.title}
+              artifactId={artifact.id}
               payload={normalizedPayload}
+              collaboration={normalizedCollaboration}
+              collaborationRuntime={collaborationRuntime}
               onPatchPayload={handlePatchPayload}
               workspaceRootPath={workspaceRootPath}
               workspaceSync={workspaceSync}
               onSyncWorkspace={handleManualWorkspaceSync}
-              collabStatus={collabStatus}
-              collabError={collabError}
-              collabPeers={collabPeers}
-              onStartCollab={handleStartCollab}
-              onLeaveCollab={handleLeaveCollab}
             />
           )}
         </CardRightPane>

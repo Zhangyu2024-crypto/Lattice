@@ -91,6 +91,10 @@ const DEFAULT_RATE_LIMIT: RateLimitConfig = {
 }
 
 const REMOVED_DEV_PROVIDER_IDS = new Set(['clawd-proxy'])
+const URL_FETCHED_BUILT_IN_PROVIDER_IDS = new Set([
+  'anthropic-default',
+  'openai-default',
+])
 
 const withoutRemovedDevProviders = (providers: LLMProvider[]): LLMProvider[] =>
   providers.filter((provider) => !REMOVED_DEV_PROVIDER_IDS.has(provider.id))
@@ -101,6 +105,25 @@ const clearRemovedDevProviderBinding = (
   config.providerId && REMOVED_DEV_PROVIDER_IDS.has(config.providerId)
     ? { ...config, providerId: null, modelId: null }
     : config
+
+const clearUrlFetchedBuiltInModels = (
+  providers: LLMProvider[],
+): LLMProvider[] =>
+  providers.map((provider) =>
+    URL_FETCHED_BUILT_IN_PROVIDER_IDS.has(provider.id) &&
+    !provider.enabled &&
+    !provider.apiKey
+      ? { ...provider, models: [] }
+      : provider,
+  )
+
+const clearBrokenModelBinding = (
+  providers: LLMProvider[],
+  config: GenerationConfig,
+): GenerationConfig =>
+  tryResolveProviderModel(providers, config)
+    ? config
+    : { ...config, providerId: null, modelId: null }
 
 function tryResolveProviderModel(
   providers: LLMProvider[],
@@ -450,7 +473,7 @@ export const useLLMConfigStore = create<LLMConfigState>()(
     }),
     {
       name: 'lattice.llm-config',
-      version: 6,
+      version: 7,
       storage: createJSONStorage(() => localStorage),
       // All fields are small and meant to survive restarts — no partialize
       // needed. The only large-ish field (`providers[].models`) caps at a
@@ -465,10 +488,12 @@ export const useLLMConfigStore = create<LLMConfigState>()(
 
         // v3: backfill `mentionResolve` on any provider that predates MP-1.
         // Idempotent — only fills when the field is absent.
-        const normalizedProviders = providers.map((provider) =>
-          provider.mentionResolve
-            ? provider
-            : { ...provider, mentionResolve: inferMentionResolvePolicy(provider) },
+        const normalizedProviders = clearUrlFetchedBuiltInModels(
+          providers.map((provider) =>
+            provider.mentionResolve
+              ? provider
+              : { ...provider, mentionResolve: inferMentionResolvePolicy(provider) },
+          ),
         )
 
         let dialog: GenerationConfig = clearRemovedDevProviderBinding({
@@ -502,8 +527,14 @@ export const useLLMConfigStore = create<LLMConfigState>()(
           }
         }
 
-        dialog = withDefaultSystemPrompt('dialog', dialog)
-        agent = withDefaultSystemPrompt('agent', agent)
+        dialog = withDefaultSystemPrompt(
+          'dialog',
+          clearBrokenModelBinding(normalizedProviders, dialog),
+        )
+        agent = withDefaultSystemPrompt(
+          'agent',
+          clearBrokenModelBinding(normalizedProviders, agent),
+        )
 
         return {
           ...state,

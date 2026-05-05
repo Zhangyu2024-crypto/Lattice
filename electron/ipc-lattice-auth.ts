@@ -21,14 +21,14 @@ type LatticeAuthLoginResult =
 type LatticeCollabTicketResult =
   | {
       ok: true
-      roomName: string
-      wsUrl: string
-      ticketExpiresAt: string
+      ticket: string
+      expiresAt: string
       expiresIn: number
-      username: string
-      userId: string
+      roomName: string
+      userId?: string
+      username?: string
     }
-  | { ok: false; error: string; status?: number }
+  | { ok: false; error: string }
 
 interface PendingCallback {
   code: string
@@ -59,6 +59,82 @@ function normalizeAuthBase(raw: unknown): string {
   return url.toString().replace(/\/+$/, '')
 }
 
+function collabBaseFromLatticeApiBase(baseUrl: string): string {
+  const url = new URL(baseUrl)
+  if (url.protocol !== 'https:' && !isLocalDevUrl(url)) {
+    throw new Error('Collaboration service URL must use HTTPS.')
+  }
+  url.protocol = url.protocol === 'http:' ? 'http:' : 'https:'
+  url.pathname = '/_collab'
+  url.hash = ''
+  url.search = ''
+  return url.toString().replace(/\/+$/, '')
+}
+
+export function collabBaseFromSessionBase(baseUrl: string): string {
+  return collabBaseFromLatticeApiBase(baseUrl)
+}
+
+export function collabWsUrl(
+  serverUrl: string,
+  roomName: string,
+  ticket: string,
+): string {
+  const url = new URL(serverUrl)
+  if (url.protocol === 'https:') {
+    url.protocol = 'wss:'
+  } else if (url.protocol === 'http:' && isLocalDevUrl(url)) {
+    url.protocol = 'ws:'
+  } else if (url.protocol !== 'wss:' && url.protocol !== 'ws:') {
+    throw new Error('Collaboration service URL must use HTTPS.')
+  }
+  url.pathname = `${url.pathname.replace(/\/+$/, '')}/${encodeURIComponent(roomName)}`
+  url.search = ''
+  url.searchParams.set('ticket', ticket)
+  url.hash = ''
+  return url.toString()
+}
+
+function ticketEndpointFromCollabServer(raw: string): string {
+  const url = new URL(raw)
+  if (url.protocol === 'wss:') {
+    url.protocol = 'https:'
+  } else if (url.protocol === 'ws:' && isLocalWebSocketDevUrl(url)) {
+    url.protocol = 'http:'
+  } else if (url.protocol === 'http:' && isLocalDevUrl(url)) {
+    url.protocol = 'http:'
+  } else if (url.protocol !== 'https:') {
+    throw new Error('Collaboration service URL must use HTTPS.')
+  }
+  url.pathname = `${url.pathname.replace(/\/+$/, '')}/ticket`
+  url.hash = ''
+  url.search = ''
+  return url.toString()
+}
+
+function resolveTrustedCollabBaseUrl(sessionBaseUrl: string, requested: string): string {
+  const fallback = collabBaseFromLatticeApiBase(sessionBaseUrl)
+  if (!requested) return fallback
+  const candidate = new URL(requested)
+  const sessionBase = new URL(sessionBaseUrl)
+  const trustedFallback = new URL(fallback)
+  const localDevOverride =
+    (candidate.protocol === 'ws:' && isLocalWebSocketDevUrl(candidate)) ||
+    (candidate.protocol === 'http:' && isLocalDevUrl(candidate))
+  if (localDevOverride) return requested
+  const candidateOrigin =
+    candidate.protocol === 'wss:'
+      ? `https://${candidate.host}`
+      : candidate.origin
+  if (
+    candidateOrigin !== sessionBase.origin ||
+    candidateOrigin !== trustedFallback.origin
+  ) {
+    throw new Error('Collaboration server must match the signed-in Lattice account.')
+  }
+  return requested
+}
+
 function isLocalDevUrl(url: URL): boolean {
   return (
     url.protocol === 'http:' &&
@@ -66,82 +142,26 @@ function isLocalDevUrl(url: URL): boolean {
   )
 }
 
+function isLocalWebSocketDevUrl(url: URL): boolean {
+  return (
+    url.protocol === 'ws:' &&
+    (url.hostname === 'localhost' || url.hostname === '127.0.0.1')
+  )
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object')
+}
+
+function stringField(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
 function isLoopbackCallbackUrl(url: URL): boolean {
   return (
     (url.hostname === '127.0.0.1' || url.hostname === 'localhost') &&
     url.pathname === CALLBACK_PATH
   )
-}
-
-function cleanReturnedBaseUrl(
-  raw: unknown,
-  authBaseUrl: string,
-): string {
-  const fallback = `${authBaseUrl}/api/lattice/v1`
-  const text = typeof raw === 'string' ? raw.trim() : ''
-  if (!text) return fallback
-  let returned: URL
-  let authBase: URL
-  try {
-    returned = new URL(text)
-    authBase = new URL(authBaseUrl)
-  } catch {
-    return fallback
-  }
-  if (
-    returned.origin !== authBase.origin ||
-    !returned.pathname.startsWith(`${authBase.pathname.replace(/\/+$/, '')}/`) ||
-    returned.username ||
-    returned.password ||
-    returned.search ||
-    returned.hash
-  ) {
-    return fallback
-  }
-  return returned.toString().replace(/\/+$/, '')
-}
-
-export function collabBaseFromSessionBase(baseUrl: string): string {
-  const url = new URL(baseUrl)
-  url.pathname = '/_collab'
-  url.search = ''
-  url.hash = ''
-  return url.toString().replace(/\/+$/, '')
-}
-
-export function collabWsUrl(
-  collabBaseUrl: string,
-  roomName: string,
-  ticket: string,
-): string {
-  const url = new URL(`${collabBaseUrl}/${encodeURIComponent(roomName)}`)
-  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
-  url.searchParams.set('ticket', ticket)
-  return url.toString()
-}
-
-function sanitizeTicketInput(payload: unknown): {
-  projectId: string
-  roomId: string
-  roomName: string
-  role: string
-} {
-  const raw = payload && typeof payload === 'object'
-    ? payload as Record<string, unknown>
-    : {}
-  const projectId = String(raw.projectId ?? '').trim()
-  const roomId = String(raw.roomId ?? '').trim()
-  const roomName = String(raw.roomName ?? '').trim()
-  const role = String(raw.role ?? 'editor').trim().toLowerCase()
-  const idRe = /^[A-Za-z0-9._-]{1,120}$/
-  const roomRe = /^[A-Za-z0-9._:@-]{1,240}$/
-  if (!idRe.test(projectId)) throw new Error('Invalid collaboration project id.')
-  if (!idRe.test(roomId)) throw new Error('Invalid collaboration room id.')
-  if (!roomRe.test(roomName)) throw new Error('Invalid collaboration room name.')
-  if (!['owner', 'editor', 'reviewer', 'viewer'].includes(role)) {
-    throw new Error('Invalid collaboration role.')
-  }
-  return { projectId, roomId, roomName, role }
 }
 
 async function readJson(res: Response): Promise<Record<string, unknown>> {
@@ -154,62 +174,6 @@ async function readJson(res: Response): Promise<Record<string, unknown>> {
       : {}
   } catch {
     return { error: text.slice(0, 500) }
-  }
-}
-
-async function createCollabTicket(
-  payload: unknown,
-): Promise<LatticeCollabTicketResult> {
-  try {
-    const session = await loadLatticeAuthSession()
-    if (!session?.accessToken) {
-      throw new Error('Lattice blog login is required before collaboration.')
-    }
-    const input = sanitizeTicketInput(payload)
-    const collabBaseUrl = collabBaseFromSessionBase(session.baseUrl)
-    const ticketRes = await fetch(`${collabBaseUrl}/ticket`, {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${session.accessToken}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        project_id: input.projectId,
-        room_id: input.roomId,
-        room_name: input.roomName,
-        role: input.role,
-      }),
-    })
-    const json = await readJson(ticketRes)
-    if (!ticketRes.ok || typeof json.ticket !== 'string') {
-      return {
-        ok: false,
-        status: ticketRes.status,
-        error: String(json.error ?? 'Could not create collaboration ticket.'),
-      }
-    }
-    const expiresAt =
-      typeof json.expires_at === 'string' ? json.expires_at : ''
-    const expiresIn =
-      typeof json.expires_in === 'number' && Number.isFinite(json.expires_in)
-        ? json.expires_in
-        : 300
-    return {
-      ok: true,
-      roomName: input.roomName,
-      wsUrl: collabWsUrl(collabBaseUrl, input.roomName, json.ticket),
-      ticketExpiresAt: expiresAt,
-      expiresIn,
-      username: typeof json.username === 'string'
-        ? json.username
-        : session.username,
-      userId: typeof json.user_id === 'string' ? json.user_id : '',
-    }
-  } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : String(err),
-    }
   }
 }
 
@@ -372,7 +336,11 @@ async function login(
     ) {
       throw new Error('Blog returned an incomplete Lattice token response.')
     }
-    const baseUrl = cleanReturnedBaseUrl(token.base_url, authBaseUrl)
+    const returnedBaseUrl =
+      typeof token.base_url === 'string' ? token.base_url.trim() : ''
+    const baseUrl = returnedBaseUrl.startsWith(`${authBaseUrl}/`)
+      ? returnedBaseUrl
+      : `${authBaseUrl}/api/lattice/v1`
 
     const summary = await saveLatticeAuthSession({
       accessToken: token.access_token,
@@ -391,14 +359,76 @@ async function login(
   }
 }
 
+async function createCollabTicket(payload: unknown): Promise<LatticeCollabTicketResult> {
+  try {
+    const session = await loadLatticeAuthSession()
+    if (!session?.accessToken) {
+      throw new Error('Log in to chaxiejun.xyz before starting collaboration.')
+    }
+    if (!isRecord(payload)) {
+      throw new Error('Collaboration ticket request is invalid.')
+    }
+    const projectId = stringField(payload.projectId)
+    const roomId = stringField(payload.roomId)
+    const roomName = stringField(payload.roomName)
+    const roomAccessKey = stringField(payload.roomAccessKey)
+    const role = stringField(payload.role) || 'editor'
+    const serverUrl = stringField(payload.serverUrl)
+    if (!projectId || !roomId || !roomName || !roomAccessKey) {
+      throw new Error('Collaboration project and room are required.')
+    }
+    const baseUrl = resolveTrustedCollabBaseUrl(session.baseUrl, serverUrl)
+    const ticketEndpoint = ticketEndpointFromCollabServer(baseUrl)
+    const ticketRes = await fetch(ticketEndpoint, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${session.accessToken}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        project_id: projectId,
+        room_id: roomId,
+        room_name: roomName,
+        room_access_key: roomAccessKey,
+        role,
+      }),
+    })
+    const ticket = await readJson(ticketRes)
+    if (!ticketRes.ok || typeof ticket.ticket !== 'string') {
+      throw new Error(String(ticket.error ?? 'Could not create collaboration ticket.'))
+    }
+    return {
+      ok: true,
+      ticket: ticket.ticket,
+      expiresAt: stringField(ticket.expires_at),
+      expiresIn:
+        typeof ticket.expires_in === 'number'
+          ? ticket.expires_in
+          : Number(ticket.expires_in || 0),
+      roomName: stringField(ticket.room_name) || roomName,
+      userId: stringField(ticket.user_id) || undefined,
+      username: stringField(ticket.username) || undefined,
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    }
+  }
+}
+
 export function registerLatticeAuthIpc(): void {
   ipcMain.handle('lattice-auth:get-session', async () => {
     return getLatticeAuthSessionSummary()
   })
 
-  ipcMain.handle('lattice-auth:login', async (event) => {
+  ipcMain.handle('lattice-auth:login', async (event, payload: unknown) => {
+    const authBaseUrl =
+      payload && typeof payload === 'object'
+        ? (payload as { authBaseUrl?: unknown }).authBaseUrl
+        : undefined
     const parent = BrowserWindow.fromWebContents(event.sender)
-    return login(undefined, parent)
+    return login(authBaseUrl, parent)
   })
 
   ipcMain.handle('lattice-auth:logout', async () => {
@@ -406,7 +436,7 @@ export function registerLatticeAuthIpc(): void {
     return { ok: true }
   })
 
-  ipcMain.handle('lattice-collab:create-ticket', async (_event, payload) => {
+  ipcMain.handle('lattice-auth:collab-ticket', async (_event, payload: unknown) => {
     return createCollabTicket(payload)
   })
 }

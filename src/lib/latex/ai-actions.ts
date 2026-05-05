@@ -118,6 +118,16 @@ export async function runSelectionAction(
       traceModule: 'latex',
       traceOperation:
         req.verb === 'fix' ? 'latex_fix_compile_error' : 'latex_edit_selection',
+      audit: {
+        source: 'creator',
+        metadata: {
+          module: 'latex-selection-command',
+          verb: req.verb,
+          selectionChars: req.selection.length,
+          contextBeforeChars: req.contextBefore.length,
+          contextAfterChars: req.contextAfter.length,
+        },
+      },
     })
     if (!result.success) {
       return { ok: false, content: '', error: result.error ?? 'LLM call failed' }

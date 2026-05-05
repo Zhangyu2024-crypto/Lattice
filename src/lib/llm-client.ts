@@ -111,6 +111,14 @@ export async function invokeLlmForStructureCode(
       userMessage: `Build this structure: ${params.description}`,
       transcript: [],
       sessionId: params.sessionId,
+      audit: {
+        source: 'creator',
+        metadata: {
+          module: 'structure-code-generator',
+          artifactTitle: params.artifactTitle,
+          descriptionChars: params.description.length,
+        },
+      },
     })
 
     if (!result.success) {

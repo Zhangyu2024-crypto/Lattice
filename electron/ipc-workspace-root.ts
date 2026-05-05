@@ -9,13 +9,14 @@ import {
   stat,
   writeFile,
 } from 'fs/promises'
+import { createHash } from 'crypto'
 import path from 'path'
 import { app, BrowserWindow, clipboard, ipcMain, shell } from 'electron'
-import { summarizeTextForAudit, writeAuditEvent } from './audit-writer'
 import type { WebContents } from 'electron'
 import chokidar from 'chokidar'
 import type { FSWatcher } from 'chokidar'
 import { isIgnoredWorkspacePath } from './workspace-ignore'
+import { recordApiCall } from './api-call-audit'
 
 const MAX_READ_BYTES = 8 * 1024 * 1024
 const ROOT_CONFIG_FILE = 'workspace-root.json'
@@ -32,18 +33,34 @@ function auditWorkspaceFs(
   error?: unknown,
   durationMs?: number,
 ): void {
-  writeAuditEvent({
-    category: 'workspace',
-    action,
-    status,
-    metadata,
-    error,
+  recordApiCall({
+    kind: 'workspace.fs',
+    source: 'workspace',
+    operation: action,
+    status:
+      status === 'success' || status === 'started'
+        ? 'ok'
+        : status === 'aborted'
+          ? 'cancelled'
+          : 'error',
     durationMs,
+    workspaceRoot: currentRoot,
+    request: metadata,
+    error,
   })
 }
 
-function contentSummary(content: string): ReturnType<typeof summarizeTextForAudit> {
-  return summarizeTextForAudit(content)
+function contentSummary(content: string): {
+  type: 'text'
+  length: number
+  sha256: string
+} {
+  const buf = Buffer.from(content, 'utf8')
+  return {
+    type: 'text',
+    length: buf.byteLength,
+    sha256: createHash('sha256').update(buf).digest('hex'),
+  }
 }
 
 interface FsEntryPayload {
@@ -329,6 +346,52 @@ function senderWebContents(event: Electron.IpcMainInvokeEvent): WebContents {
   return event.sender
 }
 
+function handleWorkspaceIpc<T>(
+  channel: string,
+  fn: (
+    event: Electron.IpcMainInvokeEvent,
+    payload: unknown,
+  ) => T | Promise<T>,
+): void {
+  ipcMain.handle(channel, async (event, payload: unknown): Promise<T> => {
+    const startedAt = Date.now()
+    try {
+      const result = await fn(event, payload)
+      const ok =
+        result && typeof result === 'object' && 'ok' in result
+          ? (result as { ok?: unknown }).ok !== false
+          : true
+      recordApiCall({
+        kind: 'workspace.ipc',
+        source: 'workspace',
+        operation: channel,
+        status: ok ? 'ok' : 'error',
+        durationMs: Date.now() - startedAt,
+        workspaceRoot: currentRoot,
+        request: { payload },
+        response: result,
+        error:
+          !ok && result && typeof result === 'object'
+            ? (result as { error?: unknown }).error
+            : undefined,
+      })
+      return result
+    } catch (err) {
+      recordApiCall({
+        kind: 'workspace.ipc',
+        source: 'workspace',
+        operation: channel,
+        status: 'error',
+        durationMs: Date.now() - startedAt,
+        workspaceRoot: currentRoot,
+        request: { payload },
+        error: err,
+      })
+      throw err
+    }
+  })
+}
+
 function trashTarget(rel: string): string {
   const today = new Date().toISOString().slice(0, 10)
   const base = path.posix.basename(rel) || 'item'
@@ -354,7 +417,7 @@ export function registerWorkspaceRootIpc(
     if (currentRoot == null) currentRoot = loaded
   })
 
-  ipcMain.handle(
+  handleWorkspaceIpc(
     'workspace-root:get',
     async (): Promise<Envelope<{ rootPath: string | null }>> => {
       if (currentRoot == null) {
@@ -365,7 +428,7 @@ export function registerWorkspaceRootIpc(
     },
   )
 
-  ipcMain.handle(
+  handleWorkspaceIpc(
     'workspace-root:set',
     async (_event, payload: unknown): Promise<Envelope<{ rootPath: string }>> => {
       const startedAt = Date.now()
@@ -390,7 +453,7 @@ export function registerWorkspaceRootIpc(
     },
   )
 
-  ipcMain.handle(
+  handleWorkspaceIpc(
     'workspace:list',
     async (_event, payload: unknown): Promise<Envelope<{ entries: FsEntryPayload[] }>> => {
       const startedAt = Date.now()
@@ -413,7 +476,7 @@ export function registerWorkspaceRootIpc(
     },
   )
 
-  ipcMain.handle(
+  handleWorkspaceIpc(
     'workspace:stat',
     async (_event, payload: unknown): Promise<Envelope<{ stat: FsStatPayload }>> => {
       const startedAt = Date.now()
@@ -471,7 +534,7 @@ export function registerWorkspaceRootIpc(
     },
   )
 
-  ipcMain.handle(
+  handleWorkspaceIpc(
     'workspace:read',
     async (_event, payload: unknown): Promise<Envelope<{ content: string }>> => {
       const startedAt = Date.now()
@@ -511,7 +574,7 @@ export function registerWorkspaceRootIpc(
     },
   )
 
-  ipcMain.handle(
+  handleWorkspaceIpc(
     'workspace:readBinary',
     async (_event, payload: unknown): Promise<Envelope<{ data: ArrayBuffer }>> => {
       const startedAt = Date.now()
@@ -549,7 +612,7 @@ export function registerWorkspaceRootIpc(
     },
   )
 
-  ipcMain.handle(
+  handleWorkspaceIpc(
     'workspace:write',
     async (_event, payload: unknown): Promise<Envelope<{ bytes: number }>> => {
       const startedAt = Date.now()
@@ -585,7 +648,7 @@ export function registerWorkspaceRootIpc(
     },
   )
 
-  ipcMain.handle(
+  handleWorkspaceIpc(
     'workspace:writeBinary',
     async (_event, payload: unknown): Promise<Envelope<{ bytes: number }>> => {
       const startedAt = Date.now()
@@ -642,7 +705,7 @@ export function registerWorkspaceRootIpc(
     },
   )
 
-  ipcMain.handle(
+  handleWorkspaceIpc(
     'workspace:append',
     async (_event, payload: unknown): Promise<Envelope<object>> => {
       const startedAt = Date.now()
@@ -675,7 +738,7 @@ export function registerWorkspaceRootIpc(
     },
   )
 
-  ipcMain.handle(
+  handleWorkspaceIpc(
     'workspace:mkdir',
     async (_event, payload: unknown): Promise<Envelope<object>> => {
       const startedAt = Date.now()
@@ -697,7 +760,7 @@ export function registerWorkspaceRootIpc(
     },
   )
 
-  ipcMain.handle(
+  handleWorkspaceIpc(
     'workspace:move',
     async (_event, payload: unknown): Promise<Envelope<object>> => {
       const startedAt = Date.now()
@@ -722,7 +785,7 @@ export function registerWorkspaceRootIpc(
     },
   )
 
-  ipcMain.handle(
+  handleWorkspaceIpc(
     'workspace:delete',
     async (_event, payload: unknown): Promise<Envelope<object>> => {
       const startedAt = Date.now()
@@ -751,7 +814,7 @@ export function registerWorkspaceRootIpc(
 
   // ─── System integration (reveal / open / copy path) ──────────
 
-  ipcMain.handle(
+  handleWorkspaceIpc(
     'workspace:reveal-in-folder',
     async (_event, payload: unknown): Promise<Envelope<object>> => {
       try {
@@ -766,7 +829,7 @@ export function registerWorkspaceRootIpc(
     },
   )
 
-  ipcMain.handle(
+  handleWorkspaceIpc(
     'workspace:open-in-system',
     async (_event, payload: unknown): Promise<Envelope<object>> => {
       try {
@@ -782,7 +845,7 @@ export function registerWorkspaceRootIpc(
     },
   )
 
-  ipcMain.handle(
+  handleWorkspaceIpc(
     'workspace:copy-path',
     async (_event, payload: unknown): Promise<Envelope<object>> => {
       try {
@@ -797,7 +860,7 @@ export function registerWorkspaceRootIpc(
     },
   )
 
-  ipcMain.handle(
+  handleWorkspaceIpc(
     'workspace:watch:start',
     async (event, payload: unknown): Promise<Envelope<{ watchId: string }>> => {
       try {
@@ -822,7 +885,7 @@ export function registerWorkspaceRootIpc(
     },
   )
 
-  ipcMain.handle(
+  handleWorkspaceIpc(
     'workspace:watch:stop',
     async (_event, payload: unknown): Promise<Envelope<object>> => {
       try {

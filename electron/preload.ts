@@ -65,8 +65,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('lattice-auth:login', payload ?? {}),
   latticeAuthLogout: () =>
     ipcRenderer.invoke('lattice-auth:logout'),
-  latticeCollabCreateTicket: (payload: unknown) =>
-    ipcRenderer.invoke('lattice-collab:create-ticket', payload),
+  latticeAuthCollabTicket: (payload: unknown) =>
+    ipcRenderer.invoke('lattice-auth:collab-ticket', payload),
   onLlmStreamChunk: (cb: (payload: { streamId: string; textDelta: string }) => void) =>
     subscribe('llm:stream-chunk', cb),
   onLlmStreamToolUse: (cb: (payload: { streamId: string; toolUse: { id: string; name: string; input: Record<string, unknown> } }) => void) =>
@@ -126,6 +126,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   workerCall: (req: unknown) => ipcRenderer.invoke('worker:call', req),
   workerHealth: () => ipcRenderer.invoke('worker:health'),
   workerStop: () => ipcRenderer.invoke('worker:stop'),
+  auditRecord: (payload: unknown) =>
+    ipcRenderer.invoke('audit:record', payload),
   onWorkerStatus: (callback: (status: unknown) => void) =>
     subscribe('worker:status', callback),
   onWorkerEvent: (callback: (event: unknown) => void) =>

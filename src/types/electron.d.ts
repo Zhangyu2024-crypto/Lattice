@@ -97,6 +97,16 @@ export interface LlmInvokeRequestPayload {
    * mode; the proxy translates these into the provider's native tool schema.
    */
   tools?: LlmToolPayload[]
+  /** Renderer-supplied audit context. Main-process audit logging consumes
+   *  this locally and never forwards it to provider APIs. */
+  audit?: {
+    source?: string
+    sessionId?: string | null
+    taskId?: string
+    stepId?: string
+    workspaceRoot?: string | null
+    metadata?: Record<string, unknown>
+  }
   /**
    * Extended thinking effort level. When 'medium' or 'high', the Anthropic
    * SDK client enables the `thinking` parameter so the model can use
@@ -221,17 +231,17 @@ export type LatticeAuthLoginResultPayload =
     } & Extract<LatticeAuthSessionPayload, { authenticated: true }>)
   | { ok: false; error: string }
 
-export type LatticeCollabTicketPayload =
+export type LatticeCollabTicketResultPayload =
   | {
       ok: true
-      roomName: string
-      wsUrl: string
-      ticketExpiresAt: string
+      ticket: string
+      expiresAt: string
       expiresIn: number
-      username: string
-      userId: string
+      roomName: string
+      userId?: string
+      username?: string
     }
-  | { ok: false; error: string; status?: number }
+  | { ok: false; error: string }
 
 // ─── Literature search (OpenAlex + arXiv) ───────────────────────────
 //
@@ -733,6 +743,22 @@ export interface WorkerEventPayload {
   [key: string]: unknown
 }
 
+export interface ApiCallAuditPayload {
+  kind: string
+  source?: string
+  operation?: string
+  status?: 'accepted' | 'ok' | 'error' | 'cancelled' | 'dropped'
+  durationMs?: number
+  sessionId?: string | null
+  taskId?: string
+  stepId?: string
+  workspaceRoot?: string | null
+  request?: unknown
+  response?: unknown
+  error?: unknown
+  meta?: Record<string, unknown>
+}
+
 declare global {
   interface Window {
     electronAPI?: {
@@ -894,12 +920,14 @@ declare global {
         authBaseUrl?: string
       }) => Promise<LatticeAuthLoginResultPayload>
       latticeAuthLogout: () => Promise<{ ok: true }>
-      latticeCollabCreateTicket: (payload: {
+      latticeAuthCollabTicket: (payload: {
+        serverUrl?: string
         projectId: string
         roomId: string
         roomName: string
-        role?: 'owner' | 'editor' | 'reviewer' | 'viewer'
-      }) => Promise<LatticeCollabTicketPayload>
+        roomAccessKey: string
+        role?: string
+      }) => Promise<LatticeCollabTicketResultPayload>
       onLlmStreamChunk: (
         callback: (event: LlmStreamChunkEvent) => void,
       ) => () => void
@@ -995,6 +1023,9 @@ declare global {
       onWorkerEvent: (
         callback: (event: WorkerEventPayload) => void,
       ) => () => void
+      /** Fire-and-forget local audit event. Main process buffers and writes
+       *  it asynchronously; renderer callers must not await for correctness. */
+      auditRecord: (payload: ApiCallAuditPayload) => Promise<{ ok: true }>
       libraryListAnnotations: (
         paperId: number,
       ) => Promise<LibraryListAnnotationsResultPayload>

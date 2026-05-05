@@ -71,11 +71,10 @@ export default function LatexCodeMirror({
       view.destroy()
       viewRef.current = null
     }
-    // `value` / `extraExtensions` intentionally excluded: LatexDocumentCard
-    // controls remount via a React key keyed on activeFile. That keeps undo
-    // history per-file without a Compartment swap here.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    // Recreate when collaboration extensions switch between local editing
+    // and Yjs-backed editing. File switches and AI replacements are still
+    // keyed by the parent, so `value` intentionally stays out of deps.
+  }, [extraExtensions])
 
   useEffect(() => {
     const view = viewRef.current

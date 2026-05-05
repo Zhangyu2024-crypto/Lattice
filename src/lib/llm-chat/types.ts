@@ -85,6 +85,12 @@ export interface LlmChatRequest {
   traceModule?: LatticeTraceModule
   traceOperation?: LatticeTraceOperation
   artifactId?: string | null
+  /** Optional audit labels passed through to the Electron main process.
+   *  They are used only for local call logging, not forwarded to providers. */
+  audit?: {
+    source?: string
+    metadata?: Record<string, unknown>
+  }
 }
 
 export interface LlmChatResult {

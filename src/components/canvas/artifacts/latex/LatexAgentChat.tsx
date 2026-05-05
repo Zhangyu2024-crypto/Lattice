@@ -155,6 +155,17 @@ export default function LatexAgentChat({
           artifactId,
           traceModule: 'creator',
           traceOperation: 'creator_generate',
+          audit: {
+            source: 'creator',
+            metadata: {
+              module: 'latex-agent-chat',
+              activeFile: activeFileRef.current,
+              fileCount: filesRef.current.length,
+              compileErrors: errorsRef.current.length,
+              compileWarnings: warningsRef.current.length,
+              userPromptChars: trimmed.length,
+            },
+          },
         })
         if (!result.success) {
           setTurns((prev) =>

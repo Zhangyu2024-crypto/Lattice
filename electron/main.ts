@@ -25,12 +25,15 @@ import {
 import { registerSyncIpc } from './ipc-sync'
 import { registerResearchIpc } from './ipc-research'
 import { registerMcpIpc, shutdownAllMcpClients } from './ipc-mcp'
-import { registerAuditIpc } from './ipc-audit'
 import {
-  flushAuditEvents,
-  summarizePayloadForAudit,
-  writeAuditEvent,
-} from './audit-writer'
+  clearApiCallAuditLogs,
+  configureApiCallAudit,
+  getApiCallAuditLogDir,
+  getApiCallAuditStatus,
+  recordApiCall,
+  shutdownApiCallAudit,
+  type ApiCallAuditEvent,
+} from './api-call-audit'
 import { readManifest } from './sync/manifest'
 import {
   push as syncPush,
@@ -45,6 +48,16 @@ const DIST_ELECTRON_DIR = path.basename(__dirname) === 'chunks'
   : __dirname
 const PRELOAD_PATH = path.join(DIST_ELECTRON_DIR, 'preload.mjs')
 const RENDERER_INDEX_PATH = path.join(DIST_ELECTRON_DIR, '../dist/index.html')
+const DEFAULT_AUDIT_RETENTION_DAYS = 30
+
+let auditAcceptedAgreementVersion: string | null = null
+let auditCurrentAgreementVersion = ''
+let auditRetentionDays = DEFAULT_AUDIT_RETENTION_DAYS
+
+configureApiCallAudit({
+  dir: path.join(app.getPath('userData'), 'logs', 'api-calls'),
+  enabled: process.env.LATTICE_API_AUDIT_ENABLED === '1',
+})
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -76,55 +89,61 @@ function broadcastBackendStatus(payload: {
   }
 }
 
-function isTrustedRendererUrl(rawUrl: string): boolean {
-  let url: URL
-  try {
-    url = new URL(rawUrl)
-  } catch {
-    return false
-  }
-  if (process.env.VITE_DEV_SERVER_URL) {
-    try {
-      return url.origin === new URL(process.env.VITE_DEV_SERVER_URL).origin
-    } catch {
-      return false
-    }
-  }
-  if (url.protocol !== 'file:') return false
-  try {
-    return fileURLToPath(url) === RENDERER_INDEX_PATH
-  } catch {
-    return false
+function auditStatusPayload() {
+  const status = getApiCallAuditStatus()
+  return {
+    enabled: status.enabled,
+    acceptedAgreementVersion: auditAcceptedAgreementVersion,
+    currentAgreementVersion: auditCurrentAgreementVersion,
+    retentionDays: auditRetentionDays,
+    logDir: status.logDir,
   }
 }
 
-function openExternalIfSafe(rawUrl: string): void {
-  let url: URL
-  try {
-    url = new URL(rawUrl)
-  } catch {
-    return
-  }
-  if (
-    url.protocol !== 'https:' &&
-    url.protocol !== 'http:' &&
-    url.protocol !== 'mailto:'
-  ) {
-    return
-  }
-  void shell.openExternal(url.toString())
+function readObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object'
+    ? (value as Record<string, unknown>)
+    : {}
 }
 
-function lockWindowToAppOrigin(win: BrowserWindow): void {
-  win.webContents.on('will-navigate', (event, url) => {
-    if (isTrustedRendererUrl(url)) return
-    event.preventDefault()
-    openExternalIfSafe(url)
-  })
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    if (!isTrustedRendererUrl(url)) openExternalIfSafe(url)
-    return { action: 'deny' }
-  })
+function validateRendererAuditEvent(payload: unknown): ApiCallAuditEvent | null {
+  const raw = readObject(payload)
+  const kind = typeof raw.kind === 'string' ? raw.kind.trim() : ''
+  if (!/^[a-z0-9_.:-]{1,80}$/i.test(kind)) return null
+  const status =
+    raw.status === 'accepted' ||
+    raw.status === 'ok' ||
+    raw.status === 'error' ||
+    raw.status === 'cancelled' ||
+    raw.status === 'dropped'
+      ? raw.status
+      : undefined
+  const meta = readObject(raw.meta)
+  return {
+    kind,
+    source: typeof raw.source === 'string' ? raw.source.slice(0, 80) : undefined,
+    operation:
+      typeof raw.operation === 'string' ? raw.operation.slice(0, 160) : undefined,
+    status,
+    durationMs:
+      typeof raw.durationMs === 'number' && Number.isFinite(raw.durationMs)
+        ? raw.durationMs
+        : undefined,
+    sessionId:
+      typeof raw.sessionId === 'string' || raw.sessionId === null
+        ? raw.sessionId
+        : undefined,
+    taskId: typeof raw.taskId === 'string' ? raw.taskId.slice(0, 120) : undefined,
+    stepId: typeof raw.stepId === 'string' ? raw.stepId.slice(0, 120) : undefined,
+    workspaceRoot:
+      typeof raw.workspaceRoot === 'string' || raw.workspaceRoot === null
+        ? raw.workspaceRoot
+        : undefined,
+    request: raw.request,
+    response: raw.response,
+    error: raw.error,
+    meta,
+  }
 }
 
 function createWindow() {
@@ -155,7 +174,6 @@ function createWindow() {
       plugins: true,
     },
   })
-  lockWindowToAppOrigin(mainWindow)
 
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
@@ -254,7 +272,6 @@ function createLibraryWindow() {
       plugins: true,
     },
   })
-  lockWindowToAppOrigin(libraryWindow)
 
   if (process.env.VITE_DEV_SERVER_URL) {
     void libraryWindow.loadURL(`${process.env.VITE_DEV_SERVER_URL}#/library`)
@@ -296,7 +313,6 @@ function createWorkbenchWindow(sessionId: string, artifactId: string) {
       plugins: true,
     },
   })
-  lockWindowToAppOrigin(win)
 
   const q = new URLSearchParams({ sessionId, artifactId }).toString()
   if (process.env.VITE_DEV_SERVER_URL) {
@@ -342,7 +358,6 @@ function createPdfReaderWindow(relPath: string) {
       plugins: true,
     },
   })
-  lockWindowToAppOrigin(win)
 
   const q = new URLSearchParams({ relPath }).toString()
   if (process.env.VITE_DEV_SERVER_URL) {
@@ -378,7 +393,6 @@ function createDataManagerWindow() {
       sandbox: false,
     },
   })
-  lockWindowToAppOrigin(win)
 
   if (process.env.VITE_DEV_SERVER_URL) {
     void win.loadURL(`${process.env.VITE_DEV_SERVER_URL}#/data-manager`)
@@ -725,57 +739,18 @@ ipcMain.handle(
     const startedAt = Date.now()
     const plugin = typeof payload?.plugin === 'string' ? payload.plugin : ''
     const name = typeof payload?.name === 'string' ? payload.name : ''
-    const auditMeta = {
-      plugin,
-      name,
-      input: summarizePayloadForAudit(payload?.input ?? {}),
-    }
-    writeAuditEvent({
-      category: 'plugin',
-      action: 'call_tool',
-      status: 'started',
-      metadata: auditMeta,
-    })
-    if (!plugin || plugin.includes('/') || plugin.includes('\\')) {
-      writeAuditEvent({
-        category: 'plugin',
-        action: 'call_tool',
-        status: 'error',
-        durationMs: Date.now() - startedAt,
-        metadata: auditMeta,
-        error: 'Invalid plugin name',
-      })
-      throw new Error('Invalid plugin name')
-    }
-    if (!name) {
-      writeAuditEvent({
-        category: 'plugin',
-        action: 'call_tool',
-        status: 'error',
-        durationMs: Date.now() - startedAt,
-        metadata: auditMeta,
-        error: 'Tool name is required',
-      })
-      throw new Error('Tool name is required')
-    }
-    const tokenCheck = consumeApprovalToken(payload.approvalToken, 'plugin_call_tool', {
-      plugin,
-      name,
-      input: JSON.stringify(payload.input ?? {}),
-    })
-    if (!tokenCheck.ok) {
-      writeAuditEvent({
-        category: 'plugin',
-        action: 'call_tool',
-        status: 'denied',
-        durationMs: Date.now() - startedAt,
-        metadata: auditMeta,
-        error: tokenCheck.error,
-      })
-      throw new Error(tokenCheck.error)
-    }
-
     try {
+      if (!plugin || plugin.includes('/') || plugin.includes('\\')) {
+        throw new Error('Invalid plugin name')
+      }
+      if (!name) throw new Error('Tool name is required')
+      const tokenCheck = consumeApprovalToken(payload.approvalToken, 'plugin_call_tool', {
+        plugin,
+        name,
+        input: JSON.stringify(payload.input ?? {}),
+      })
+      if (!tokenCheck.ok) throw new Error(tokenCheck.error)
+
       const root = path.join(app.getPath('userData'), 'plugins')
       const { tools } = await readPluginTools(root)
       const tool = tools.find((entry) => entry.plugin === plugin && entry.name === name)
@@ -786,86 +761,59 @@ ipcMain.handle(
         tool,
         input: payload.input ?? {},
       })
-      const finishMeta = {
-        ...auditMeta,
-        exitCode: result.code,
-        timedOut: result.timedOut,
-        stdoutBytes: Buffer.byteLength(result.stdout, 'utf8'),
-        stderrBytes: Buffer.byteLength(result.stderr, 'utf8'),
-      }
       if (result.code !== 0) {
-        writeAuditEvent({
-          category: 'plugin',
-          action: 'call_tool',
-          status: 'error',
-          durationMs: Date.now() - startedAt,
-          metadata: finishMeta,
-          error: `Plugin tool failed with exit code ${result.code}${result.timedOut ? ' after timeout' : ''}`,
-        })
         throw new Error(
           `Plugin tool failed (${result.code})${result.timedOut ? ' after timeout' : ''}: ${result.stderr || result.stdout}`,
         )
       }
       const trimmed = result.stdout.trim()
+      let out: { output: unknown; stdout: string; stderr: string }
       if (!trimmed) {
-        writeAuditEvent({
-          category: 'plugin',
-          action: 'call_tool',
-          status: 'success',
-          durationMs: Date.now() - startedAt,
-          metadata: finishMeta,
-        })
-        return { output: null, stdout: '', stderr: result.stderr }
+        out = { output: null, stdout: '', stderr: result.stderr }
+      } else {
+        try {
+          const parsed = JSON.parse(trimmed) as { ok?: boolean; output?: unknown; error?: string }
+          if (parsed && typeof parsed === 'object' && parsed.ok === false) {
+            throw new Error(parsed.error ?? 'Plugin tool returned ok=false')
+          }
+          if (parsed && typeof parsed === 'object' && 'output' in parsed) {
+            out = { output: parsed.output, stdout: result.stdout, stderr: result.stderr }
+          } else {
+            out = { output: parsed, stdout: result.stdout, stderr: result.stderr }
+          }
+        } catch (err) {
+          if (err instanceof SyntaxError) {
+            out = { output: result.stdout, stdout: result.stdout, stderr: result.stderr }
+          } else {
+            throw err
+          }
+        }
       }
-      try {
-        const parsed = JSON.parse(trimmed) as { ok?: boolean; output?: unknown; error?: string }
-        if (parsed && typeof parsed === 'object' && parsed.ok === false) {
-          writeAuditEvent({
-            category: 'plugin',
-            action: 'call_tool',
-            status: 'error',
-            durationMs: Date.now() - startedAt,
-            metadata: finishMeta,
-            error: parsed.error ?? 'Plugin tool returned ok=false',
-          })
-          throw new Error(parsed.error ?? 'Plugin tool returned ok=false')
-        }
-        writeAuditEvent({
-          category: 'plugin',
-          action: 'call_tool',
-          status: 'success',
-          durationMs: Date.now() - startedAt,
-          metadata: finishMeta,
-        })
-        if (parsed && typeof parsed === 'object' && 'output' in parsed) {
-          return { output: parsed.output, stdout: result.stdout, stderr: result.stderr }
-        }
-        return { output: parsed, stdout: result.stdout, stderr: result.stderr }
-      } catch (err) {
-        if (err instanceof SyntaxError) {
-          writeAuditEvent({
-            category: 'plugin',
-            action: 'call_tool',
-            status: 'success',
-            durationMs: Date.now() - startedAt,
-            metadata: finishMeta,
-          })
-          return { output: result.stdout, stdout: result.stdout, stderr: result.stderr }
-        }
-        throw err
-      }
+      recordApiCall({
+        kind: 'plugin.call_tool',
+        source: 'extension',
+        operation: `${plugin}/${name}`,
+        status: 'ok',
+        durationMs: Date.now() - startedAt,
+        request: { plugin, name, input: payload.input ?? {} },
+        response: {
+          output: out.output,
+          exitCode: result.code,
+          timedOut: result.timedOut,
+          stdoutBytes: Buffer.byteLength(out.stdout, 'utf8'),
+          stderrBytes: Buffer.byteLength(out.stderr, 'utf8'),
+        },
+      })
+      return out
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      const alreadyAudited =
-        message.startsWith('Plugin tool failed (') ||
-        message.includes('Plugin tool returned ok=false')
-      writeAuditEvent({
-        category: 'plugin',
-        action: 'call_tool',
+      recordApiCall({
+        kind: 'plugin.call_tool',
+        source: 'extension',
+        operation: `${plugin || '<invalid>'}/${name || '<missing>'}`,
         status: 'error',
         durationMs: Date.now() - startedAt,
-        metadata: auditMeta,
-        error: alreadyAudited ? 'Plugin tool failed' : err,
+        request: { plugin, name, input: payload?.input ?? {} },
+        error: err,
       })
       throw err
     }
@@ -1084,6 +1032,71 @@ ipcMain.handle(
 registerLlmIpc()
 registerLatticeAuthIpc()
 
+ipcMain.handle('audit:get-status', () => auditStatusPayload())
+
+ipcMain.handle('audit:configure', (_event, payload: unknown) => {
+  const raw = readObject(payload)
+  auditAcceptedAgreementVersion =
+    typeof raw.acceptedAgreementVersion === 'string'
+      ? raw.acceptedAgreementVersion
+      : raw.acceptedAgreementVersion === null
+        ? null
+        : auditAcceptedAgreementVersion
+  auditCurrentAgreementVersion =
+    typeof raw.currentAgreementVersion === 'string'
+      ? raw.currentAgreementVersion
+      : auditCurrentAgreementVersion
+  auditRetentionDays =
+    typeof raw.retentionDays === 'number' && Number.isFinite(raw.retentionDays)
+      ? Math.max(1, Math.min(Math.floor(raw.retentionDays), 365))
+      : auditRetentionDays
+  configureApiCallAudit({
+    dir: path.join(app.getPath('userData'), 'logs', 'api-calls'),
+    enabled:
+      raw.enabled === true &&
+      Boolean(auditCurrentAgreementVersion) &&
+      auditAcceptedAgreementVersion === auditCurrentAgreementVersion,
+  })
+  return auditStatusPayload()
+})
+
+ipcMain.handle('audit:open-log-dir', async () => {
+  const dir = getApiCallAuditLogDir()
+  await fs.mkdir(dir, { recursive: true })
+  const result = await shell.openPath(dir)
+  return result ? { ok: false, error: result } : { ok: true, logDir: dir }
+})
+
+ipcMain.handle('audit:clear-logs', async () => {
+  clearApiCallAuditLogs()
+  return { ok: true, logDir: getApiCallAuditLogDir() }
+})
+
+ipcMain.handle('audit:export-logs', async () => {
+  const dir = getApiCallAuditLogDir()
+  await fs.mkdir(dir, { recursive: true })
+  const downloads = app.getPath('downloads')
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+  const target = path.join(downloads, `lattice-api-audit-${stamp}.zip`)
+  const JSZip = (await import('jszip')).default
+  const zip = new JSZip()
+  let count = 0
+  for (const name of await fs.readdir(dir).catch(() => [] as string[])) {
+    if (!/^api-calls-.*\.ndjson\.gz$/.test(name)) continue
+    zip.file(name, await fs.readFile(path.join(dir, name)))
+    count += 1
+  }
+  await fs.writeFile(target, await zip.generateAsync({ type: 'nodebuffer' }))
+  return { ok: true, path: target, fileCount: count }
+})
+
+ipcMain.handle('audit:record', (_event, payload: unknown) => {
+  const event = validateRendererAuditEvent(payload)
+  if (!event) return { ok: true }
+  recordApiCall(event)
+  return { ok: true }
+})
+
 // IPC: Docker-backed Python compute runner
 registerComputeIpc(() => mainWindow)
 
@@ -1120,7 +1133,6 @@ registerLiteratureIpc()
 registerWorkerIpc(() => mainWindow)
 
 registerApprovalTokenIpc()
-registerAuditIpc()
 
 // IPC: workspace bash passthrough. Executes a shell command with the
 // user-supplied cwd (typically `useWorkspaceStore().rootPath`). Gated at
@@ -1295,7 +1307,6 @@ function shutdownBackends(): Promise<void> {
       getComputeManager()?.cancelAll() ?? Promise.resolve(),
       getWorkerManager()?.stop() ?? Promise.resolve(),
       closeAllWorkspaceWatchers(),
-      flushAuditEvents(),
     ]).then(() => undefined)
   }
   return shutdownPromise
@@ -1311,7 +1322,7 @@ app.on('before-quit', async () => {
   await runAutoPush()
   await shutdownAllMcpClients()
   await shutdownBackends()
-  await flushAuditEvents()
+  await shutdownApiCallAudit()
 })
 
 app.on('activate', () => {
