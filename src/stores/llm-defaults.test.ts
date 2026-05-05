@@ -7,6 +7,7 @@ describe('LLM built-in provider defaults', () => {
       expect(provider.enabled).toBe(false)
       expect(provider.apiKey).toBeUndefined()
       expect(provider.baseUrl).not.toMatch(/claw-d/i)
+      expect(provider.models).toEqual([])
     }
   })
 
@@ -14,5 +15,6 @@ describe('LLM built-in provider defaults', () => {
     const providers = createDefaultProviders()
     expect(providers.map((provider) => provider.id)).not.toContain('clawd-proxy')
     expect(JSON.stringify(providers)).not.toMatch(/sk-[A-Za-z0-9_-]+/)
+    expect(JSON.stringify(providers)).not.toMatch(/sonnet|gpt-4o/i)
   })
 })
