@@ -154,6 +154,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   auditOpenLogDir: () => ipcRenderer.invoke('audit:open-log-dir'),
   auditClearLogs: () => ipcRenderer.invoke('audit:clear-logs'),
   auditExportLogs: () => ipcRenderer.invoke('audit:export-logs'),
+  appUpdateGetStatus: () => ipcRenderer.invoke('app-update:get-status'),
+  appUpdateCheck: () => ipcRenderer.invoke('app-update:check'),
+  appUpdateOpenRelease: () => ipcRenderer.invoke('app-update:open-release'),
   // ─── Workspace bash (shell command runner) ─────────────────────
   // Trust-gated at the tool layer (`workspace_bash` = hostExec). cwd is
   // supplied in the request payload — main-chat callers pass the user's

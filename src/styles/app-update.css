@@ -1,0 +1,156 @@
+/* General settings: GitHub release update status. */
+
+.settings-update-panel {
+  padding: 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-bg-sidebar);
+}
+
+.settings-update-panel.is-ok {
+  border-color: color-mix(in srgb, var(--color-green) 28%, var(--color-border));
+}
+
+.settings-update-panel.is-warn {
+  border-color: color-mix(in srgb, var(--color-yellow) 30%, var(--color-border));
+}
+
+.settings-update-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.settings-update-icon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--color-bg-panel);
+  color: var(--color-text-muted);
+}
+
+.settings-update-icon.is-ok {
+  color: var(--color-green);
+}
+
+.settings-update-icon.is-warn {
+  color: var(--color-yellow);
+}
+
+.settings-update-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-update-title,
+.settings-update-detail {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-update-title {
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+
+.settings-update-detail {
+  margin-top: 3px;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.settings-update-version {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-panel);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.settings-update-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.settings-update-chip {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--color-bg-panel);
+}
+
+.settings-update-chip span,
+.settings-update-chip strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-update-chip span {
+  color: var(--color-text-muted);
+  font-size: var(--text-xxs);
+}
+
+.settings-update-chip strong {
+  margin-top: 3px;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 650;
+}
+
+.settings-update-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.settings-update-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--text-xs);
+}
+
+.settings-update-btn:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.settings-update-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+@media (max-width: 760px) {
+  .settings-update-meta {
+    grid-template-columns: 1fr;
+  }
+}

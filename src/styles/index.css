@@ -35,6 +35,7 @@
 @import "./workspace.css";
 @import "./chat.css";
 @import "./views.css";
+@import "./app-update.css";
 @import "./canvas.css";
 @import "./llm-config.css";
 @import "./modals.css";

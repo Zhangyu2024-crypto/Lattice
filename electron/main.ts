@@ -26,6 +26,11 @@ import { registerSyncIpc } from './ipc-sync'
 import { registerResearchIpc } from './ipc-research'
 import { registerMcpIpc, shutdownAllMcpClients } from './ipc-mcp'
 import {
+  registerUpdateIpc,
+  startPeriodicUpdateChecks,
+  stopPeriodicUpdateChecks,
+} from './ipc-updates'
+import {
   clearApiCallAuditLogs,
   configureApiCallAudit,
   getApiCallAuditLogDir,
@@ -1178,6 +1183,11 @@ registerResearchIpc()
 // `mcp:reconcile` whenever the user edits Settings → Extensions.
 registerMcpIpc(() => BrowserWindow.getAllWindows())
 
+// IPC: GitHub release checks. This does not self-replace the running app;
+// current packaging is a directory build, so the safe behavior is to surface
+// the newest release and let the user open the release page.
+registerUpdateIpc()
+
 // Auto-sync helpers. Best-effort on start / quit; failures are logged but
 // don't block the app lifecycle. Time caps match the plan:
 //   auto-pull on start  → 15 s (one-time hit; bigger cap OK)
@@ -1297,6 +1307,7 @@ app.whenReady().then(async () => {
   // any pulled content lands in time for the first research-mirror hydrate.
   void runAutoPull()
   restartSyncInterval()
+  startPeriodicUpdateChecks()
 })
 
 let shutdownPromise: Promise<void> | null = null
@@ -1319,6 +1330,7 @@ app.on('window-all-closed', async () => {
 
 app.on('before-quit', async () => {
   if (syncIntervalTimer) { clearInterval(syncIntervalTimer); syncIntervalTimer = null }
+  stopPeriodicUpdateChecks()
   await runAutoPush()
   await shutdownAllMcpClients()
   await shutdownBackends()

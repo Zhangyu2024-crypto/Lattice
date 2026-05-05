@@ -243,6 +243,31 @@ export type LatticeCollabTicketResultPayload =
     }
   | { ok: false; error: string }
 
+export type AppUpdateState =
+  | 'idle'
+  | 'checking'
+  | 'latest'
+  | 'available'
+  | 'error'
+
+export interface AppUpdateStatusPayload {
+  state: AppUpdateState
+  currentVersion: string
+  latestVersion?: string
+  releaseName?: string
+  releaseUrl?: string
+  downloadUrl?: string
+  assetName?: string
+  publishedAt?: string
+  checkedAt?: string
+  updateAvailable: boolean
+  error?: string
+}
+
+export type AppUpdateOpenReleaseResult =
+  | { ok: true; url: string }
+  | { ok: false; error: string }
+
 // ─── Literature search (OpenAlex + arXiv) ───────────────────────────
 //
 // Ported from lattice-cli's `_search_openalex` / `_search_arxiv`
@@ -1059,6 +1084,9 @@ declare global {
       auditOpenLogDir: () => Promise<AuditSimpleResult>
       auditClearLogs: () => Promise<AuditSimpleResult>
       auditExportLogs: () => Promise<AuditExportResult>
+      appUpdateGetStatus: () => Promise<AppUpdateStatusPayload>
+      appUpdateCheck: () => Promise<AppUpdateStatusPayload>
+      appUpdateOpenRelease: () => Promise<AppUpdateOpenReleaseResult>
       // ─── Workspace bash ──────────────────────────────────────────
       workspaceBash: (
         req: WorkspaceBashRequest,
