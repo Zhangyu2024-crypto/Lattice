@@ -105,6 +105,25 @@ interface OpenAiResponseOutputItem {
   arguments?: string
 }
 
+interface OpenAiChatToolCall {
+  id?: string
+  type?: string
+  function?: {
+    name?: string
+    arguments?: string
+  }
+}
+
+interface OpenAiChatMessage {
+  role?: string
+  content?: string | Array<{ type?: string; text?: string }> | null
+  tool_calls?: OpenAiChatToolCall[]
+  function_call?: {
+    name?: string
+    arguments?: string
+  }
+}
+
 export interface ToolCallRequest {
   id: string
   name: string
@@ -292,8 +311,11 @@ export async function invoke(req: LlmInvokeRequest): Promise<LlmInvokeResult> {
     }
     return invokeAnthropic(req)
   }
-  if (req.provider === 'openai' || req.provider === 'openai-compatible') {
-    return invokeOpenAI(req)
+  if (req.provider === 'openai') {
+    return invokeOpenAIResponses(req)
+  }
+  if (req.provider === 'openai-compatible') {
+    return invokeOpenAICompatibleChat(req)
   }
   return {
     success: false,
@@ -378,7 +400,9 @@ async function invokeAnthropic(req: LlmInvokeRequest): Promise<LlmInvokeResult> 
   }
 }
 
-async function invokeOpenAI(req: LlmInvokeRequest): Promise<LlmInvokeResult> {
+async function invokeOpenAIResponses(
+  req: LlmInvokeRequest,
+): Promise<LlmInvokeResult> {
   const start = Date.now()
   let apiKey: string
   try {
@@ -438,6 +462,86 @@ async function invokeOpenAI(req: LlmInvokeRequest): Promise<LlmInvokeResult> {
       : typeof json.output_text === 'string'
         ? json.output_text
         : ''
+    const toolCalls = assistantMessage
+      ? extractToolCalls(assistantMessage.content)
+      : []
+    return {
+      success: true,
+      content,
+      usage: {
+        inputTokens: json.usage?.prompt_tokens ?? json.usage?.input_tokens ?? 0,
+        outputTokens:
+          json.usage?.completion_tokens ?? json.usage?.output_tokens ?? 0,
+      },
+      durationMs,
+      ...(toolCalls.length > 0 ? { toolCalls } : {}),
+      ...(assistantMessage ? { messages: [assistantMessage] } : {}),
+    }
+  } catch (err) {
+    return toError(err, Date.now() - start)
+  }
+}
+
+async function invokeOpenAICompatibleChat(
+  req: LlmInvokeRequest,
+): Promise<LlmInvokeResult> {
+  const start = Date.now()
+  let apiKey: string
+  try {
+    apiKey = await resolveLatticeApiKeyForRequest(req.apiKey, req.baseUrl)
+  } catch (err) {
+    return toError(err, Date.now() - start)
+  }
+  const url = `${openAiApiRoot(req.baseUrl)}/chat/completions`
+  const systemPrompt = buildSystemPrompt(req)
+  const body: Record<string, unknown> = {
+    model: req.model,
+    messages: toOpenAiChatMessages(req.messages, systemPrompt),
+    max_tokens: req.maxTokens,
+    temperature: req.temperature,
+  }
+  if (req.tools && req.tools.length > 0) {
+    body.tools = toOpenAiChatTools(req.tools)
+    body.tool_choice = 'auto'
+  }
+  try {
+    const traceHeaders = latticeTraceHeaders(buildLatticeTraceContext(req))
+    const res = await fetchWithTimeout(url, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${apiKey}`,
+        ...traceHeaders,
+      },
+      body: JSON.stringify(body),
+      timeoutMs: req.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    })
+    const durationMs = Date.now() - start
+    if (!res.ok) {
+      return {
+        success: false,
+        error: mapHttpStatusToMessage(res.status, await safeText(res)),
+        status: res.status,
+        durationMs,
+      }
+    }
+    const json = (await res.json()) as {
+      choices?: Array<{
+        message?: OpenAiChatMessage
+      }>
+      usage?: {
+        prompt_tokens?: number
+        completion_tokens?: number
+        input_tokens?: number
+        output_tokens?: number
+      }
+    }
+    const assistantMessage = normalizeOpenAiChatAssistantMessage(
+      json.choices?.[0]?.message,
+    )
+    const content = assistantMessage
+      ? extractTextFromContent(assistantMessage.content)
+      : ''
     const toolCalls = assistantMessage
       ? extractToolCalls(assistantMessage.content)
       : []
@@ -881,6 +985,100 @@ function toOpenAiResponseTools(
   }))
 }
 
+function toOpenAiChatMessages(
+  messages: LlmMessage[],
+  systemPrompt: string | undefined,
+): Array<Record<string, unknown>> {
+  const out: Array<Record<string, unknown>> = []
+  if (systemPrompt) {
+    out.push({ role: 'system', content: systemPrompt })
+  }
+
+  for (const message of messages) {
+    if (typeof message.content === 'string') {
+      out.push({ role: message.role, content: message.content })
+      continue
+    }
+
+    const textParts = message.content
+      .filter((block): block is LlmTextBlock => block.type === 'text')
+      .map((block) => block.text)
+      .join('')
+    const imageParts = message.content.filter(
+      (block): block is LlmImageBlock => block.type === 'image',
+    )
+    const toolUses = message.content.filter(
+      (block): block is LlmToolUseBlock => block.type === 'tool_use',
+    )
+    const toolResults = message.content.filter(
+      (block): block is LlmToolResultBlock => block.type === 'tool_result',
+    )
+
+    if (message.role === 'assistant') {
+      if (textParts.length > 0 || toolUses.length > 0) {
+        out.push({
+          role: 'assistant',
+          content: textParts.length > 0 ? textParts : null,
+          ...(toolUses.length > 0
+            ? {
+                tool_calls: toolUses.map((block) => ({
+                  id: block.id,
+                  type: 'function',
+                  function: {
+                    name: block.name,
+                    arguments: JSON.stringify(block.input ?? {}),
+                  },
+                })),
+              }
+            : {}),
+        })
+      }
+      continue
+    }
+
+    if (textParts.length > 0 || imageParts.length > 0) {
+      if (imageParts.length > 0) {
+        const content: Array<Record<string, unknown>> = []
+        if (textParts.length > 0) {
+          content.push({ type: 'text', text: textParts })
+        }
+        for (const block of imageParts) {
+          content.push({
+            type: 'image_url',
+            image_url: {
+              url: `data:${block.source.media_type};base64,${block.source.data}`,
+            },
+          })
+        }
+        out.push({ role: 'user', content })
+      } else {
+        out.push({ role: 'user', content: textParts })
+      }
+    }
+    for (const block of toolResults) {
+      out.push({
+        role: 'tool',
+        tool_call_id: block.tool_use_id,
+        content: block.content,
+      })
+    }
+  }
+  return out
+}
+
+function toOpenAiChatTools(
+  tools: LlmToolSpec[],
+): Array<Record<string, unknown>> {
+  return tools.map((tool) => ({
+    type: 'function',
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.input_schema,
+    },
+  }))
+}
+
 function normalizeAnthropicAssistantMessage(
   content:
     | Array<{
@@ -946,6 +1144,51 @@ function normalizeOpenAiResponseAssistantMessage(
         input: parseJsonObject(item.arguments),
       })
     }
+  }
+  if (blocks.length === 0) return null
+  return { role: 'assistant', content: collapseMessageContent(blocks) }
+}
+
+function normalizeOpenAiChatAssistantMessage(
+  message: OpenAiChatMessage | undefined,
+): LlmMessage | null {
+  if (!message) return null
+  const blocks: LlmMessageBlock[] = []
+  if (typeof message.content === 'string' && message.content.length > 0) {
+    blocks.push({ type: 'text', text: message.content })
+  } else if (Array.isArray(message.content)) {
+    for (const part of message.content) {
+      if (part.type === 'text' && typeof part.text === 'string') {
+        blocks.push({ type: 'text', text: part.text })
+      }
+    }
+  }
+  if (Array.isArray(message.tool_calls)) {
+    for (const [index, call] of message.tool_calls.entries()) {
+      const name = call.function?.name
+      if (typeof name !== 'string' || name.length === 0) continue
+      blocks.push({
+        type: 'tool_use',
+        id:
+          typeof call.id === 'string' && call.id.length > 0
+            ? call.id
+            : `tool_call_${index}`,
+        name,
+        input: parseJsonObject(call.function?.arguments),
+      })
+    }
+  }
+  const legacyFunctionName = message.function_call?.name
+  if (
+    typeof legacyFunctionName === 'string' &&
+    legacyFunctionName.length > 0
+  ) {
+    blocks.push({
+      type: 'tool_use',
+      id: 'function_call',
+      name: legacyFunctionName,
+      input: parseJsonObject(message.function_call?.arguments),
+    })
   }
   if (blocks.length === 0) return null
   return { role: 'assistant', content: collapseMessageContent(blocks) }

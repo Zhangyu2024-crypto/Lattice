@@ -39,17 +39,18 @@ describe('llm-proxy OpenAI-compatible transport', () => {
     vi.unstubAllGlobals()
   })
 
-  it('sends Responses API requests to OpenAI-compatible endpoints', async () => {
+  it('sends Chat Completions requests to OpenAI-compatible endpoints', async () => {
     const fetchMock = vi.fn(async () =>
       jsonResponse({
-        output: [
+        choices: [
           {
-            type: 'message',
-            role: 'assistant',
-            content: [{ type: 'output_text', text: 'Pong' }],
+            message: {
+              role: 'assistant',
+              content: 'Pong',
+            },
           },
         ],
-        usage: { input_tokens: 11, output_tokens: 3 },
+        usage: { prompt_tokens: 11, completion_tokens: 3 },
       }),
     )
     vi.stubGlobal('fetch', fetchMock)
@@ -64,7 +65,7 @@ describe('llm-proxy OpenAI-compatible transport', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const [url, init] = fetchCall(fetchMock, 0)
-    expect(url).toBe('https://compat.example/v1/responses')
+    expect(url).toBe('https://compat.example/v1/chat/completions')
     expect(init.method).toBe('POST')
     expect(init.headers).toMatchObject({
       'content-type': 'application/json',
@@ -79,20 +80,44 @@ describe('llm-proxy OpenAI-compatible transport', () => {
     })
     expect(JSON.parse(String(init.body))).toEqual({
       model: 'test-model',
-      input: [
+      messages: [
+        { role: 'system', content: 'You are terse.' },
         {
-          type: 'message',
           role: 'user',
-          content: [{ type: 'input_text', text: 'Ping' }],
+          content: 'Ping',
         },
       ],
-      instructions: 'You are terse.',
-      max_output_tokens: 128,
+      max_tokens: 128,
       temperature: 0.2,
     })
   })
 
   it('does not duplicate /v1 when the configured base URL already includes it', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({
+        choices: [
+          {
+            message: {
+              role: 'assistant',
+              content: 'ok',
+            },
+          },
+        ],
+        usage: {},
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const req = baseOpenAiRequest()
+    req.baseUrl = 'https://api.openai.com/v1'
+
+    await invoke(req)
+
+    const [url] = fetchCall(fetchMock, 0)
+    expect(url).toBe('https://api.openai.com/v1/chat/completions')
+  })
+
+  it('keeps official OpenAI on the Responses API', async () => {
     const fetchMock = vi.fn(async () =>
       jsonResponse({
         output: [
@@ -108,26 +133,48 @@ describe('llm-proxy OpenAI-compatible transport', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const req = baseOpenAiRequest()
+    req.provider = 'openai'
     req.baseUrl = 'https://api.openai.com/v1'
 
     await invoke(req)
 
-    const [url] = fetchCall(fetchMock, 0)
+    const [url, init] = fetchCall(fetchMock, 0)
     expect(url).toBe('https://api.openai.com/v1/responses')
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      input: [
+        {
+          type: 'message',
+          role: 'user',
+          content: [{ type: 'input_text', text: 'Ping' }],
+        },
+      ],
+      instructions: 'You are terse.',
+      max_output_tokens: 128,
+    })
   })
 
-  it('translates neutral tool messages and schemas into Responses function-call items', async () => {
+  it('translates neutral tool messages and schemas into Chat Completions tool calls', async () => {
     const fetchMock = vi.fn(async () =>
       jsonResponse({
-        output: [
+        choices: [
           {
-            type: 'function_call',
-            call_id: 'call_2',
-            name: 'search_workspace',
-            arguments: '{"query":"xrd"}',
+            message: {
+              role: 'assistant',
+              content: null,
+              tool_calls: [
+                {
+                  id: 'call_2',
+                  type: 'function',
+                  function: {
+                    name: 'search_workspace',
+                    arguments: '{"query":"xrd"}',
+                  },
+                },
+              ],
+            },
           },
         ],
-        usage: { input_tokens: 24, output_tokens: 7 },
+        usage: { prompt_tokens: 24, completion_tokens: 7 },
       }),
     )
     vi.stubGlobal('fetch', fetchMock)
@@ -191,39 +238,40 @@ describe('llm-proxy OpenAI-compatible transport', () => {
       tools: [
         {
           type: 'function',
-          name: 'search_workspace',
-          description: 'Search workspace files',
-          parameters: {
-            type: 'object',
-            properties: {
-              query: { type: 'string', description: 'Search query' },
+          function: {
+            name: 'search_workspace',
+            description: 'Search workspace files',
+            parameters: {
+              type: 'object',
+              properties: {
+                query: { type: 'string', description: 'Search query' },
+              },
+              required: ['query'],
             },
-            required: ['query'],
           },
         },
       ],
       tool_choice: 'auto',
-      instructions: 'You are terse.',
-      input: [
+      messages: [
+        { role: 'system', content: 'You are terse.' },
         {
-          type: 'message',
           role: 'assistant',
-          status: 'completed',
-          content: [
-            { type: 'output_text', text: 'I will search.', annotations: [] },
+          content: 'I will search.',
+          tool_calls: [
+            {
+              id: 'call_1',
+              type: 'function',
+              function: {
+                name: 'search_workspace',
+                arguments: '{"query":"lattice"}',
+              },
+            },
           ],
         },
         {
-          type: 'function_call',
-          call_id: 'call_1',
-          name: 'search_workspace',
-          arguments: '{"query":"lattice"}',
-          status: 'completed',
-        },
-        {
-          type: 'function_call_output',
-          call_id: 'call_1',
-          output: '{"matches":[]}',
+          role: 'tool',
+          tool_call_id: 'call_1',
+          content: '{"matches":[]}',
         },
       ],
     })
