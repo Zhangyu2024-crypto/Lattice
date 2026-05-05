@@ -4729,8 +4729,28 @@
 }
 .toast-host-message {
   flex: 1;                   /* layout-critical */
+  min-width: 0;
   font-size: var(--text-base);
   line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.toast-host-message-title {
+  color: var(--color-text-primary);
+  font-size: var(--text-sm);
+  font-weight: 650;
+  line-height: 1.35;
+}
+.toast-host-message-body {
+  margin-top: 2px;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+.toast-host-message-meta {
+  margin-top: 5px;
+  color: var(--color-text-muted);
+  font-size: var(--text-xxs);
+  line-height: 1.35;
 }
 .toast-host-dismiss {
   background: transparent;

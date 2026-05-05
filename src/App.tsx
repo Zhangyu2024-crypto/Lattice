@@ -113,7 +113,12 @@ const WORKSPACE_COMPOSER_PANE_MIN = 220
 const WORKSPACE_SPLIT_HANDLE_PX = 6
 
 if (import.meta.env.DEV) {
-  void import('./dev/mock-agent-stream')
+  void import('./dev/mock-agent-stream').catch((err) => {
+    console.warn(
+      '[dev] mock agent stream unavailable:',
+      err instanceof Error ? err.message : String(err),
+    )
+  })
 }
 
 export default function App() {

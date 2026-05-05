@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from 'lucide-react'
 import { useToastStore, type Toast } from '../../stores/toast-store'
+import { compactAssistantErrorToast } from '../../lib/assistant-error-display'
 
 export default function ToastHost() {
   const toasts = useToastStore((s) => s.toasts)
@@ -24,6 +25,7 @@ function ToastCard({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
 
   const palette = kindPalette(toast.kind)
   const Icon = palette.icon
+  const message = formatToastMessage(toast.message)
 
   return (
     <div
@@ -36,7 +38,19 @@ function ToastCard({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
       }
     >
       <Icon size={16} className="toast-host-icon" />
-      <div className="toast-host-message">{toast.message}</div>
+      <div className="toast-host-message">
+        {message.title ? (
+          <>
+            <div className="toast-host-message-title">{message.title}</div>
+            <div className="toast-host-message-body">{message.body}</div>
+          </>
+        ) : (
+          message.body
+        )}
+        {message.meta ? (
+          <div className="toast-host-message-meta">{message.meta}</div>
+        ) : null}
+      </div>
       <button
         onClick={onDismiss}
         className="toast-host-dismiss"
@@ -60,4 +74,14 @@ function kindPalette(kind: Toast['kind']) {
     default:
       return { icon: Info, accent: 'var(--color-accent)', border: 'var(--color-border)' }
   }
+}
+
+interface ToastMessageView {
+  title?: string
+  body: string
+  meta?: string
+}
+
+function formatToastMessage(message: string): ToastMessageView {
+  return compactAssistantErrorToast(message)
 }

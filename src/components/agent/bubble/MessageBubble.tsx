@@ -1,6 +1,7 @@
 import { memo, useMemo, useState, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react'
 import AgentCard from '../cards/AgentCard'
 import { isSilentStep } from '../cards/agent-card/helpers'
 import ArtifactBadge from '../ArtifactBadge'
@@ -9,6 +10,10 @@ import BubbleCopyButton from './BubbleCopyButton'
 import ChatBubbleImage from './ChatBubbleImage'
 import ChatMarkdownTable from './ChatMarkdownTable'
 import { flushRuntimePersist, useSessionStore } from '../../../stores/session-store'
+import {
+  parseAssistantErrorDisplay,
+  type AssistantErrorDisplay,
+} from '../../../lib/assistant-error-display'
 import type { TaskStep, TranscriptMessage } from '../../../types/session'
 import type { MentionRef } from '../../../types/mention'
 
@@ -97,6 +102,13 @@ const MessageBubble = memo(function MessageBubble({
   const isAssistantErrorNotice =
     message.role === 'assistant' &&
     (message.status === 'error' || /^error\s*:/i.test(trimmedContent))
+  const assistantErrorNotice = useMemo(
+    () =>
+      isAssistantErrorNotice
+        ? parseAssistantErrorDisplay(message.content)
+        : null,
+    [isAssistantErrorNotice, message.content],
+  )
   const showThinkingPlaceholder =
     message.role === 'assistant' &&
     message.id.startsWith('thinking_') &&
@@ -243,6 +255,8 @@ const MessageBubble = memo(function MessageBubble({
             <span>.</span>
             <span>.</span>
           </span>
+        ) : assistantErrorNotice ? (
+          <AssistantErrorNotice notice={assistantErrorNotice} />
         ) : (
           <>
             <ReactMarkdown
@@ -363,6 +377,65 @@ const MessageBubble = memo(function MessageBubble({
 })
 
 export default MessageBubble
+
+function AssistantErrorNotice({
+  notice,
+}: {
+  notice: AssistantErrorDisplay
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const hasDetail = Boolean(notice.detail && notice.detail !== notice.summary)
+
+  return (
+    <div className="chat-error-notice">
+      <div className="chat-error-notice-head">
+        <AlertTriangle size={17} aria-hidden />
+        <div className="chat-error-notice-main">
+          <div className="chat-error-notice-title">{notice.title}</div>
+          <div className="chat-error-notice-summary">{notice.summary}</div>
+        </div>
+      </div>
+
+      {(notice.statusCode || notice.code || notice.type || notice.requestId) && (
+        <div className="chat-error-notice-meta" aria-label="Error metadata">
+          {notice.statusCode && (
+            <span className="chat-error-notice-pill">HTTP {notice.statusCode}</span>
+          )}
+          {notice.code && (
+            <span className="chat-error-notice-pill">{notice.code}</span>
+          )}
+          {notice.type && (
+            <span className="chat-error-notice-pill">{notice.type}</span>
+          )}
+          {notice.requestId && (
+            <span className="chat-error-notice-pill">
+              Request {notice.requestId}
+            </span>
+          )}
+        </div>
+      )}
+
+      {hasDetail && (
+        <div className="chat-error-notice-detail">
+          <button
+            type="button"
+            className="chat-error-notice-toggle"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((v) => !v)}
+          >
+            {expanded ? (
+              <ChevronDown size={14} aria-hidden />
+            ) : (
+              <ChevronRight size={14} aria-hidden />
+            )}
+            Details
+          </button>
+          {expanded && <pre>{notice.detail}</pre>}
+        </div>
+      )}
+    </div>
+  )
+}
 
 // Matches `@[label#anchor]` literals in a message body. `label` may contain
 // any char except `]` or `#`; `anchor` is exactly 5 chars base36 per
