@@ -12,6 +12,7 @@
 
 import { ipcMain, type BrowserWindow as BrowserWindowType } from 'electron'
 import { consumeApprovalToken } from './ipc-approval-tokens'
+import { summarizePayloadForAudit, writeAuditEvent } from './audit-writer'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 
@@ -219,19 +220,63 @@ export function registerMcpIpc(
         approvalToken?: string
       },
     ) => {
+      const startedAt = Date.now()
+      const auditMeta = {
+        serverId: payload.serverId,
+        name: payload.name,
+        args: summarizePayloadForAudit(payload.args ?? {}),
+      }
+      writeAuditEvent({
+        category: 'mcp',
+        action: 'call_tool',
+        status: 'started',
+        metadata: auditMeta,
+      })
       const tokenCheck = consumeApprovalToken(payload.approvalToken, 'mcp_call_tool', {
         serverId: payload.serverId,
         name: payload.name,
         args: JSON.stringify(payload.args ?? {}),
       })
-      if (!tokenCheck.ok) throw new Error(tokenCheck.error)
-      const entry = running.get(payload.serverId)
-      if (!entry) throw new Error(`MCP server not running: ${payload.serverId}`)
-      const result = await entry.client.callTool({
-        name: payload.name,
-        arguments: payload.args,
-      })
-      return { result }
+      if (!tokenCheck.ok) {
+        writeAuditEvent({
+          category: 'mcp',
+          action: 'call_tool',
+          status: 'denied',
+          durationMs: Date.now() - startedAt,
+          metadata: auditMeta,
+          error: tokenCheck.error,
+        })
+        throw new Error(tokenCheck.error)
+      }
+      try {
+        const entry = running.get(payload.serverId)
+        if (!entry) throw new Error(`MCP server not running: ${payload.serverId}`)
+        const result = await entry.client.callTool({
+          name: payload.name,
+          arguments: payload.args,
+        })
+        writeAuditEvent({
+          category: 'mcp',
+          action: 'call_tool',
+          status: 'success',
+          durationMs: Date.now() - startedAt,
+          metadata: {
+            ...auditMeta,
+            result: summarizePayloadForAudit(result),
+          },
+        })
+        return { result }
+      } catch (err) {
+        writeAuditEvent({
+          category: 'mcp',
+          action: 'call_tool',
+          status: 'error',
+          durationMs: Date.now() - startedAt,
+          metadata: auditMeta,
+          error: err,
+        })
+        throw err
+      }
     },
   )
 

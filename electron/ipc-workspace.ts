@@ -12,6 +12,7 @@
 import { spawn } from 'child_process'
 import { ipcMain } from 'electron'
 import { consumeApprovalToken } from './ipc-approval-tokens'
+import { summarizeTextForAudit, writeAuditEvent } from './audit-writer'
 
 const MAX_BASH_OUTPUT_BYTES = 4 * 1024 * 1024
 const DEFAULT_BASH_TIMEOUT_MS = 120_000
@@ -24,7 +25,15 @@ export function registerWorkspaceIpc(): void {
   ipcMain.handle(
     'workspace:bash',
     async (event, req: unknown) => {
+      const startedAt = Date.now()
       if (!req || typeof req !== 'object') {
+        writeAuditEvent({
+          category: 'workspace',
+          action: 'bash',
+          status: 'error',
+          metadata: { invalidPayload: true },
+          error: 'invalid request',
+        })
         return { success: false, error: 'invalid request' }
       }
       const r = req as {
@@ -35,13 +44,49 @@ export function registerWorkspaceIpc(): void {
         approvalToken?: unknown
       }
       if (typeof r.workspaceDir !== 'string' || typeof r.command !== 'string') {
+        writeAuditEvent({
+          category: 'workspace',
+          action: 'bash',
+          status: 'error',
+          metadata: {
+            workspaceDir: typeof r.workspaceDir === 'string' ? r.workspaceDir : undefined,
+            command: typeof r.command === 'string'
+              ? summarizeTextForAudit(r.command)
+              : undefined,
+          },
+          error: 'workspaceDir and command required',
+        })
         return { success: false, error: 'workspaceDir and command required' }
       }
+      const auditMeta = {
+        workspaceDir: r.workspaceDir,
+        command: summarizeTextForAudit(r.command),
+        invocationId:
+          typeof r.invocationId === 'string' && r.invocationId.length > 0
+            ? r.invocationId
+            : undefined,
+      }
+      writeAuditEvent({
+        category: 'workspace',
+        action: 'bash',
+        status: 'started',
+        metadata: auditMeta,
+      })
       const tokenCheck = consumeApprovalToken(r.approvalToken, 'workspace_bash', {
         workspaceDir: r.workspaceDir,
         command: r.command,
       })
-      if (!tokenCheck.ok) return { success: false, error: tokenCheck.error }
+      if (!tokenCheck.ok) {
+        writeAuditEvent({
+          category: 'workspace',
+          action: 'bash',
+          status: 'denied',
+          durationMs: Date.now() - startedAt,
+          metadata: auditMeta,
+          error: tokenCheck.error,
+        })
+        return { success: false, error: tokenCheck.error }
+      }
       const timeoutMs =
         typeof r.timeoutMs === 'number' && Number.isFinite(r.timeoutMs)
           ? Math.min(Math.max(1_000, Math.floor(r.timeoutMs)), 600_000)
@@ -161,6 +206,18 @@ export function registerWorkspaceIpc(): void {
           flushCompleteLines()
           flushPartial()
           sendDone('error', null)
+          writeAuditEvent({
+            category: 'workspace',
+            action: 'bash',
+            status: 'error',
+            durationMs: Date.now() - startedAt,
+            metadata: {
+              ...auditMeta,
+              stdoutBytes: Buffer.byteLength(stdout, 'utf8'),
+              stderrBytes: Buffer.byteLength(stderr, 'utf8'),
+            },
+            error: err,
+          })
           resolve({ success: false, error: err.message, stdout, stderr })
         })
         child.on('close', (code) => {
@@ -170,6 +227,20 @@ export function registerWorkspaceIpc(): void {
           flushCompleteLines()
           flushPartial()
           sendDone(timedOut ? 'timeout' : 'ok', code)
+          writeAuditEvent({
+            category: 'workspace',
+            action: 'bash',
+            status: timedOut ? 'aborted' : code === 0 ? 'success' : 'error',
+            durationMs: Date.now() - startedAt,
+            metadata: {
+              ...auditMeta,
+              exitCode: code,
+              timedOut,
+              stdoutBytes: Buffer.byteLength(stdout, 'utf8'),
+              stderrBytes: Buffer.byteLength(stderr, 'utf8'),
+            },
+            ...(code === 0 && !timedOut ? {} : { error: timedOut ? 'timeout' : `exit code ${code}` }),
+          })
           resolve({
             success: code === 0,
             exitCode: code,

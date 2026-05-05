@@ -21,6 +21,7 @@ import type {
   ToolCallRequest,
 } from './llm-proxy'
 import { resolveLatticeApiKeyForRequest } from './lattice-auth-store'
+import { summarizePayloadForAudit, writeAuditEvent } from './audit-writer'
 
 // ── Stream bookkeeping ──────────────────────────────────────────────
 
@@ -197,6 +198,24 @@ async function runStream(
     if (!sender.isDestroyed()) {
       sender.send('llm:stream-end', { streamId, result })
     }
+    writeAuditEvent({
+      category: 'llm',
+      action: 'stream_complete',
+      status: 'success',
+      durationMs,
+      metadata: {
+        streamId,
+        provider: req.provider,
+        baseUrl: req.baseUrl,
+        model: req.model,
+        mode: req.mode ?? 'dialog',
+        auditSource: (req as { auditSource?: unknown }).auditSource,
+        inputTokens: result.usage.inputTokens,
+        outputTokens: result.usage.outputTokens,
+        toolCallCount: toolCalls.length,
+        response: summarizePayloadForAudit(content),
+      },
+    })
   } catch (err) {
     const durationMs = Date.now() - start
     const result = toStreamError(err, durationMs)
@@ -204,6 +223,22 @@ async function runStream(
     if (!sender.isDestroyed()) {
       sender.send('llm:stream-end', { streamId, result })
     }
+    writeAuditEvent({
+      category: 'llm',
+      action: 'stream_complete',
+      status: 'error',
+      durationMs,
+      metadata: {
+        streamId,
+        provider: req.provider,
+        baseUrl: req.baseUrl,
+        model: req.model,
+        mode: req.mode ?? 'dialog',
+        auditSource: (req as { auditSource?: unknown }).auditSource,
+        status: result.success ? undefined : result.status,
+      },
+      error: result.success ? undefined : result.error,
+    })
   } finally {
     activeStreams.delete(streamId)
   }

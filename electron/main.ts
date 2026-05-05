@@ -25,6 +25,12 @@ import {
 import { registerSyncIpc } from './ipc-sync'
 import { registerResearchIpc } from './ipc-research'
 import { registerMcpIpc, shutdownAllMcpClients } from './ipc-mcp'
+import { registerAuditIpc } from './ipc-audit'
+import {
+  flushAuditEvents,
+  summarizePayloadForAudit,
+  writeAuditEvent,
+} from './audit-writer'
 import { readManifest } from './sync/manifest'
 import {
   push as syncPush,
@@ -716,49 +722,151 @@ ipcMain.handle(
       approvalToken?: string
     },
   ) => {
+    const startedAt = Date.now()
     const plugin = typeof payload?.plugin === 'string' ? payload.plugin : ''
     const name = typeof payload?.name === 'string' ? payload.name : ''
+    const auditMeta = {
+      plugin,
+      name,
+      input: summarizePayloadForAudit(payload?.input ?? {}),
+    }
+    writeAuditEvent({
+      category: 'plugin',
+      action: 'call_tool',
+      status: 'started',
+      metadata: auditMeta,
+    })
     if (!plugin || plugin.includes('/') || plugin.includes('\\')) {
+      writeAuditEvent({
+        category: 'plugin',
+        action: 'call_tool',
+        status: 'error',
+        durationMs: Date.now() - startedAt,
+        metadata: auditMeta,
+        error: 'Invalid plugin name',
+      })
       throw new Error('Invalid plugin name')
     }
-    if (!name) throw new Error('Tool name is required')
+    if (!name) {
+      writeAuditEvent({
+        category: 'plugin',
+        action: 'call_tool',
+        status: 'error',
+        durationMs: Date.now() - startedAt,
+        metadata: auditMeta,
+        error: 'Tool name is required',
+      })
+      throw new Error('Tool name is required')
+    }
     const tokenCheck = consumeApprovalToken(payload.approvalToken, 'plugin_call_tool', {
       plugin,
       name,
       input: JSON.stringify(payload.input ?? {}),
     })
-    if (!tokenCheck.ok) throw new Error(tokenCheck.error)
-
-    const root = path.join(app.getPath('userData'), 'plugins')
-    const { tools } = await readPluginTools(root)
-    const tool = tools.find((entry) => entry.plugin === plugin && entry.name === name)
-    if (!tool) throw new Error(`Plugin tool not found: ${plugin}/${name}`)
-    const pluginRoot = path.join(root, plugin)
-    const result = await runPluginTool({
-      pluginRoot,
-      tool,
-      input: payload.input ?? {},
-    })
-    if (result.code !== 0) {
-      throw new Error(
-        `Plugin tool failed (${result.code})${result.timedOut ? ' after timeout' : ''}: ${result.stderr || result.stdout}`,
-      )
+    if (!tokenCheck.ok) {
+      writeAuditEvent({
+        category: 'plugin',
+        action: 'call_tool',
+        status: 'denied',
+        durationMs: Date.now() - startedAt,
+        metadata: auditMeta,
+        error: tokenCheck.error,
+      })
+      throw new Error(tokenCheck.error)
     }
-    const trimmed = result.stdout.trim()
-    if (!trimmed) return { output: null, stdout: '', stderr: result.stderr }
+
     try {
-      const parsed = JSON.parse(trimmed) as { ok?: boolean; output?: unknown; error?: string }
-      if (parsed && typeof parsed === 'object' && parsed.ok === false) {
-        throw new Error(parsed.error ?? 'Plugin tool returned ok=false')
+      const root = path.join(app.getPath('userData'), 'plugins')
+      const { tools } = await readPluginTools(root)
+      const tool = tools.find((entry) => entry.plugin === plugin && entry.name === name)
+      if (!tool) throw new Error(`Plugin tool not found: ${plugin}/${name}`)
+      const pluginRoot = path.join(root, plugin)
+      const result = await runPluginTool({
+        pluginRoot,
+        tool,
+        input: payload.input ?? {},
+      })
+      const finishMeta = {
+        ...auditMeta,
+        exitCode: result.code,
+        timedOut: result.timedOut,
+        stdoutBytes: Buffer.byteLength(result.stdout, 'utf8'),
+        stderrBytes: Buffer.byteLength(result.stderr, 'utf8'),
       }
-      if (parsed && typeof parsed === 'object' && 'output' in parsed) {
-        return { output: parsed.output, stdout: result.stdout, stderr: result.stderr }
+      if (result.code !== 0) {
+        writeAuditEvent({
+          category: 'plugin',
+          action: 'call_tool',
+          status: 'error',
+          durationMs: Date.now() - startedAt,
+          metadata: finishMeta,
+          error: `Plugin tool failed with exit code ${result.code}${result.timedOut ? ' after timeout' : ''}`,
+        })
+        throw new Error(
+          `Plugin tool failed (${result.code})${result.timedOut ? ' after timeout' : ''}: ${result.stderr || result.stdout}`,
+        )
       }
-      return { output: parsed, stdout: result.stdout, stderr: result.stderr }
+      const trimmed = result.stdout.trim()
+      if (!trimmed) {
+        writeAuditEvent({
+          category: 'plugin',
+          action: 'call_tool',
+          status: 'success',
+          durationMs: Date.now() - startedAt,
+          metadata: finishMeta,
+        })
+        return { output: null, stdout: '', stderr: result.stderr }
+      }
+      try {
+        const parsed = JSON.parse(trimmed) as { ok?: boolean; output?: unknown; error?: string }
+        if (parsed && typeof parsed === 'object' && parsed.ok === false) {
+          writeAuditEvent({
+            category: 'plugin',
+            action: 'call_tool',
+            status: 'error',
+            durationMs: Date.now() - startedAt,
+            metadata: finishMeta,
+            error: parsed.error ?? 'Plugin tool returned ok=false',
+          })
+          throw new Error(parsed.error ?? 'Plugin tool returned ok=false')
+        }
+        writeAuditEvent({
+          category: 'plugin',
+          action: 'call_tool',
+          status: 'success',
+          durationMs: Date.now() - startedAt,
+          metadata: finishMeta,
+        })
+        if (parsed && typeof parsed === 'object' && 'output' in parsed) {
+          return { output: parsed.output, stdout: result.stdout, stderr: result.stderr }
+        }
+        return { output: parsed, stdout: result.stdout, stderr: result.stderr }
+      } catch (err) {
+        if (err instanceof SyntaxError) {
+          writeAuditEvent({
+            category: 'plugin',
+            action: 'call_tool',
+            status: 'success',
+            durationMs: Date.now() - startedAt,
+            metadata: finishMeta,
+          })
+          return { output: result.stdout, stdout: result.stdout, stderr: result.stderr }
+        }
+        throw err
+      }
     } catch (err) {
-      if (err instanceof SyntaxError) {
-        return { output: result.stdout, stdout: result.stdout, stderr: result.stderr }
-      }
+      const message = err instanceof Error ? err.message : String(err)
+      const alreadyAudited =
+        message.startsWith('Plugin tool failed (') ||
+        message.includes('Plugin tool returned ok=false')
+      writeAuditEvent({
+        category: 'plugin',
+        action: 'call_tool',
+        status: 'error',
+        durationMs: Date.now() - startedAt,
+        metadata: auditMeta,
+        error: alreadyAudited ? 'Plugin tool failed' : err,
+      })
       throw err
     }
   },
@@ -1012,6 +1120,7 @@ registerLiteratureIpc()
 registerWorkerIpc(() => mainWindow)
 
 registerApprovalTokenIpc()
+registerAuditIpc()
 
 // IPC: workspace bash passthrough. Executes a shell command with the
 // user-supplied cwd (typically `useWorkspaceStore().rootPath`). Gated at
@@ -1186,6 +1295,7 @@ function shutdownBackends(): Promise<void> {
       getComputeManager()?.cancelAll() ?? Promise.resolve(),
       getWorkerManager()?.stop() ?? Promise.resolve(),
       closeAllWorkspaceWatchers(),
+      flushAuditEvents(),
     ]).then(() => undefined)
   }
   return shutdownPromise
@@ -1201,6 +1311,7 @@ app.on('before-quit', async () => {
   await runAutoPush()
   await shutdownAllMcpClients()
   await shutdownBackends()
+  await flushAuditEvents()
 })
 
 app.on('activate', () => {

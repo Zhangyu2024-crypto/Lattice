@@ -300,6 +300,7 @@ export async function sendLlmChat(
     ...(effective.reasoningEffort
       ? { reasoningEffort: effective.reasoningEffort }
       : {}),
+    ...(req.auditSource ? { auditSource: req.auditSource } : {}),
   }
 
   // ── Transport selection ─────────────────────────────────────────

@@ -49,6 +49,7 @@ import DragOverlay from './components/common/DragOverlay'
 import MigrationDialog from './components/common/MigrationDialog'
 import ProLauncherMenu from './components/common/ProLauncherMenu'
 import Resizer from './components/common/Resizer'
+import UserAgreementGate from './components/startup/UserAgreementGate'
 
 const LazyLatexDocumentCard = lazy(
   () => import('./components/canvas/artifacts/latex/LatexDocumentCard'),
@@ -873,6 +874,7 @@ export default function App() {
       <LogConsole />
       <PromptHost />
       <MigrationDialog />
+      <UserAgreementGate />
       {settingsOpen && (
         <Suspense fallback={null}>
           <SettingsModal

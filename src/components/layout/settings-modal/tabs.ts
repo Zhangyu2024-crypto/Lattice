@@ -3,6 +3,7 @@ import {
   Cpu,
   Puzzle,
   CircleUserRound,
+  ShieldCheck,
   Settings2,
   Sparkles,
   type LucideIcon,
@@ -13,6 +14,7 @@ export type SettingsTabId =
   | 'general'
   | 'models'
   | 'compute'
+  | 'privacy'
   | 'sync'
   | 'extensions'
 
@@ -47,6 +49,12 @@ export const SETTINGS_TABS: readonly TabDef[] = [
     label: 'Compute',
     description: 'Bundled Python stack (LAMMPS / CP2K) & optional Docker',
     icon: Cpu,
+  },
+  {
+    id: 'privacy',
+    label: 'Privacy',
+    description: 'Agreement, local audit logs & retention',
+    icon: ShieldCheck,
   },
   {
     id: 'sync',

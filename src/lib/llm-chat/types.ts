@@ -76,6 +76,10 @@ export interface LlmChatRequest {
   /** Optional cancellation signal. Streaming calls are aborted at the IPC
    *  layer; one-shot calls return early on abort and ignore the late result. */
   signal?: AbortSignal
+  /** Optional audit classification for internal surfaces such as LaTeX
+   *  Creator. This is metadata only; prompts and file contents are still
+   *  summarized by the main-process audit writer. */
+  auditSource?: 'chat' | 'agent' | 'creator-latex' | 'compute'
 }
 
 export interface LlmChatResult {

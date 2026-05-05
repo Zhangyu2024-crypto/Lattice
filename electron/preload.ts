@@ -146,6 +146,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     subscribe(COMPUTE_RUN_CHANNELS.EXIT, callback),
   issueApprovalToken: (req: unknown) =>
     ipcRenderer.invoke('approval-token:issue', req),
+  auditGetStatus: () => ipcRenderer.invoke('audit:get-status'),
+  auditConfigure: (payload: unknown) =>
+    ipcRenderer.invoke('audit:configure', payload),
+  auditOpenLogDir: () => ipcRenderer.invoke('audit:open-log-dir'),
+  auditClearLogs: () => ipcRenderer.invoke('audit:clear-logs'),
+  auditExportLogs: () => ipcRenderer.invoke('audit:export-logs'),
   // ─── Workspace bash (shell command runner) ─────────────────────
   // Trust-gated at the tool layer (`workspace_bash` = hostExec). cwd is
   // supplied in the request payload — main-chat callers pass the user's

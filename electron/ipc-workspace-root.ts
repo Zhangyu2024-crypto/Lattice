@@ -11,6 +11,7 @@ import {
 } from 'fs/promises'
 import path from 'path'
 import { app, BrowserWindow, clipboard, ipcMain, shell } from 'electron'
+import { summarizeTextForAudit, writeAuditEvent } from './audit-writer'
 import type { WebContents } from 'electron'
 import chokidar from 'chokidar'
 import type { FSWatcher } from 'chokidar'
@@ -23,6 +24,27 @@ const LIST_STAT_CONCURRENCY = 32
 type OkEnvelope<T extends object> = { ok: true } & T
 type ErrEnvelope = { ok: false; error: string }
 type Envelope<T extends object> = OkEnvelope<T> | ErrEnvelope
+
+function auditWorkspaceFs(
+  action: string,
+  status: 'started' | 'success' | 'error' | 'denied' | 'aborted',
+  metadata: Record<string, unknown>,
+  error?: unknown,
+  durationMs?: number,
+): void {
+  writeAuditEvent({
+    category: 'workspace',
+    action,
+    status,
+    metadata,
+    error,
+    durationMs,
+  })
+}
+
+function contentSummary(content: string): ReturnType<typeof summarizeTextForAudit> {
+  return summarizeTextForAudit(content)
+}
 
 interface FsEntryPayload {
   name: string
@@ -346,18 +368,23 @@ export function registerWorkspaceRootIpc(
   ipcMain.handle(
     'workspace-root:set',
     async (_event, payload: unknown): Promise<Envelope<{ rootPath: string }>> => {
+      const startedAt = Date.now()
       try {
         const req = payload as { rootPath?: unknown }
         if (typeof req?.rootPath !== 'string' || req.rootPath.length === 0) {
+          auditWorkspaceFs('root_set', 'error', {}, 'rootPath required', Date.now() - startedAt)
           return { ok: false, error: 'rootPath required' }
         }
         const rootPath = path.resolve(req.rootPath)
+        auditWorkspaceFs('root_set', 'started', { rootPath })
         await mkdir(rootPath, { recursive: true })
         await stopAllWatchers()
         currentRoot = rootPath
         await persistRoot(rootPath)
+        auditWorkspaceFs('root_set', 'success', { rootPath }, undefined, Date.now() - startedAt)
         return { ok: true, rootPath }
       } catch (err) {
+        auditWorkspaceFs('root_set', 'error', {}, err, Date.now() - startedAt)
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
       }
     },
@@ -366,12 +393,21 @@ export function registerWorkspaceRootIpc(
   ipcMain.handle(
     'workspace:list',
     async (_event, payload: unknown): Promise<Envelope<{ entries: FsEntryPayload[] }>> => {
+      const startedAt = Date.now()
+      const req = payload as { rel?: unknown }
+      const rel = typeof req?.rel === 'string' ? req.rel : ''
       try {
-        const req = payload as { rel?: unknown }
-        const rel = typeof req?.rel === 'string' ? req.rel : ''
         const entries = await listDir(rel)
+        auditWorkspaceFs(
+          'list',
+          'success',
+          { relPath: rel, entryCount: entries.length },
+          undefined,
+          Date.now() - startedAt,
+        )
         return { ok: true, entries }
       } catch (err) {
+        auditWorkspaceFs('list', 'error', { relPath: rel }, err, Date.now() - startedAt)
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
       }
     },
@@ -380,12 +416,25 @@ export function registerWorkspaceRootIpc(
   ipcMain.handle(
     'workspace:stat',
     async (_event, payload: unknown): Promise<Envelope<{ stat: FsStatPayload }>> => {
+      const startedAt = Date.now()
+      const req = payload as { rel?: unknown }
+      const rel = typeof req?.rel === 'string' ? req.rel : ''
       try {
-        const req = payload as { rel?: unknown }
-        const rel = typeof req?.rel === 'string' ? req.rel : ''
         const { abs, rel: clean } = resolveInRoot(rel)
         try {
           const info = await stat(abs)
+          auditWorkspaceFs(
+            'stat',
+            'success',
+            {
+              relPath: clean,
+              exists: true,
+              isDirectory: info.isDirectory(),
+              size: info.isDirectory() ? 0 : info.size,
+            },
+            undefined,
+            Date.now() - startedAt,
+          )
           return {
             ok: true,
             stat: {
@@ -397,6 +446,13 @@ export function registerWorkspaceRootIpc(
             },
           }
         } catch {
+          auditWorkspaceFs(
+            'stat',
+            'success',
+            { relPath: clean, exists: false },
+            undefined,
+            Date.now() - startedAt,
+          )
           return {
             ok: true,
             stat: {
@@ -409,6 +465,7 @@ export function registerWorkspaceRootIpc(
           }
         }
       } catch (err) {
+        auditWorkspaceFs('stat', 'error', { relPath: rel }, err, Date.now() - startedAt)
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
       }
     },
@@ -417,17 +474,38 @@ export function registerWorkspaceRootIpc(
   ipcMain.handle(
     'workspace:read',
     async (_event, payload: unknown): Promise<Envelope<{ content: string }>> => {
+      const startedAt = Date.now()
+      const req = payload as { rel?: unknown }
+      const rel = typeof req?.rel === 'string' ? req.rel : ''
       try {
-        const req = payload as { rel?: unknown }
         if (typeof req?.rel !== 'string') return { ok: false, error: 'rel required' }
         const { abs } = resolveInRoot(req.rel)
         const info = await stat(abs)
         if (info.size > MAX_READ_BYTES) {
+          auditWorkspaceFs(
+            'read',
+            'error',
+            { relPath: req.rel, size: info.size },
+            `file too large (${info.size} bytes)`,
+            Date.now() - startedAt,
+          )
           return { ok: false, error: `file too large (${info.size} bytes)` }
         }
         const content = await readFile(abs, 'utf-8')
+        auditWorkspaceFs(
+          'read',
+          'success',
+          {
+            relPath: req.rel,
+            size: info.size,
+            content: contentSummary(content),
+          },
+          undefined,
+          Date.now() - startedAt,
+        )
         return { ok: true, content }
       } catch (err) {
+        auditWorkspaceFs('read', 'error', { relPath: rel }, err, Date.now() - startedAt)
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
       }
     },
@@ -436,19 +514,36 @@ export function registerWorkspaceRootIpc(
   ipcMain.handle(
     'workspace:readBinary',
     async (_event, payload: unknown): Promise<Envelope<{ data: ArrayBuffer }>> => {
+      const startedAt = Date.now()
+      const req = payload as { rel?: unknown }
+      const rel = typeof req?.rel === 'string' ? req.rel : ''
       try {
-        const req = payload as { rel?: unknown }
         if (typeof req?.rel !== 'string') return { ok: false, error: 'rel required' }
         const { abs } = resolveInRoot(req.rel)
         const info = await stat(abs)
         if (info.size > 64 * 1024 * 1024) {
+          auditWorkspaceFs(
+            'read_binary',
+            'error',
+            { relPath: req.rel, size: info.size },
+            `file too large (${info.size} bytes)`,
+            Date.now() - startedAt,
+          )
           return { ok: false, error: `file too large (${info.size} bytes)` }
         }
         const buf = await readFile(abs)
         const ab = new ArrayBuffer(buf.byteLength)
         new Uint8Array(ab).set(buf)
+        auditWorkspaceFs(
+          'read_binary',
+          'success',
+          { relPath: req.rel, size: buf.byteLength },
+          undefined,
+          Date.now() - startedAt,
+        )
         return { ok: true, data: ab }
       } catch (err) {
+        auditWorkspaceFs('read_binary', 'error', { relPath: rel }, err, Date.now() - startedAt)
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
       }
     },
@@ -457,9 +552,12 @@ export function registerWorkspaceRootIpc(
   ipcMain.handle(
     'workspace:write',
     async (_event, payload: unknown): Promise<Envelope<{ bytes: number }>> => {
+      const startedAt = Date.now()
+      const req = payload as { rel?: unknown; content?: unknown }
+      const rel = typeof req?.rel === 'string' ? req.rel : ''
       try {
-        const req = payload as { rel?: unknown; content?: unknown }
         if (typeof req?.rel !== 'string' || typeof req?.content !== 'string') {
+          auditWorkspaceFs('write', 'error', { relPath: rel }, 'rel and content required', Date.now() - startedAt)
           return { ok: false, error: 'rel and content required' }
         }
         const { abs } = resolveInRoot(req.rel)
@@ -467,8 +565,21 @@ export function registerWorkspaceRootIpc(
         const tmp = `${abs}.tmp-${randomUUID()}`
         await writeFile(tmp, req.content, 'utf-8')
         await rename(tmp, abs)
-        return { ok: true, bytes: Buffer.byteLength(req.content, 'utf-8') }
+        const bytes = Buffer.byteLength(req.content, 'utf-8')
+        auditWorkspaceFs(
+          'write',
+          'success',
+          {
+            relPath: req.rel,
+            bytes,
+            content: contentSummary(req.content),
+          },
+          undefined,
+          Date.now() - startedAt,
+        )
+        return { ok: true, bytes }
       } catch (err) {
+        auditWorkspaceFs('write', 'error', { relPath: rel }, err, Date.now() - startedAt)
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
       }
     },
@@ -477,9 +588,12 @@ export function registerWorkspaceRootIpc(
   ipcMain.handle(
     'workspace:writeBinary',
     async (_event, payload: unknown): Promise<Envelope<{ bytes: number }>> => {
+      const startedAt = Date.now()
+      const req = payload as { rel?: unknown; data?: unknown }
+      const rel = typeof req?.rel === 'string' ? req.rel : ''
       try {
-        const req = payload as { rel?: unknown; data?: unknown }
         if (typeof req?.rel !== 'string') {
+          auditWorkspaceFs('write_binary', 'error', { relPath: rel }, 'rel required', Date.now() - startedAt)
           return { ok: false, error: 'rel required' }
         }
         // Accepts ArrayBuffer (structured-clone path) or Uint8Array —
@@ -496,6 +610,13 @@ export function registerWorkspaceRootIpc(
             view.byteLength,
           )
         } else {
+          auditWorkspaceFs(
+            'write_binary',
+            'error',
+            { relPath: req.rel },
+            'data must be ArrayBuffer or typed array',
+            Date.now() - startedAt,
+          )
           return {
             ok: false,
             error: 'data must be ArrayBuffer or typed array',
@@ -506,8 +627,16 @@ export function registerWorkspaceRootIpc(
         const tmp = `${abs}.tmp-${randomUUID()}`
         await writeFile(tmp, buf)
         await rename(tmp, abs)
+        auditWorkspaceFs(
+          'write_binary',
+          'success',
+          { relPath: req.rel, bytes: buf.byteLength },
+          undefined,
+          Date.now() - startedAt,
+        )
         return { ok: true, bytes: buf.byteLength }
       } catch (err) {
+        auditWorkspaceFs('write_binary', 'error', { relPath: rel }, err, Date.now() - startedAt)
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
       }
     },
@@ -516,16 +645,31 @@ export function registerWorkspaceRootIpc(
   ipcMain.handle(
     'workspace:append',
     async (_event, payload: unknown): Promise<Envelope<object>> => {
+      const startedAt = Date.now()
+      const req = payload as { rel?: unknown; content?: unknown }
+      const rel = typeof req?.rel === 'string' ? req.rel : ''
       try {
-        const req = payload as { rel?: unknown; content?: unknown }
         if (typeof req?.rel !== 'string' || typeof req?.content !== 'string') {
+          auditWorkspaceFs('append', 'error', { relPath: rel }, 'rel and content required', Date.now() - startedAt)
           return { ok: false, error: 'rel and content required' }
         }
         const { abs } = resolveInRoot(req.rel)
         await mkdir(path.dirname(abs), { recursive: true })
         await appendFile(abs, req.content, 'utf-8')
+        auditWorkspaceFs(
+          'append',
+          'success',
+          {
+            relPath: req.rel,
+            bytes: Buffer.byteLength(req.content, 'utf-8'),
+            content: contentSummary(req.content),
+          },
+          undefined,
+          Date.now() - startedAt,
+        )
         return { ok: true }
       } catch (err) {
+        auditWorkspaceFs('append', 'error', { relPath: rel }, err, Date.now() - startedAt)
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
       }
     },
@@ -534,13 +678,20 @@ export function registerWorkspaceRootIpc(
   ipcMain.handle(
     'workspace:mkdir',
     async (_event, payload: unknown): Promise<Envelope<object>> => {
+      const startedAt = Date.now()
+      const req = payload as { rel?: unknown }
+      const rel = typeof req?.rel === 'string' ? req.rel : ''
       try {
-        const req = payload as { rel?: unknown }
-        if (typeof req?.rel !== 'string') return { ok: false, error: 'rel required' }
+        if (typeof req?.rel !== 'string') {
+          auditWorkspaceFs('mkdir', 'error', { relPath: rel }, 'rel required', Date.now() - startedAt)
+          return { ok: false, error: 'rel required' }
+        }
         const { abs } = resolveInRoot(req.rel)
         await mkdir(abs, { recursive: true })
+        auditWorkspaceFs('mkdir', 'success', { relPath: req.rel }, undefined, Date.now() - startedAt)
         return { ok: true }
       } catch (err) {
+        auditWorkspaceFs('mkdir', 'error', { relPath: rel }, err, Date.now() - startedAt)
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
       }
     },
@@ -549,17 +700,23 @@ export function registerWorkspaceRootIpc(
   ipcMain.handle(
     'workspace:move',
     async (_event, payload: unknown): Promise<Envelope<object>> => {
+      const startedAt = Date.now()
+      const req = payload as { from?: unknown; to?: unknown }
+      const from = typeof req?.from === 'string' ? req.from : ''
+      const to = typeof req?.to === 'string' ? req.to : ''
       try {
-        const req = payload as { from?: unknown; to?: unknown }
         if (typeof req?.from !== 'string' || typeof req?.to !== 'string') {
+          auditWorkspaceFs('move', 'error', { from, to }, 'from and to required', Date.now() - startedAt)
           return { ok: false, error: 'from and to required' }
         }
         const src = resolveInRoot(req.from)
         const dst = resolveInRoot(req.to)
         await mkdir(path.dirname(dst.abs), { recursive: true })
         await rename(src.abs, dst.abs)
+        auditWorkspaceFs('move', 'success', { from: req.from, to: req.to }, undefined, Date.now() - startedAt)
         return { ok: true }
       } catch (err) {
+        auditWorkspaceFs('move', 'error', { from, to }, err, Date.now() - startedAt)
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
       }
     },
@@ -568,18 +725,25 @@ export function registerWorkspaceRootIpc(
   ipcMain.handle(
     'workspace:delete',
     async (_event, payload: unknown): Promise<Envelope<object>> => {
+      const startedAt = Date.now()
+      const req = payload as { rel?: unknown; toTrash?: unknown }
+      const rel = typeof req?.rel === 'string' ? req.rel : ''
+      const toTrash = req.toTrash !== false
       try {
-        const req = payload as { rel?: unknown; toTrash?: unknown }
-        if (typeof req?.rel !== 'string') return { ok: false, error: 'rel required' }
-        const toTrash = req.toTrash !== false
+        if (typeof req?.rel !== 'string') {
+          auditWorkspaceFs('delete', 'error', { relPath: rel, toTrash }, 'rel required', Date.now() - startedAt)
+          return { ok: false, error: 'rel required' }
+        }
         if (toTrash) {
           await softDelete(req.rel)
         } else {
           const { abs } = resolveInRoot(req.rel)
           await rm(abs, { recursive: true, force: true })
         }
+        auditWorkspaceFs('delete', 'success', { relPath: req.rel, toTrash }, undefined, Date.now() - startedAt)
         return { ok: true }
       } catch (err) {
+        auditWorkspaceFs('delete', 'error', { relPath: rel, toTrash }, err, Date.now() - startedAt)
         return { ok: false, error: err instanceof Error ? err.message : String(err) }
       }
     },

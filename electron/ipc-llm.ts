@@ -15,6 +15,10 @@ import {
   abortStream,
   type StreamStartResult,
 } from './llm-stream'
+import {
+  summarizePayloadForAudit,
+  writeAuditEvent,
+} from './audit-writer'
 
 // Basic shape guard — the renderer is trusted (single-origin) but we still
 // narrow the payload so a malformed caller gets a structured error instead
@@ -50,43 +54,183 @@ function isValidListModelsRequest(v: unknown): v is LlmListModelsRequest {
   return isValidTestRequest(v as LlmTestConnectionRequest)
 }
 
+function summarizeMessages(messages: LlmInvokeRequest['messages']): unknown {
+  return messages.map((message) => ({
+    role: message.role,
+    content: summarizePayloadForAudit(message.content),
+  }))
+}
+
+function llmInvokeAuditMeta(req: LlmInvokeRequest): Record<string, unknown> {
+  return {
+    provider: req.provider,
+    baseUrl: req.baseUrl,
+    model: req.model,
+    mode: req.mode ?? 'dialog',
+    auditSource: (req as { auditSource?: unknown }).auditSource,
+    maxTokens: req.maxTokens,
+    temperature: req.temperature,
+    timeoutMs: req.timeoutMs,
+    reasoningEffort: req.reasoningEffort,
+    systemPrompt: req.systemPrompt
+      ? summarizePayloadForAudit(req.systemPrompt)
+      : undefined,
+    messages: summarizeMessages(req.messages),
+    contextBlocks: (req.contextBlocks ?? []).map((block) => ({
+      refKey: block.refKey,
+      tokenEstimate: block.tokenEstimate,
+      body: summarizePayloadForAudit(block.body),
+    })),
+    tools: (req.tools ?? []).map((tool) => ({
+      name: tool.name,
+      description: tool.description
+        ? summarizePayloadForAudit(tool.description)
+        : undefined,
+      inputSchema: summarizePayloadForAudit(tool.input_schema),
+    })),
+  }
+}
+
+function llmProviderMeta(
+  req: Pick<LlmTestConnectionRequest, 'provider' | 'baseUrl' | 'timeoutMs'>,
+): Record<string, unknown> {
+  return {
+    provider: req.provider,
+    baseUrl: req.baseUrl,
+    timeoutMs: req.timeoutMs,
+  }
+}
+
 export function registerLlmIpc(): void {
   ipcMain.handle('llm:invoke', async (_event, req: unknown): Promise<LlmInvokeResult> => {
+    const startedAt = Date.now()
     if (!isValidRequest(req)) {
+      writeAuditEvent({
+        category: 'llm',
+        action: 'invoke',
+        status: 'error',
+        durationMs: 0,
+        metadata: { invalidPayload: true },
+        error: 'Invalid LLM invoke request payload',
+      })
       return {
         success: false,
         error: 'Invalid LLM invoke request payload',
         durationMs: 0,
       }
     }
-    return invoke(req)
+    const metadata = llmInvokeAuditMeta(req)
+    writeAuditEvent({
+      category: 'llm',
+      action: 'invoke',
+      status: 'started',
+      metadata,
+    })
+    const result = await invoke(req)
+    writeAuditEvent({
+      category: 'llm',
+      action: 'invoke',
+      status: result.success ? 'success' : 'error',
+      durationMs: result.durationMs || Date.now() - startedAt,
+      metadata: {
+        ...metadata,
+        ...(result.success
+          ? {
+              inputTokens: result.usage.inputTokens,
+              outputTokens: result.usage.outputTokens,
+              toolCallCount: result.toolCalls?.length ?? 0,
+              response: summarizePayloadForAudit(result.content),
+            }
+          : {
+              status: result.status,
+            }),
+      },
+      ...(!result.success ? { error: result.error } : {}),
+    })
+    return result
   })
 
   ipcMain.handle(
     'llm:test-connection',
     async (_event, req: unknown): Promise<LlmTestConnectionResult> => {
+      const startedAt = Date.now()
       if (!isValidTestRequest(req)) {
+        writeAuditEvent({
+          category: 'llm',
+          action: 'test_connection',
+          status: 'error',
+          durationMs: 0,
+          metadata: { invalidPayload: true },
+          error: 'Invalid test-connection request payload',
+        })
         return {
           success: false,
           error: 'Invalid test-connection request payload',
           durationMs: 0,
         }
       }
-      return testConnection(req)
+      const metadata = llmProviderMeta(req)
+      writeAuditEvent({
+        category: 'llm',
+        action: 'test_connection',
+        status: 'started',
+        metadata,
+      })
+      const result = await testConnection(req)
+      writeAuditEvent({
+        category: 'llm',
+        action: 'test_connection',
+        status: result.success ? 'success' : 'error',
+        durationMs: result.durationMs || Date.now() - startedAt,
+        metadata: {
+          ...metadata,
+          ...(result.success ? { modelCount: result.modelCount } : { status: result.status }),
+        },
+        ...(!result.success ? { error: result.error } : {}),
+      })
+      return result
     },
   )
 
   ipcMain.handle(
     'llm:list-models',
     async (_event, req: unknown): Promise<LlmListModelsResult> => {
+      const startedAt = Date.now()
       if (!isValidListModelsRequest(req)) {
+        writeAuditEvent({
+          category: 'llm',
+          action: 'list_models',
+          status: 'error',
+          durationMs: 0,
+          metadata: { invalidPayload: true },
+          error: 'Invalid list-models request payload',
+        })
         return {
           success: false,
           error: 'Invalid list-models request payload',
           durationMs: 0,
         }
       }
-      return listModels(req)
+      const metadata = llmProviderMeta(req)
+      writeAuditEvent({
+        category: 'llm',
+        action: 'list_models',
+        status: 'started',
+        metadata,
+      })
+      const result = await listModels(req)
+      writeAuditEvent({
+        category: 'llm',
+        action: 'list_models',
+        status: result.success ? 'success' : 'error',
+        durationMs: result.durationMs || Date.now() - startedAt,
+        metadata: {
+          ...metadata,
+          ...(result.success ? { modelCount: result.models.length } : { status: result.status }),
+        },
+        ...(!result.success ? { error: result.error } : {}),
+      })
+      return result
     },
   )
 
@@ -94,9 +238,28 @@ export function registerLlmIpc(): void {
     'llm:stream-start',
     (event, req: unknown): StreamStartResult => {
       if (!isValidRequest(req)) {
+        writeAuditEvent({
+          category: 'llm',
+          action: 'stream_start',
+          status: 'error',
+          metadata: { invalidPayload: true },
+          error: 'Invalid LLM stream request payload',
+        })
         return { ok: false, error: 'Invalid LLM stream request payload' }
       }
-      return startStream(req, event.sender)
+      const metadata = llmInvokeAuditMeta(req)
+      const result = startStream(req, event.sender)
+      writeAuditEvent({
+        category: 'llm',
+        action: 'stream_start',
+        status: result.ok ? 'started' : 'error',
+        metadata: {
+          ...metadata,
+          ...(result.ok ? { streamId: result.streamId } : {}),
+        },
+        ...(!result.ok ? { error: result.error } : {}),
+      })
+      return result
     },
   )
 
@@ -104,6 +267,12 @@ export function registerLlmIpc(): void {
     'llm:stream-abort',
     (_event, streamId: unknown): void => {
       if (typeof streamId === 'string') {
+        writeAuditEvent({
+          category: 'llm',
+          action: 'stream_abort',
+          status: 'aborted',
+          metadata: { streamId },
+        })
         abortStream(streamId)
       }
     },

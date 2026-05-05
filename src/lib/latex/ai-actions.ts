@@ -115,6 +115,7 @@ export async function runSelectionAction(
       userMessage,
       transcript: [],
       sessionId: req.sessionId ?? null,
+      auditSource: 'creator-latex',
     })
     if (!result.success) {
       return { ok: false, content: '', error: result.error ?? 'LLM call failed' }

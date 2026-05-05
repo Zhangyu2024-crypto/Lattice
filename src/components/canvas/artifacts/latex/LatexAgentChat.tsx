@@ -150,6 +150,7 @@ export default function LatexAgentChat({
           userMessage,
           transcript: [],
           sessionId,
+          auditSource: 'creator-latex',
         })
         if (!result.success) {
           setTurns((prev) =>

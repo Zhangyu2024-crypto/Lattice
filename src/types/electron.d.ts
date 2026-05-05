@@ -104,6 +104,7 @@ export interface LlmInvokeRequestPayload {
    * no thinking is requested.
    */
   reasoningEffort?: 'low' | 'medium' | 'high'
+  auditSource?: 'chat' | 'agent' | 'creator-latex' | 'compute'
 }
 
 export type LlmInvokeResultPayload =
@@ -680,6 +681,29 @@ export type ResearchExportPdfResult =
   | { ok: false; canceled: true }
   | { ok: false; error: string }
 
+export interface AuditStatusPayload {
+  enabled: boolean
+  acceptedAgreementVersion: string | null
+  currentAgreementVersion: string
+  retentionDays: number
+  logDir: string
+}
+
+export interface AuditConfigurePayload {
+  enabled: boolean
+  acceptedAgreementVersion: string | null
+  currentAgreementVersion: string
+  retentionDays: number
+}
+
+export type AuditSimpleResult =
+  | { ok: true; logDir?: string }
+  | { ok: false; error: string }
+
+export type AuditExportResult =
+  | { ok: true; path: string; fileCount: number }
+  | { ok: false; error: string }
+
 /** A streamed event from the worker tagged with the originating request
  *  id (when the worker emits it under one). Renderer subscribers should
  *  filter by `event` + `id` to react only to relevant traffic. */
@@ -977,6 +1001,13 @@ declare global {
       issueApprovalToken: (
         req: ApprovalTokenIssueRequest,
       ) => Promise<ApprovalTokenIssueResult>
+      auditGetStatus: () => Promise<AuditStatusPayload>
+      auditConfigure: (
+        payload: AuditConfigurePayload,
+      ) => Promise<AuditStatusPayload>
+      auditOpenLogDir: () => Promise<AuditSimpleResult>
+      auditClearLogs: () => Promise<AuditSimpleResult>
+      auditExportLogs: () => Promise<AuditExportResult>
       // ─── Workspace bash ──────────────────────────────────────────
       workspaceBash: (
         req: WorkspaceBashRequest,

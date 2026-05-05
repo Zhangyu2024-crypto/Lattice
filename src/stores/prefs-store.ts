@@ -4,6 +4,7 @@ import type { ComposerMode } from '../types/llm'
 import { genShortId } from '../lib/id-gen'
 import type { PermissionMode } from '../types/permission-mode'
 import { PERMISSION_MODES } from '../types/permission-mode'
+import { USER_AGREEMENT_VERSION } from '../lib/user-agreement'
 
 export interface ParamPreset {
   id: string
@@ -62,12 +63,20 @@ export interface AgentApprovalPrefs {
   hostExec: 'auto' | 'ask'
 }
 
+export interface PrivacyAuditPrefs {
+  acceptedAgreementVersion: string | null
+  acceptedAt: string | null
+  auditLoggingEnabled: boolean
+  auditRetentionDays: number
+}
+
 interface PrefsState {
   theme: Theme
   presets: ParamPreset[]
   composerMode: ComposerMode
   layout: LayoutPrefs
   agentApproval: AgentApprovalPrefs
+  privacy: PrivacyAuditPrefs
   /** Session-level approval preset; a single dropdown overrides per-tool
    *  ask/auto behavior for everything in the chat. See
    *  `src/types/permission-mode.ts` for the 4 modes and their matrix. */
@@ -82,11 +91,26 @@ interface PrefsState {
   renamePreset: (id: string, name: string) => void
   setAgentApproval: (patch: Partial<AgentApprovalPrefs>) => void
   setPermissionMode: (mode: PermissionMode) => void
+  acceptUserAgreement: (opts?: { auditLoggingEnabled?: boolean }) => void
+  setPrivacyAudit: (
+    patch: Partial<Pick<PrivacyAuditPrefs, 'auditLoggingEnabled' | 'auditRetentionDays'>>,
+  ) => void
 }
 
 const DEFAULT_AGENT_APPROVAL: AgentApprovalPrefs = {
   localWrite: 'auto',
   hostExec: 'ask',
+}
+
+export const DEFAULT_AUDIT_RETENTION_DAYS = 30
+export const AUDIT_RETENTION_MIN_DAYS = 1
+export const AUDIT_RETENTION_MAX_DAYS = 365
+
+const DEFAULT_PRIVACY: PrivacyAuditPrefs = {
+  acceptedAgreementVersion: null,
+  acceptedAt: null,
+  auditLoggingEnabled: false,
+  auditRetentionDays: DEFAULT_AUDIT_RETENTION_DAYS,
 }
 
 const genId = () => genShortId('prs', 4)
@@ -153,6 +177,30 @@ const normalizeRightRailTab = (value: unknown): RightRailTab =>
 const clampInt = (value: unknown, fallback: number, min: number, max: number): number => {
   if (typeof value !== 'number' || !Number.isFinite(value)) return fallback
   return Math.round(Math.max(min, Math.min(max, value)))
+}
+
+const normalizePrivacy = (privacy?: Partial<PrivacyAuditPrefs>): PrivacyAuditPrefs => {
+  const acceptedAgreementVersion =
+    typeof privacy?.acceptedAgreementVersion === 'string' &&
+    privacy.acceptedAgreementVersion.length > 0
+      ? privacy.acceptedAgreementVersion
+      : null
+  return {
+    acceptedAgreementVersion,
+    acceptedAt:
+      typeof privacy?.acceptedAt === 'string' && privacy.acceptedAt.length > 0
+        ? privacy.acceptedAt
+        : null,
+    auditLoggingEnabled:
+      acceptedAgreementVersion === USER_AGREEMENT_VERSION &&
+      privacy?.auditLoggingEnabled === true,
+    auditRetentionDays: clampInt(
+      privacy?.auditRetentionDays,
+      DEFAULT_PRIVACY.auditRetentionDays,
+      AUDIT_RETENTION_MIN_DAYS,
+      AUDIT_RETENTION_MAX_DAYS,
+    ),
+  }
 }
 
 // Coerce an untrusted layout patch (from migrate or setLayout) into a
@@ -222,6 +270,7 @@ export const usePrefsStore = create<PrefsState>()(
       composerMode: 'agent',
       layout: { ...DEFAULT_LAYOUT },
       agentApproval: { ...DEFAULT_AGENT_APPROVAL },
+      privacy: { ...DEFAULT_PRIVACY },
       permissionMode: 'normal',
 
       setTheme: (theme) => set({ theme }),
@@ -239,6 +288,19 @@ export const usePrefsStore = create<PrefsState>()(
       setAgentApproval: (patch) =>
         set((state) => ({
           agentApproval: { ...state.agentApproval, ...patch },
+        })),
+      acceptUserAgreement: (opts) =>
+        set((state) => ({
+          privacy: normalizePrivacy({
+            ...state.privacy,
+            acceptedAgreementVersion: USER_AGREEMENT_VERSION,
+            acceptedAt: new Date().toISOString(),
+            auditLoggingEnabled: opts?.auditLoggingEnabled ?? false,
+          }),
+        })),
+      setPrivacyAudit: (patch) =>
+        set((state) => ({
+          privacy: normalizePrivacy({ ...state.privacy, ...patch }),
         })),
 
       // Accepts a partial patch; normalises so callers can't persist NaN /
@@ -269,17 +331,22 @@ export const usePrefsStore = create<PrefsState>()(
     }),
     {
       name: 'lattice.prefs',
-      version: 17,
+      version: 18,
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         ...state,
         permissionMode: 'normal' as PermissionMode,
       }),
-      merge: (persisted, current) => ({
-        ...current,
-        ...(persisted as Partial<PrefsState>),
-        permissionMode: 'normal' as PermissionMode,
-      }),
+      merge: (persisted, current) => {
+        const incoming = (persisted ?? {}) as Partial<PrefsState>
+        return {
+          ...current,
+          ...incoming,
+          permissionMode: 'normal' as PermissionMode,
+          layout: normalizeLayout(incoming.layout),
+          privacy: normalizePrivacy(incoming.privacy),
+        }
+      },
       // v2 introduces `layout`. v3 extends with inspector visibility + width.
       // v4 adds `layout.activeView`. v5 drops `agentModel` (moved to
       // llm-config-store.agent.{providerId,modelId}). v6 removes the old
@@ -305,12 +372,15 @@ export const usePrefsStore = create<PrefsState>()(
       // vertical splitter.
       // v17 retires Creator as a sidebar view. The activity-bar Creator
       // button now opens the dedicated LaTeX document surface directly.
+      // v18 adds user agreement + local audit logging preferences. Audit is
+      // disabled by default until the current agreement version is accepted.
       // migrate-forward fills defaults via normalizeLayout so legacy
       // persisted states round-trip cleanly.
       migrate: (persistedState) => {
         const state = (persistedState ?? {}) as Partial<PrefsState> & {
           agentModel?: unknown
           layout?: Partial<LayoutPrefs>
+          privacy?: Partial<PrivacyAuditPrefs>
         }
         const { agentModel: _legacyAgentModel, ...rest } = state
         void _legacyAgentModel
@@ -337,6 +407,7 @@ export const usePrefsStore = create<PrefsState>()(
         return {
           ...rest,
           composerMode,
+          privacy: normalizePrivacy(state.privacy),
           layout: normalizeLayout({
             ...state.layout,
             activeView,
