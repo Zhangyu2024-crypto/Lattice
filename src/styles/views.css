@@ -3281,39 +3281,7 @@
   line-height: 1.45;
 }
 
-/* ── Privacy tab ─────────────────────────────────────────────────── */
-
-.settings-privacy-retention {
-  max-width: 120px;
-}
-
-.settings-privacy-field-note {
-  margin-left: 8px;
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-
-.settings-privacy-path {
-  display: block;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  padding: 6px 8px;
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
-  background: var(--color-bg-input);
-  color: var(--color-text-secondary);
-  font-size: var(--text-xs);
-}
-
-.settings-privacy-actions {
-  flex-wrap: wrap;
-}
-
-.settings-privacy-danger {
-  background: color-mix(in srgb, #dc2626 82%, var(--color-accent));
-}
-
-/* ── Account tab: login + usage summary ────────────────────────────── */
+/* ── Account tab: login + connection summary ───────────────────────── */
 
 .settings-account-root {
   display: flex;
@@ -3436,44 +3404,6 @@
   margin-top: 3px;
   color: var(--color-text-muted);
   font-size: var(--text-xs);
-}
-
-.settings-account-usage {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-bg-sidebar);
-}
-
-.settings-account-progress-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--color-text-secondary);
-  font-size: var(--text-sm);
-}
-
-.settings-account-progress-head strong {
-  color: var(--color-text-primary);
-  font-family: var(--font-mono);
-}
-
-.settings-account-progress {
-  height: 7px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--color-border);
-}
-
-.settings-account-progress-fill {
-  display: block;
-  width: var(--settings-account-progress-width);
-  height: 100%;
-  background: var(--settings-account-progress-bg);
 }
 
 .settings-account-detail-grid {

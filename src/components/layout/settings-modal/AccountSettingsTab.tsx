@@ -4,10 +4,8 @@ import {
   ShieldCheck,
   Sparkles,
 } from 'lucide-react'
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import {
-  colorForPct,
-  dailyBudgetLabel,
   formatRelativeDate,
   lastCallLabel,
   useAccountStats,
@@ -63,34 +61,6 @@ export default function AccountSettingsTab() {
             value={stats.todayUsageLabel}
             detail={stats.todayUsageDetail}
           />
-        </div>
-      </Section>
-
-      <Section title="Usage and limits">
-        <div className="settings-account-usage">
-          <div className="settings-account-progress-head">
-            <span>{dailyBudgetLabel(stats.budget.daily)}</span>
-            <strong>{Math.round(stats.budgetPct * 100)}%</strong>
-          </div>
-          <div className="settings-account-progress">
-            <span
-              className="settings-account-progress-fill"
-              style={
-                {
-                  '--settings-account-progress-width': `${Math.max(2, stats.budgetPct * 100)}%`,
-                  '--settings-account-progress-bg': colorForPct(stats.budgetPct),
-                } as CSSProperties
-              }
-            />
-          </div>
-          <div className="settings-account-detail-grid">
-            <DetailRow label="Enabled connections" value={`${stats.enabledProviders} / ${stats.providers.length}`} />
-            <DetailRow label="Available routes" value={String(stats.totalModels)} />
-            <DetailRow label="Today" value={stats.todayUsageDetail} />
-            <DetailRow label="All time" value={stats.allTimeUsageDetail} />
-            <DetailRow label="Total tokens" value={stats.allTimeUsageLabel} />
-            <DetailRow label="Last call" value={lastCallLabel(stats.lastRecord)} />
-          </div>
         </div>
       </Section>
 

@@ -9,7 +9,6 @@ import AccountSettingsTab from './settings-modal/AccountSettingsTab'
 import GeneralSettingsTab from './settings-modal/GeneralSettingsTab'
 import ComputeSettingsTab from './settings-modal/ComputeSettingsTab'
 import ExtensionsSettingsTab from './settings-modal/ExtensionsSettingsTab'
-import PrivacySettingsTab from './settings-modal/PrivacySettingsTab'
 import { summariseHealth } from './settings-modal/helpers'
 import {
   SETTINGS_TABS,
@@ -100,9 +99,6 @@ export default function SettingsModal({
           onTestCompute={handleTestCompute}
         />
       )
-      break
-    case 'privacy':
-      tabContent = <PrivacySettingsTab />
       break
     case 'models':
       tabContent = <ModelsTab />
