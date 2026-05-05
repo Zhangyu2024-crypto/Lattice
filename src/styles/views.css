@@ -3319,9 +3319,7 @@
 }
 
 .settings-account-name,
-.settings-account-subtitle,
-.settings-account-card-value,
-.settings-account-card-detail {
+.settings-account-subtitle {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3365,45 +3363,6 @@
 
 .settings-account-status--off {
   color: var(--color-text-muted);
-}
-
-.settings-account-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.settings-account-card {
-  min-width: 0;
-  padding: 11px;
-  border: 1px solid var(--color-border);
-  border-radius: 7px;
-  background: var(--color-bg-sidebar);
-}
-
-.settings-account-card-label {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
-}
-
-.settings-account-card-label svg {
-  flex: 0 0 auto;
-}
-
-.settings-account-card-value {
-  margin-top: 8px;
-  color: var(--color-text-primary);
-  font-size: var(--text-sm);
-  font-weight: 650;
-}
-
-.settings-account-card-detail {
-  margin-top: 3px;
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
 }
 
 .settings-account-detail-grid {

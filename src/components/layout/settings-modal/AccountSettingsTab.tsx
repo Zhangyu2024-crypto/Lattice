@@ -1,10 +1,4 @@
-import {
-  Gauge,
-  MessageSquare,
-  ShieldCheck,
-  Sparkles,
-} from 'lucide-react'
-import type { ReactNode } from 'react'
+import { ShieldCheck } from 'lucide-react'
 import {
   formatRelativeDate,
   lastCallLabel,
@@ -35,44 +29,15 @@ export default function AccountSettingsTab() {
         </div>
       </Section>
 
-      <Section title="Connection">
-        <div className="settings-account-grid">
-          <MetricCard
-            icon={<ShieldCheck size={15} />}
-            label="Desktop session"
-            value={stats.sessionLabel}
-            detail={stats.sessionDetail}
-          />
-          <MetricCard
-            icon={<ShieldCheck size={15} />}
-            label="Account provider"
-            value={stats.providerLabel}
-            detail={stats.providerDetail}
-          />
-          <MetricCard
-            icon={<Sparkles size={15} />}
-            label="Service connection"
-            value={stats.serviceLabel}
-            detail={stats.serviceDetail}
-          />
-          <MetricCard
-            icon={<Gauge size={15} />}
-            label="Daily usage"
-            value={stats.todayUsageLabel}
-            detail={stats.todayUsageDetail}
-          />
-        </div>
-      </Section>
-
-      <Section title="Account record">
+      <Section title="Details">
         <div className="settings-account-record">
           <DetailRow
             label="Username"
             value={stats.authenticated ? stats.authSession?.username ?? 'Signed in' : 'Not signed in'}
           />
           <DetailRow
-            label="Desktop session"
-            value={stats.sessionLabel}
+            label="Connection"
+            value={stats.providerLabel}
           />
           <DetailRow
             label="Saved"
@@ -83,38 +48,11 @@ export default function AccountSettingsTab() {
             }
           />
           <DetailRow
-            label="Last request"
+            label="Last used"
             value={lastCallLabel(stats.lastRecord)}
           />
-          <div className="settings-account-record-note">
-            <MessageSquare size={14} aria-hidden />
-            <span>Usage is tracked locally from Lattice workspace calls made here.</span>
-          </div>
         </div>
       </Section>
-    </div>
-  )
-}
-
-function MetricCard({
-  icon,
-  label,
-  value,
-  detail,
-}: {
-  icon: ReactNode
-  label: string
-  value: string
-  detail: string
-}) {
-  return (
-    <div className="settings-account-card">
-      <div className="settings-account-card-label">
-        {icon}
-        <span>{label}</span>
-      </div>
-      <div className="settings-account-card-value" title={value}>{value}</div>
-      <div className="settings-account-card-detail" title={detail}>{detail}</div>
     </div>
   )
 }
