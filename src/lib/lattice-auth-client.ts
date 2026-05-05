@@ -5,11 +5,18 @@ import {
   getPricingCatalog,
 } from '@/lib/model-pricing'
 import { errorMessage } from '@/lib/error-message'
+import {
+  createLatticeTraceId,
+  sha256Hex,
+} from '@/lib/lattice-trace'
+import { USER_AGREEMENT_VERSION } from '@/lib/user-agreement'
 import type { LLMProvider } from '@/types/llm'
 import type {
   LatticeAuthSessionPayload,
   LlmListModelsResultPayload,
 } from '@/types/electron'
+import { usePrefsStore } from '@/stores/prefs-store'
+import { useWorkspaceStore } from '@/stores/workspace-store'
 
 export const LATTICE_AUTH_API_KEY_REF = 'lattice-secure-token'
 export const LATTICE_AUTH_PROVIDER_ID = 'lattice-blog'
@@ -97,10 +104,21 @@ export async function connectLatticeAuthProviderModels(
 
   let result: LlmListModelsResultPayload
   try {
+    const workspaceRootPath = useWorkspaceStore.getState().rootPath
+    const acceptedConsent =
+      usePrefsStore.getState().privacy.acceptedAgreementVersion ===
+      USER_AGREEMENT_VERSION
     result = await api.llmListModels({
       provider: 'openai-compatible',
       apiKey: provider.apiKey?.trim() ?? '',
       baseUrl: provider.baseUrl.trim(),
+      traceId: createLatticeTraceId(),
+      module: 'agent',
+      operation: 'list_models',
+      workspaceIdHash: workspaceRootPath
+        ? await sha256Hex(workspaceRootPath)
+        : null,
+      consentVersion: acceptedConsent ? USER_AGREEMENT_VERSION : null,
     })
   } catch (err) {
     return {

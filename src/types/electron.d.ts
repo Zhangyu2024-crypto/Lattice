@@ -104,7 +104,13 @@ export interface LlmInvokeRequestPayload {
    * no thinking is requested.
    */
   reasoningEffort?: 'low' | 'medium' | 'high'
-  auditSource?: 'chat' | 'agent' | 'creator-latex' | 'compute'
+  traceId?: string
+  module?: 'agent' | 'creator' | 'latex' | 'workspace' | 'compute' | 'research' | 'library'
+  operation?: string
+  sessionId?: string | null
+  artifactId?: string | null
+  workspaceIdHash?: string | null
+  consentVersion?: string | null
 }
 
 export type LlmInvokeResultPayload =
@@ -137,6 +143,13 @@ export interface LlmTestConnectionRequestPayload {
   apiKey: string
   baseUrl: string
   timeoutMs?: number
+  traceId?: string
+  module?: 'agent' | 'creator' | 'latex' | 'workspace' | 'compute' | 'research' | 'library'
+  operation?: string
+  sessionId?: string | null
+  artifactId?: string | null
+  workspaceIdHash?: string | null
+  consentVersion?: string | null
 }
 
 export type LlmTestConnectionResultPayload =
@@ -169,6 +182,13 @@ export interface LlmListModelsRequestPayload {
   apiKey: string
   baseUrl: string
   timeoutMs?: number
+  traceId?: string
+  module?: 'agent' | 'creator' | 'latex' | 'workspace' | 'compute' | 'research' | 'library'
+  operation?: string
+  sessionId?: string | null
+  artifactId?: string | null
+  workspaceIdHash?: string | null
+  consentVersion?: string | null
 }
 
 export type LlmListModelsResultPayload =

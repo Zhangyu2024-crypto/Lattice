@@ -19,6 +19,10 @@ import {
   summarizePayloadForAudit,
   writeAuditEvent,
 } from './audit-writer'
+import {
+  buildLatticeTraceContext,
+  latticeTraceAuditMetadata,
+} from './lattice-trace'
 
 // Basic shape guard — the renderer is trusted (single-origin) but we still
 // narrow the payload so a malformed caller gets a structured error instead
@@ -62,12 +66,13 @@ function summarizeMessages(messages: LlmInvokeRequest['messages']): unknown {
 }
 
 function llmInvokeAuditMeta(req: LlmInvokeRequest): Record<string, unknown> {
+  const trace = buildLatticeTraceContext(req)
   return {
+    ...latticeTraceAuditMetadata(trace),
     provider: req.provider,
     baseUrl: req.baseUrl,
     model: req.model,
     mode: req.mode ?? 'dialog',
-    auditSource: (req as { auditSource?: unknown }).auditSource,
     maxTokens: req.maxTokens,
     temperature: req.temperature,
     timeoutMs: req.timeoutMs,
@@ -91,10 +96,16 @@ function llmInvokeAuditMeta(req: LlmInvokeRequest): Record<string, unknown> {
   }
 }
 
+function traceIdFromMetadata(metadata: Record<string, unknown>): string | undefined {
+  return typeof metadata.trace_id === 'string' ? metadata.trace_id : undefined
+}
+
 function llmProviderMeta(
-  req: Pick<LlmTestConnectionRequest, 'provider' | 'baseUrl' | 'timeoutMs'>,
+  req: LlmTestConnectionRequest | LlmListModelsRequest,
 ): Record<string, unknown> {
+  const trace = buildLatticeTraceContext(req)
   return {
+    ...latticeTraceAuditMetadata(trace),
     provider: req.provider,
     baseUrl: req.baseUrl,
     timeoutMs: req.timeoutMs,
@@ -125,6 +136,7 @@ export function registerLlmIpc(): void {
       action: 'invoke',
       status: 'started',
       metadata,
+      traceId: traceIdFromMetadata(metadata),
     })
     const result = await invoke(req)
     writeAuditEvent({
@@ -145,6 +157,7 @@ export function registerLlmIpc(): void {
               status: result.status,
             }),
       },
+      traceId: traceIdFromMetadata(metadata),
       ...(!result.success ? { error: result.error } : {}),
     })
     return result
@@ -175,6 +188,7 @@ export function registerLlmIpc(): void {
         action: 'test_connection',
         status: 'started',
         metadata,
+        traceId: traceIdFromMetadata(metadata),
       })
       const result = await testConnection(req)
       writeAuditEvent({
@@ -186,6 +200,7 @@ export function registerLlmIpc(): void {
           ...metadata,
           ...(result.success ? { modelCount: result.modelCount } : { status: result.status }),
         },
+        traceId: traceIdFromMetadata(metadata),
         ...(!result.success ? { error: result.error } : {}),
       })
       return result
@@ -217,6 +232,7 @@ export function registerLlmIpc(): void {
         action: 'list_models',
         status: 'started',
         metadata,
+        traceId: traceIdFromMetadata(metadata),
       })
       const result = await listModels(req)
       writeAuditEvent({
@@ -228,6 +244,7 @@ export function registerLlmIpc(): void {
           ...metadata,
           ...(result.success ? { modelCount: result.models.length } : { status: result.status }),
         },
+        traceId: traceIdFromMetadata(metadata),
         ...(!result.success ? { error: result.error } : {}),
       })
       return result
@@ -257,6 +274,7 @@ export function registerLlmIpc(): void {
           ...metadata,
           ...(result.ok ? { streamId: result.streamId } : {}),
         },
+        traceId: traceIdFromMetadata(metadata),
         ...(!result.ok ? { error: result.error } : {}),
       })
       return result

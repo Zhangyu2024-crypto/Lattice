@@ -977,6 +977,7 @@ export default function LatexDocumentCard({
                   errors={compileSnapshot.errors}
                   warnings={compileSnapshot.warnings}
                   sessionId={sessionId}
+                  artifactId={artifact.id}
                   onApplyFile={applyFileContents}
                   initialPrompt={aiAutoPrompt}
                   onInitialPromptConsumed={() => setAiAutoPrompt(null)}
@@ -1117,6 +1118,7 @@ export default function LatexDocumentCard({
         errors={compileSnapshot.errors}
         warnings={compileSnapshot.warnings}
         sessionId={sessionId}
+        artifactId={artifact.id}
         onApplyFile={applyFileContents}
         initialPrompt={aiAutoPrompt}
         onInitialPromptConsumed={() => setAiAutoPrompt(null)}

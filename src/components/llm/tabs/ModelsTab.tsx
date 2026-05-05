@@ -5,6 +5,11 @@ import { useLLMConfigStore } from '../../../stores/llm-config-store'
 import { toast } from '../../../stores/toast-store'
 import { errorMessage } from '../../../lib/error-message'
 import {
+  createLatticeTraceId,
+  sha256Hex,
+} from '../../../lib/lattice-trace'
+import { USER_AGREEMENT_VERSION } from '../../../lib/user-agreement'
+import {
   applyPricingToModels,
   getCachedPricingCatalog,
   getPricingCatalog,
@@ -19,6 +24,8 @@ import {
   disableLatticeAuthProvider,
   upsertLatticeAuthProvider,
 } from '../../../lib/lattice-auth-client'
+import { usePrefsStore } from '../../../stores/prefs-store'
+import { useWorkspaceStore } from '../../../stores/workspace-store'
 import ActiveModelBanner from './models/ActiveModelBanner'
 import GenerationTabs from './models/GenerationTabs'
 import NewProviderForm from './models/NewProviderForm'
@@ -287,10 +294,21 @@ function ProvidersSection() {
     setStatus(provider.id, { state: 'running' })
     let result: LlmListModelsResultPayload
     try {
+      const workspaceRootPath = useWorkspaceStore.getState().rootPath
+      const acceptedConsent =
+        usePrefsStore.getState().privacy.acceptedAgreementVersion ===
+        USER_AGREEMENT_VERSION
       result = await api.llmListModels({
         provider: provider.type as 'anthropic' | 'openai' | 'openai-compatible',
         apiKey: provider.apiKey.trim(),
         baseUrl: provider.baseUrl.trim(),
+        traceId: createLatticeTraceId(),
+        module: 'agent',
+        operation: 'list_models',
+        workspaceIdHash: workspaceRootPath
+          ? await sha256Hex(workspaceRootPath)
+          : null,
+        consentVersion: acceptedConsent ? USER_AGREEMENT_VERSION : null,
       })
     } catch (err) {
       setStatus(provider.id, {

@@ -9,6 +9,10 @@ import type {
   ToolCallRequest,
 } from './llm-proxy'
 import { resolveLatticeApiKeyForRequest } from './lattice-auth-store'
+import {
+  buildLatticeTraceContext,
+  latticeTraceHeaders,
+} from './lattice-trace'
 
 const DEFAULT_TIMEOUT_MS = 60_000
 
@@ -65,17 +69,22 @@ export async function invokeAnthropicSdk(
       maxRetries: 2,
     })
 
-    const response = await client.messages.create({
-      model: req.model,
-      max_tokens: effectiveMaxTokens,
-      temperature: effectiveTemperature,
-      ...(system ? { system } : {}),
-      messages: req.messages.map(toSdkMessage),
-      ...(tools ? { tools } : {}),
-      ...(thinkingEnabled
-        ? { thinking: { type: 'enabled' as const, budget_tokens: thinkingBudget } }
-        : {}),
-    })
+    const response = await client.messages.create(
+      {
+        model: req.model,
+        max_tokens: effectiveMaxTokens,
+        temperature: effectiveTemperature,
+        ...(system ? { system } : {}),
+        messages: req.messages.map(toSdkMessage),
+        ...(tools ? { tools } : {}),
+        ...(thinkingEnabled
+          ? { thinking: { type: 'enabled' as const, budget_tokens: thinkingBudget } }
+          : {}),
+      },
+      {
+        headers: latticeTraceHeaders(buildLatticeTraceContext(req)),
+      },
+    )
 
     const durationMs = Date.now() - start
     const thinkingContent = extractThinkingContent(response.content)

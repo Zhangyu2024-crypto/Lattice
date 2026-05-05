@@ -48,6 +48,10 @@ import { assembleLlmContext } from './context-management/assembler'
 import { recordUsage } from './llm-chat/usage'
 import type { LlmChatRequest, LlmChatResult } from './llm-chat/types'
 import {
+  createLatticeTraceId,
+  sha256Hex,
+} from './lattice-trace'
+import {
   LATTICE_AUTH_API_KEY_REF,
   LATTICE_AUTH_PROVIDER_ID,
 } from './lattice-auth-client'
@@ -57,6 +61,9 @@ import {
   resolveEffectiveBinding,
   useModelRouteStore,
 } from './model-routing'
+import { usePrefsStore } from '../stores/prefs-store'
+import { useWorkspaceStore } from '../stores/workspace-store'
+import { USER_AGREEMENT_VERSION } from './user-agreement'
 
 // Re-export the public surface so existing callers (`./llm-chat`) keep
 // importing from the same module path. See `./llm-chat/*` for the
@@ -300,8 +307,22 @@ export async function sendLlmChat(
     ...(effective.reasoningEffort
       ? { reasoningEffort: effective.reasoningEffort }
       : {}),
-    ...(req.auditSource ? { auditSource: req.auditSource } : {}),
   }
+
+  const workspaceRootPath = useWorkspaceStore.getState().rootPath
+  const acceptedConsent =
+    usePrefsStore.getState().privacy.acceptedAgreementVersion ===
+    USER_AGREEMENT_VERSION
+  request.traceId = createLatticeTraceId()
+  request.module =
+    req.traceModule ?? (req.mode === 'agent' ? 'agent' : 'agent')
+  request.operation = req.traceOperation ?? 'chat'
+  request.sessionId = req.sessionId
+  request.artifactId = req.artifactId ?? null
+  request.consentVersion = acceptedConsent ? USER_AGREEMENT_VERSION : null
+  request.workspaceIdHash = workspaceRootPath
+    ? await sha256Hex(workspaceRootPath)
+    : null
 
   // ── Transport selection ─────────────────────────────────────────
   //

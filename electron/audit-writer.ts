@@ -34,6 +34,7 @@ export interface AuditEventInput {
   error?: unknown
   durationMs?: number
   requestId?: string
+  traceId?: string
 }
 
 export interface AuditConfig {
@@ -274,6 +275,11 @@ async function writeEventNow(input: AuditEventInput): Promise<void> {
   await cleanupOldLogs(now)
   const record = {
     id: input.requestId ?? randomUUID(),
+    trace_id:
+      input.traceId ??
+      (typeof input.metadata?.trace_id === 'string'
+        ? input.metadata.trace_id
+        : undefined),
     timestamp: date.toISOString(),
     category: input.category,
     action: input.action,

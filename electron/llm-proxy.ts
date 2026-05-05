@@ -11,6 +11,10 @@
 // from Electron safeStorage before dispatching the HTTPS request.
 
 import { resolveLatticeApiKeyForRequest } from './lattice-auth-store'
+import {
+  buildLatticeTraceContext,
+  latticeTraceHeaders,
+} from './lattice-trace'
 
 export type LlmProviderType = 'anthropic' | 'openai' | 'openai-compatible'
 
@@ -135,6 +139,13 @@ export interface LlmInvokeRequest {
    * no thinking is requested.
    */
   reasoningEffort?: 'low' | 'medium' | 'high'
+  traceId?: string
+  module?: 'agent' | 'creator' | 'latex' | 'workspace' | 'compute' | 'research' | 'library'
+  operation?: string
+  sessionId?: string | null
+  artifactId?: string | null
+  workspaceIdHash?: string | null
+  consentVersion?: string | null
 }
 
 export type LlmInvokeResult =
@@ -171,6 +182,13 @@ export interface LlmTestConnectionRequest {
   apiKey: string
   baseUrl: string
   timeoutMs?: number
+  traceId?: string
+  module?: 'agent' | 'creator' | 'latex' | 'workspace' | 'compute' | 'research' | 'library'
+  operation?: string
+  sessionId?: string | null
+  artifactId?: string | null
+  workspaceIdHash?: string | null
+  consentVersion?: string | null
 }
 
 export type LlmTestConnectionResult =
@@ -203,6 +221,13 @@ export interface LlmListModelsRequest {
   apiKey: string
   baseUrl: string
   timeoutMs?: number
+  traceId?: string
+  module?: 'agent' | 'creator' | 'latex' | 'workspace' | 'compute' | 'research' | 'library'
+  operation?: string
+  sessionId?: string | null
+  artifactId?: string | null
+  workspaceIdHash?: string | null
+  consentVersion?: string | null
 }
 
 export type LlmListModelsResult =
@@ -289,12 +314,14 @@ async function invokeAnthropic(req: LlmInvokeRequest): Promise<LlmInvokeResult> 
     body.tools = req.tools
   }
   try {
+    const traceHeaders = latticeTraceHeaders(buildLatticeTraceContext(req))
     const res = await fetchWithTimeout(url, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
+        ...traceHeaders,
       },
       body: JSON.stringify(body),
       timeoutMs: req.timeoutMs ?? DEFAULT_TIMEOUT_MS,
@@ -365,11 +392,13 @@ async function invokeOpenAI(req: LlmInvokeRequest): Promise<LlmInvokeResult> {
     body.tool_choice = 'auto'
   }
   try {
+    const traceHeaders = latticeTraceHeaders(buildLatticeTraceContext(req))
     const res = await fetchWithTimeout(url, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         authorization: `Bearer ${apiKey}`,
+        ...traceHeaders,
       },
       body: JSON.stringify(body),
       timeoutMs: req.timeoutMs ?? DEFAULT_TIMEOUT_MS,
@@ -457,9 +486,11 @@ export async function testConnection(
       ? {
           'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',
+          ...latticeTraceHeaders(buildLatticeTraceContext(req)),
         }
       : {
           authorization: `Bearer ${apiKey}`,
+          ...latticeTraceHeaders(buildLatticeTraceContext(req)),
         }
 
   try {
@@ -537,9 +568,11 @@ export async function listModels(
       ? {
           'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',
+          ...latticeTraceHeaders(buildLatticeTraceContext(req)),
         }
       : {
           authorization: `Bearer ${apiKey}`,
+          ...latticeTraceHeaders(buildLatticeTraceContext(req)),
         }
 
   try {

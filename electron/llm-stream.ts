@@ -22,6 +22,11 @@ import type {
 } from './llm-proxy'
 import { resolveLatticeApiKeyForRequest } from './lattice-auth-store'
 import { summarizePayloadForAudit, writeAuditEvent } from './audit-writer'
+import {
+  buildLatticeTraceContext,
+  latticeTraceAuditMetadata,
+  latticeTraceHeaders,
+} from './lattice-trace'
 
 // ── Stream bookkeeping ──────────────────────────────────────────────
 
@@ -97,6 +102,7 @@ async function runStream(
   sender: Electron.WebContents,
 ): Promise<void> {
   const start = Date.now()
+  const trace = buildLatticeTraceContext(req)
 
   try {
     const apiKey = await resolveLatticeApiKeyForRequest(req.apiKey, req.baseUrl)
@@ -137,7 +143,10 @@ async function runStream(
         messages: req.messages.map(toSdkMessage),
         ...(tools ? { tools } : {}),
       },
-      { signal: controller.signal },
+      {
+        signal: controller.signal,
+        headers: latticeTraceHeaders(trace),
+      },
     )
 
     // ── Wire up incremental events ──────────────────────────────
@@ -203,13 +212,14 @@ async function runStream(
       action: 'stream_complete',
       status: 'success',
       durationMs,
+      traceId: trace.traceId,
       metadata: {
         streamId,
+        ...latticeTraceAuditMetadata(trace),
         provider: req.provider,
         baseUrl: req.baseUrl,
         model: req.model,
         mode: req.mode ?? 'dialog',
-        auditSource: (req as { auditSource?: unknown }).auditSource,
         inputTokens: result.usage.inputTokens,
         outputTokens: result.usage.outputTokens,
         toolCallCount: toolCalls.length,
@@ -228,13 +238,14 @@ async function runStream(
       action: 'stream_complete',
       status: 'error',
       durationMs,
+      traceId: trace.traceId,
       metadata: {
         streamId,
+        ...latticeTraceAuditMetadata(trace),
         provider: req.provider,
         baseUrl: req.baseUrl,
         model: req.model,
         mode: req.mode ?? 'dialog',
-        auditSource: (req as { auditSource?: unknown }).auditSource,
         status: result.success ? undefined : result.status,
       },
       error: result.success ? undefined : result.error,

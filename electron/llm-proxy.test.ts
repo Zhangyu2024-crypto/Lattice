@@ -19,6 +19,13 @@ const baseOpenAiRequest = (): LlmInvokeRequest => ({
   messages: [{ role: 'user', content: 'Ping' }],
   maxTokens: 128,
   temperature: 0.2,
+  traceId: 'trace-test-1',
+  module: 'creator',
+  operation: 'creator_generate',
+  sessionId: 'ses_1',
+  artifactId: 'art_1',
+  workspaceIdHash: 'workspace_hash',
+  consentVersion: '2026-05-05',
 })
 
 const fetchCall = (
@@ -62,6 +69,13 @@ describe('llm-proxy OpenAI-compatible transport', () => {
     expect(init.headers).toMatchObject({
       'content-type': 'application/json',
       authorization: 'Bearer test-key',
+      'X-Lattice-Trace-Id': 'trace-test-1',
+      'X-Lattice-Module': 'creator',
+      'X-Lattice-Operation': 'creator_generate',
+      'X-Lattice-Session-Id': 'ses_1',
+      'X-Lattice-Artifact-Id': 'art_1',
+      'X-Lattice-Workspace-Id-Hash': 'workspace_hash',
+      'X-Lattice-Consent-Version': '2026-05-05',
     })
     expect(JSON.parse(String(init.body))).toEqual({
       model: 'test-model',
@@ -231,6 +245,9 @@ describe('llm-proxy OpenAI-compatible transport', () => {
         provider: 'openai-compatible',
         apiKey: 'test-key',
         baseUrl: 'https://compat.example',
+        traceId: 'trace-model-test',
+        module: 'agent',
+        operation: 'list_models',
       }),
     ).resolves.toMatchObject({ success: true, modelCount: 2 })
     await expect(
@@ -238,6 +255,9 @@ describe('llm-proxy OpenAI-compatible transport', () => {
         provider: 'openai-compatible',
         apiKey: 'test-key',
         baseUrl: 'https://compat.example/v1',
+        traceId: 'trace-model-list',
+        module: 'agent',
+        operation: 'list_models',
       }),
     ).resolves.toMatchObject({
       success: true,
@@ -251,7 +271,17 @@ describe('llm-proxy OpenAI-compatible transport', () => {
     const [listUrl, listInit] = fetchCall(fetchMock, 1)
     expect(testUrl).toBe('https://compat.example/v1/models')
     expect(listUrl).toBe('https://compat.example/v1/models')
-    expect(testInit.headers).toMatchObject({ authorization: 'Bearer test-key' })
-    expect(listInit.headers).toMatchObject({ authorization: 'Bearer test-key' })
+    expect(testInit.headers).toMatchObject({
+      authorization: 'Bearer test-key',
+      'X-Lattice-Trace-Id': 'trace-model-test',
+      'X-Lattice-Module': 'agent',
+      'X-Lattice-Operation': 'list_models',
+    })
+    expect(listInit.headers).toMatchObject({
+      authorization: 'Bearer test-key',
+      'X-Lattice-Trace-Id': 'trace-model-list',
+      'X-Lattice-Module': 'agent',
+      'X-Lattice-Operation': 'list_models',
+    })
   })
 })

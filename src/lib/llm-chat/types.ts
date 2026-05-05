@@ -6,6 +6,10 @@ import type { LlmMessagePayload } from '../../types/electron'
 import type { ComposerMode } from '../../types/llm'
 import type { MentionRef } from '../../types/mention'
 import type { TranscriptMessage } from '../../types/session'
+import type {
+  LatticeTraceModule,
+  LatticeTraceOperation,
+} from '../lattice-trace'
 
 /**
  * Only the schema surface of a `LocalTool` is ever sent over IPC —
@@ -76,10 +80,11 @@ export interface LlmChatRequest {
   /** Optional cancellation signal. Streaming calls are aborted at the IPC
    *  layer; one-shot calls return early on abort and ignore the late result. */
   signal?: AbortSignal
-  /** Optional audit classification for internal surfaces such as LaTeX
-   *  Creator. This is metadata only; prompts and file contents are still
-   *  summarized by the main-process audit writer. */
-  auditSource?: 'chat' | 'agent' | 'creator-latex' | 'compute'
+  /** Operation labels used to correlate local audit rows with chaxiejun
+   *  gateway API logs. Prompt/content is still summarized separately. */
+  traceModule?: LatticeTraceModule
+  traceOperation?: LatticeTraceOperation
+  artifactId?: string | null
 }
 
 export interface LlmChatResult {

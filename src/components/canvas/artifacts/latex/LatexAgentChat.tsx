@@ -42,6 +42,7 @@ interface Props {
   errors: LatexCompileError[]
   warnings: LatexCompileError[]
   sessionId: string
+  artifactId: string
   /** Replace the full contents of `path` with `content`. Parent owns the
    *  artifact store write + the CodeMirror view switch. */
   onApplyFile: (path: string, content: string) => void
@@ -56,6 +57,7 @@ export default function LatexAgentChat({
   errors,
   warnings,
   sessionId,
+  artifactId,
   onApplyFile,
   initialPrompt,
   onInitialPromptConsumed,
@@ -150,7 +152,9 @@ export default function LatexAgentChat({
           userMessage,
           transcript: [],
           sessionId,
-          auditSource: 'creator-latex',
+          artifactId,
+          traceModule: 'creator',
+          traceOperation: 'creator_generate',
         })
         if (!result.success) {
           setTurns((prev) =>
