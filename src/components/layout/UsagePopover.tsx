@@ -114,7 +114,7 @@ export default function UsagePopover({
     <div
       ref={rootRef}
       role="dialog"
-      aria-label="LLM usage and model switcher"
+      aria-label="Usage and service connection"
       className="usage-popover"
       style={
         {
@@ -125,11 +125,11 @@ export default function UsagePopover({
     >
       <div style={S.header}>
         <Gauge size={13} className="usage-popover-gauge" />
-        <span style={S.headerTitle}>LLM usage</span>
+        <span style={S.headerTitle}>Usage</span>
       </div>
 
       <section style={S.section}>
-        <div style={S.sectionLabel}>AI service</div>
+        <div style={S.sectionLabel}>Service connection</div>
         <div style={S.modelLine}>
           {publicModelLabel(resolved, 'Not configured')}
         </div>

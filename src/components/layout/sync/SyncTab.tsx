@@ -252,7 +252,7 @@ export default function SyncTab() {
       <div className="settings-modal-compute-intro">
         Sync your library and research reports via{' '}
         <strong>WebDAV</strong> or <strong>rclone</strong>.
-        Credentials are stored locally (file mode 0600).
+        Sign-in details are stored locally (file mode 0600).
       </div>
 
       {/* ── Connection config ── */}

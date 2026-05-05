@@ -6,7 +6,7 @@ export const USER_AGREEMENT_SECTIONS = [
   {
     title: 'Local activity records',
     body:
-      'Lattice may keep local records of actions that help explain how the app was used, including AI requests routed through configured providers, workspace file operations, Creator and LaTeX assistant actions, agent tool calls, plugin and MCP activity, workspace shell commands, and related app integrations.',
+      'Lattice may keep local records of actions that help explain how the app was used, including account-connected workspace requests, workspace file operations, Creator and LaTeX helper actions, agent tool calls, plugin and MCP activity, workspace shell commands, and related app integrations.',
   },
   {
     title: 'Where records are stored',
@@ -21,7 +21,7 @@ export const USER_AGREEMENT_SECTIONS = [
   {
     title: 'Third-party services',
     body:
-      'You may connect Lattice to LLM providers, MCP servers, plugins, sync backends, and other integrations. Data sent to those services is handled according to the provider, server, plugin, or tool you choose, in addition to Lattice settings.',
+      'You may connect Lattice to chaxiejun.xyz, MCP servers, plugins, sync backends, and other integrations. Data sent to those services is handled according to the provider, server, plugin, or tool you choose, in addition to Lattice settings.',
   },
   {
     title: 'Your controls',

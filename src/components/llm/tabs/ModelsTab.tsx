@@ -54,7 +54,7 @@ export default function ModelsTab() {
   )
 }
 
-// ─── Active model section (banner + generation tabs) ────────────────────
+// ─── Active route section (banner + generation tabs) ────────────────────
 
 function ActiveModelSection() {
   const providers = useLLMConfigStore((s) => s.providers)
@@ -115,44 +115,44 @@ function ActiveModelSection() {
     if (providers.length === 0) {
       return {
         variant: 'empty',
-        title: 'No providers configured',
-        detail: 'Add an LLM provider below to start using Lattice.',
+        title: 'No connections configured',
+        detail: 'Add a connection below to start using Lattice.',
       }
     }
     if (totalOptions === 0) {
       return {
         variant: 'needs-connect',
-        title: 'No models available yet',
+        title: 'No routes available yet',
         detail:
-          'Click "Connect" on a provider below to fetch its model catalog.',
+          'Click "Connect" on a connection below to fetch its route catalog.',
       }
     }
     if (currentKey && !validKeys.has(currentKey)) {
       return {
         variant: 'stale',
-        title: 'Selected model is no longer available',
+        title: 'Selected route is no longer available',
         detail:
-          'The saved default refers to a model that is not in the fetched catalog. Pick a new one below.',
+          'The saved default is not in the fetched catalog. Pick a new one below.',
       }
     }
     if (!currentKey) {
       return {
         variant: 'needs-pick',
-        title: 'Choose a default model',
-        detail: `${totalOptions} model${totalOptions === 1 ? '' : 's'} available across ${providers.length} provider${providers.length === 1 ? '' : 's'}.`,
+        title: 'Choose a default route',
+        detail: `${totalOptions} route${totalOptions === 1 ? '' : 's'} available across ${providers.length} connection${providers.length === 1 ? '' : 's'}.`,
       }
     }
     if (selectedSummary && (!selectedSummary.providerEnabled || !anyEnabled)) {
       return {
         variant: 'stale',
-        title: 'Selected provider is disabled',
-        detail: 'Enable it below, or pick another model.',
+        title: 'Selected connection is disabled',
+        detail: 'Enable it below, or pick another route.',
       }
     }
     return {
       variant: 'ready',
       title: 'chaxiejun.xyz is connected',
-      detail: 'Lattice routes AI requests through the connected account.',
+      detail: 'Lattice uses the connected account for workspace access.',
     }
   })()
 
@@ -160,9 +160,9 @@ function ActiveModelSection() {
     <section>
       <header className="llm-models-section-header">
         <div>
-          <div className="llm-models-heading">Active model</div>
+          <div className="llm-models-heading">Active route</div>
           <div className="llm-models-subheading">
-            One model drives all requests. Generation parameters are below.
+            One route is used by default. Generation parameters are below.
           </div>
         </div>
       </header>
@@ -269,7 +269,7 @@ function ProvidersSection() {
     if (!CONNECTABLE_TYPES.has(provider.type)) {
       setStatus(provider.id, {
         state: 'error',
-        message: `Provider type "${provider.type}" does not expose a model catalog`,
+        message: `Provider type "${provider.type}" does not expose a route catalog`,
       })
       return
     }
@@ -279,7 +279,7 @@ function ProvidersSection() {
     ) {
       setStatus(provider.id, {
         state: 'error',
-        message: 'Lattice secure credentials can only be used by the signed-in chaxiejun.xyz provider',
+        message: 'The signed-in chaxiejun.xyz connection cannot be reused by another provider',
       })
       return
     }
@@ -337,7 +337,7 @@ function ProvidersSection() {
         added: 0,
         updated: 0,
       })
-      toast.warn(`${provider.name}: connected but the provider returned no models`)
+      toast.warn(`${provider.name}: connected but no routes were returned`)
       if (!provider.enabled) enableProvider(provider.id, true)
       return
     }
@@ -489,7 +489,7 @@ function ProvidersSection() {
           status: connected.status,
         })
         const suffix = connected.status ? ` (HTTP ${connected.status})` : ''
-        toast.warn(`Model setup did not finish: ${connected.message}${suffix}`)
+        toast.warn(`Connection setup did not finish: ${connected.message}${suffix}`)
         return
       }
       if (connected.provider.models.length === 0) {
@@ -500,7 +500,7 @@ function ProvidersSection() {
           added: 0,
           updated: 0,
         })
-        toast.warn('Logged in, but chaxiejun.xyz returned no models')
+        toast.warn('Logged in, but chaxiejun.xyz returned no available routes')
         return
       }
       setStatus(connected.provider.id, {
@@ -544,10 +544,10 @@ function ProvidersSection() {
     <section>
       <header className="llm-models-section-header">
         <div>
-          <div className="llm-models-heading">Providers</div>
+          <div className="llm-models-heading">Connections</div>
           <div className="llm-models-subheading">
-            Add a provider, enter an API key, click <strong>Connect</strong>.
-            Lattice fetches the model catalog, looks up pricing, and picks a
+            Add a connection, enter an API key, click <strong>Connect</strong>.
+            Lattice fetches the route catalog, looks up pricing, and picks a
             default for you.
           </div>
           <PricingCatalogStatus
@@ -585,7 +585,7 @@ function ProvidersSection() {
             disabled={adding}
             leading={<Plus size={13} />}
           >
-            Add provider
+            Add connection
           </Button>
         </div>
       </header>
@@ -599,7 +599,7 @@ function ProvidersSection() {
 
       <div className="llm-models-list">
         {providers.length === 0 ? (
-          <div className="llm-models-empty">No providers configured yet.</div>
+          <div className="llm-models-empty">No connections configured yet.</div>
         ) : (
           providers.map((p) => (
             <ProviderCard

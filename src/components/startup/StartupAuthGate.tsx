@@ -64,13 +64,13 @@ export default function StartupAuthGate({ children }: Props) {
       if (cancelled?.()) return
       if (!connected.ok) {
         const suffix = connected.status ? ` (HTTP ${connected.status})` : ''
-        toast.warn(`Signed in as ${session.username}. Model setup can be retried later: ${connected.message}${suffix}`)
+        toast.warn(`Signed in as ${session.username}. Connection setup can be retried later: ${connected.message}${suffix}`)
         setState({ status: 'ready', session })
         return
       }
       if (connected.provider.models.length === 0) {
         toast.warn(
-          'Signed in, but chaxiejun.xyz returned no models for this desktop credential.',
+          'Signed in, but chaxiejun.xyz did not return an available connection for this desktop session.',
         )
         setState({ status: 'ready', session })
         return
@@ -153,9 +153,9 @@ export default function StartupAuthGate({ children }: Props) {
     state.status === 'checking'
       ? 'Checking the secure desktop session.'
       : state.status === 'setting-up'
-        ? `Preparing the model provider for ${state.session.username}.`
+        ? `Preparing the account connection for ${state.session.username}.`
         : state.status === 'setup-error'
-          ? `Signed in as ${state.session.username}, but model setup did not finish.`
+          ? `Signed in as ${state.session.username}, but connection setup did not finish.`
           : null
 
   return (
@@ -173,8 +173,8 @@ export default function StartupAuthGate({ children }: Props) {
             <h1>Connect your research workspace</h1>
             <p>
               Sign in with chaxiejun.xyz once. Lattice will use that account
-              connection for AI service access without showing private
-              credential details or model names in the app.
+              connection for workspace access without showing private sign-in
+              details or backend names in the app.
             </p>
           </div>
 
@@ -194,7 +194,7 @@ export default function StartupAuthGate({ children }: Props) {
                 {state.status === 'checking'
                   ? 'Checking session'
                   : state.status === 'setting-up'
-                    ? 'Setting up provider'
+                    ? 'Setting up account'
                   : loginRunning
                     ? 'Waiting for browser login'
                     : 'Login with chaxiejun.xyz'}
@@ -288,7 +288,7 @@ export default function StartupAuthGate({ children }: Props) {
               <div>
                 <strong>Secure sign-in</strong>
                 <span>
-                  Lattice keeps private credential details out of the visible
+                  Lattice keeps private sign-in details out of the visible
                   interface.
                 </span>
               </div>
@@ -298,8 +298,8 @@ export default function StartupAuthGate({ children }: Props) {
               <div>
                 <strong>Account ready</strong>
                 <span>
-                  chaxiejun.xyz is connected so Lattice can route AI requests
-                  through your account.
+                  chaxiejun.xyz is connected so Lattice can work through your
+                  account.
                 </span>
               </div>
             </div>

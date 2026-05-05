@@ -130,7 +130,7 @@ export default function AccountStatsMenu({ onOpenSettings }: Props) {
             />
             <InfoRow
               icon={<Sparkles size={13} />}
-              label="AI service"
+              label="Service"
               value={stats.serviceLabel}
               detail={stats.serviceDetail}
             />

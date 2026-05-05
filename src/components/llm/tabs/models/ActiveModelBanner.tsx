@@ -66,11 +66,11 @@ export default function ActiveModelBanner({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="llm-input llm-input--full llm-cursor-pointer llm-models-active-select"
-          aria-label="Default AI service"
+          aria-label="Default service connection"
         >
           <option value="">
             {variant === 'needs-pick' || variant === 'stale'
-              ? '— pick a model —'
+              ? '— pick a route —'
               : '(none)'}
           </option>
           {groups.map((g) => (

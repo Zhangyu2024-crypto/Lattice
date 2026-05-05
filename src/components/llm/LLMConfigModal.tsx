@@ -19,7 +19,7 @@ interface TabDef {
 }
 
 const TABS: readonly TabDef[] = [
-  { id: 'models', label: 'Models', icon: Cpu },
+  { id: 'models', label: 'Connections', icon: Cpu },
   { id: 'budget', label: 'Budget & Limits', icon: DollarSign },
 ]
 
@@ -63,7 +63,7 @@ export default function LLMConfigModal({
       <div onClick={(e) => e.stopPropagation()} className="llm-modal-panel">
         <div className="llm-modal-header">
           <Cpu size={15} className="llm-modal-header-icon" />
-          <strong className="llm-modal-title">LLM Configuration</strong>
+          <strong className="llm-modal-title">Connection Settings</strong>
           <span className="llm-modal-header-spacer" />
           <button
             type="button"
@@ -76,7 +76,7 @@ export default function LLMConfigModal({
         </div>
 
         <div className="llm-modal-body">
-          <nav className="llm-modal-tab-rail" aria-label="LLM configuration sections">
+          <nav className="llm-modal-tab-rail" aria-label="Connection settings sections">
             {TABS.map((tab) => {
               const active = tab.id === activeTab
               const Icon = tab.icon

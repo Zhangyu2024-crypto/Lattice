@@ -53,7 +53,7 @@ export default function AccountSettingsTab() {
           />
           <MetricCard
             icon={<Sparkles size={15} />}
-            label="AI service"
+            label="Service connection"
             value={stats.serviceLabel}
             detail={stats.serviceDetail}
           />
@@ -84,8 +84,8 @@ export default function AccountSettingsTab() {
             />
           </div>
           <div className="settings-account-detail-grid">
-            <DetailRow label="Enabled providers" value={`${stats.enabledProviders} / ${stats.providers.length}`} />
-            <DetailRow label="Available models" value={String(stats.totalModels)} />
+            <DetailRow label="Enabled connections" value={`${stats.enabledProviders} / ${stats.providers.length}`} />
+            <DetailRow label="Available routes" value={String(stats.totalModels)} />
             <DetailRow label="Today" value={stats.todayUsageDetail} />
             <DetailRow label="All time" value={stats.allTimeUsageDetail} />
             <DetailRow label="Total tokens" value={stats.allTimeUsageLabel} />
@@ -109,7 +109,7 @@ export default function AccountSettingsTab() {
             value={
               stats.authenticated
                 ? formatRelativeDate(stats.authSession?.savedAt ?? '')
-                : 'No local credential'
+                : 'No local sign-in'
             }
           />
           <DetailRow
@@ -118,7 +118,7 @@ export default function AccountSettingsTab() {
           />
           <div className="settings-account-record-note">
             <MessageSquare size={14} aria-hidden />
-            <span>Usage is tracked locally from Lattice model calls made in this workspace.</span>
+            <span>Usage is tracked locally from Lattice workspace calls made here.</span>
           </div>
         </div>
       </Section>

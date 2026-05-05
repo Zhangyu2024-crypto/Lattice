@@ -148,7 +148,7 @@ export function resolveProviderModelForMode(
   )
 }
 
-const SETTINGS_MODELS_HINT = 'Open Settings → Models (Ctrl+Shift+L).'
+const SETTINGS_MODELS_HINT = 'Open Settings -> Connections (Ctrl+Shift+L).'
 
 function explainBrokenBinding(
   providers: LLMProvider[],
@@ -158,11 +158,11 @@ function explainBrokenBinding(
   if (!cfg.providerId || !cfg.modelId) return null
   if (tryResolveProviderModel(providers, cfg)) return null
   const p = providers.find((x) => x.id === cfg.providerId)
-  if (!p) return `The saved ${label} provider no longer exists.`
+  if (!p) return `The saved ${label} connection no longer exists.`
   if (!p.models.some((m) => m.id === cfg.modelId)) {
-    return `The saved ${label} model is not in the provider list — fetch models again or pick a new default.`
+    return `The saved ${label} route is not in the connection list. Fetch routes again or pick a new default.`
   }
-  return `The saved ${label} model could not be resolved.`
+  return `The saved ${label} route could not be resolved.`
 }
 
 /**
@@ -180,13 +180,13 @@ export function getUnresolvedModelMessage(
   const { providers, dialog, agent } = state
 
   if (providers.length === 0) {
-    return `No LLM providers are configured. ${SETTINGS_MODELS_HINT}`
+    return `No service connections are configured. ${SETTINGS_MODELS_HINT}`
   }
 
   const dComplete = Boolean(dialog.providerId && dialog.modelId)
   const aComplete = Boolean(agent.providerId && agent.modelId)
   if (!dComplete && !aComplete) {
-    return `No default model is selected for Dialog or Agent. ${SETTINGS_MODELS_HINT}`
+    return `No default route is selected for Dialog or Agent. ${SETTINGS_MODELS_HINT}`
   }
 
   const hints: string[] = []
@@ -198,7 +198,7 @@ export function getUnresolvedModelMessage(
     return `${hints.join(' ')} ${SETTINGS_MODELS_HINT}`
   }
 
-  return `Could not resolve a model for ${mode} mode. ${SETTINGS_MODELS_HINT}`
+  return `Could not resolve a route for ${mode} mode. ${SETTINGS_MODELS_HINT}`
 }
 
 interface LLMConfigState {

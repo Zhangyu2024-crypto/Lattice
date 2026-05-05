@@ -1,4 +1,4 @@
-// Surfaces the active slash-command model overrides (`/model`, `/effort`)
+// Surfaces the active slash-command route overrides (`/model`, `/effort`)
 // next to the composer's ModelChip so the user can see at a glance which
 // layer of the routing resolver is currently in control. Independent
 // component to keep ModelChip's prop surface frozen.
@@ -50,9 +50,9 @@ export default function ModelRouteBadge() {
       {hasModelOverride ? (
         <Badge
           variant="warning"
-          title={`Session model override: ${modelTooltip}`}
+          title={`Session route override: ${modelTooltip}`}
         >
-          MODEL
+          ROUTE
         </Badge>
       ) : null}
       {hasEffortOverride ? (
@@ -66,8 +66,8 @@ export default function ModelRouteBadge() {
       <button
         type="button"
         onClick={clear}
-        title="Clear all session model overrides"
-        aria-label="Clear model overrides"
+        title="Clear all session route overrides"
+        aria-label="Clear route overrides"
         className="model-route-badge-clear"
         style={{
           display: 'inline-flex',

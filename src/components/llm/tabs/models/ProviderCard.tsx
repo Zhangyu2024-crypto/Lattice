@@ -67,11 +67,11 @@ export default function ProviderCard({
     : 'var(--color-text-muted)'
 
   const connectDisabledReason = !provider.enabled
-    ? 'Enable the provider first'
+    ? 'Enable the connection first'
     : !hasKey
       ? 'Add an API key first'
       : !CONNECTABLE_TYPES.has(provider.type)
-        ? `Provider type "${provider.type}" does not expose a model catalog`
+        ? `Connection type "${provider.type}" does not expose a route catalog`
         : undefined
 
   const handleSaveKey = () => {
@@ -104,7 +104,7 @@ export default function ProviderCard({
         {isCurrentDefault ? (
           <span
             className="llm-models-type-chip"
-            title="Default provider for Dialog and Agent"
+            title="Default connection for Dialog and Agent"
           >
             default
           </span>
@@ -205,7 +205,7 @@ export default function ProviderCard({
             ) : (
               <ChevronRight size={12} />
             )}
-            {accountBacked ? 'Account AI service' : `Models (${provider.models.length})`}
+            {accountBacked ? 'Account connection' : `Routes (${provider.models.length})`}
           </button>
         ) : null}
       </div>
@@ -252,7 +252,7 @@ export default function ProviderCard({
                   title={
                     isDefault
                       ? 'Already the default'
-                      : 'Use this model as default for Dialog and Agent'
+                      : 'Use this route as default for Dialog and Agent'
                   }
                 >
                   {isDefault ? 'Default' : 'Set default'}
@@ -312,8 +312,8 @@ function ConnectButton({
           : disabled
             ? disabledReason
             : hasModels
-              ? 'Re-fetch the model catalog'
-              : 'Validate the API key and fetch the model catalog'
+              ? 'Re-fetch the route catalog'
+              : 'Validate the API key and fetch the route catalog'
       }
       leading={
         running ? (
@@ -331,7 +331,7 @@ function ConnectButton({
 function ConnectStatusBadge({ status }: { status: ConnectStatus }) {
   if (status.state === 'idle' || status.state === 'running') return null
   if (status.state === 'ok') {
-    const parts = [`${status.fetched} models`, `${status.durationMs}ms`]
+    const parts = [`${status.fetched} routes`, `${status.durationMs}ms`]
     if (status.added > 0) parts.push(`${status.added} new`)
     if (status.updated > 0) parts.push(`${status.updated} updated`)
     return (

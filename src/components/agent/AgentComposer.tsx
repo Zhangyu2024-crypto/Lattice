@@ -1086,7 +1086,7 @@ export default function AgentComposer({
 
     if (imagesSnapshot.length > 0 && !hasLlm) {
       toast.error(
-        'Images require the desktop app with a configured local LLM (Electron).',
+        'Images require the desktop app with a configured local connection.',
       )
       return
     }
@@ -1387,9 +1387,9 @@ export default function AgentComposer({
                     aria-label="Send message"
                     title={
                       imageSendBlocked
-                        ? 'Images need the desktop app with a local LLM'
+                        ? 'Images need the desktop app with a local connection'
                         : !canSubmit
-                          ? 'Configure a local or remote LLM provider'
+                          ? 'Configure a connection in Settings'
                           : 'Send message'
                     }
                   >
@@ -1399,16 +1399,16 @@ export default function AgentComposer({
               </div>
               {hasModeToolbar ? (
                 <div className="chat-input-model-row">
-                  <span className="chat-input-model-row-label">Model</span>
+                  <span className="chat-input-model-row-label">Route</span>
                   <div
                     ref={modelChipAnchorRef}
                     className="chat-model-chip-wrap"
-                    aria-label="Agent model"
+                    aria-label="Agent route"
                   >
                     <ModelChip
                       label={agentModelLabel}
                       tone={connectionReady ? 'accent' : 'muted'}
-                      title="Choose agent model"
+                      title="Choose agent route"
                       hideDot
                       showChevron
                       onClick={() => setModelPickerOpen((o) => !o)}
@@ -1431,7 +1431,7 @@ export default function AgentComposer({
                 role="status"
                 id="composer-connection-status"
               >
-                Configure a local or remote LLM provider to send messages.
+                Configure a connection in Settings to send messages.
               </div>
             )}
           </div>

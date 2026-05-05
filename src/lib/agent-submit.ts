@@ -116,7 +116,7 @@ export async function submitAgentPrompt(
     !window.electronAPI?.llmInvoke
   ) {
     toast.error(
-      'Images require the desktop app with a configured local LLM (Electron).',
+      'Images require the desktop app with a configured local connection.',
     )
     return false
   }

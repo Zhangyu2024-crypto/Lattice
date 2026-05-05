@@ -131,11 +131,11 @@ function XrdSearchCompact({
         </div>
       ) : null}
 
-      {/* LLM verdict */}
+      {/* Route verdict */}
       {ident ? (
         <div style={S.verdictBox}>
           <div style={S.verdictHeader}>
-            <span>LLM verdict</span>
+            <span>Route verdict</span>
             <span>{((ident.confidence ?? 0) * 100).toFixed(0)}%</span>
             {ident.model ? (
               <span style={{ color: 'var(--color-text-muted)' }}>· {ident.model}</span>
@@ -147,7 +147,7 @@ function XrdSearchCompact({
             </div>
           ) : (
             <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)' }}>
-              Model did not commit to a phase.
+              No phase was selected.
             </div>
           )}
           {ident.reasoning ? (

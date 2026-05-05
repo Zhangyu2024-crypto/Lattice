@@ -15,7 +15,7 @@ import {
 interface Props {
   anchorEl: HTMLElement | null
   onClose: () => void
-  /** Full LLM settings (providers, keys, budget) — secondary to quick model pick. */
+  /** Full connection settings — secondary to quick model pick. */
   onOpenFullSettings?: () => void
 }
 
@@ -118,7 +118,7 @@ export default function AgentModelPickerPopover({
       }
     >
       <div className="agent-model-picker-head">
-        <span className="agent-model-picker-title">Agent model</span>
+        <span className="agent-model-picker-title">Agent route</span>
         {resolved ? (
           <span className="agent-model-picker-current" title={selectedKey}>
             {publicModelLabel(resolved)}
@@ -130,10 +130,10 @@ export default function AgentModelPickerPopover({
         )}
       </div>
 
-      <div className="agent-model-picker-list" role="listbox" aria-label="Models">
+      <div className="agent-model-picker-list" role="listbox" aria-label="Routes">
         {modelOptions.length === 0 ? (
           <div className="agent-model-picker-empty">
-            No models in catalog — open settings to connect a provider.
+            No routes in catalog. Open settings to connect an account.
           </div>
         ) : (
           modelOptions.map((opt) => {
@@ -174,7 +174,7 @@ export default function AgentModelPickerPopover({
           }}
         >
           <Settings size={12} strokeWidth={2} aria-hidden />
-          <span>LLM settings (providers, keys, budget)</span>
+          <span>Connection settings</span>
         </button>
       ) : null}
     </div>

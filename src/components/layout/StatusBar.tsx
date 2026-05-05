@@ -89,7 +89,7 @@ export default function StatusBar({
     ? `Optional legacy bridge WebSocket connected on port ${backend.port}`
     : backend.ready
       ? 'Optional legacy bridge process is ready, but the WebSocket is not connected. Local Electron tools still work.'
-      : 'Running in local mode. Local Electron tools, local agent tools, and configured LLM providers can still work.'
+      : 'Running in local mode. Local Electron tools, local agent tools, and configured service connections can still work.'
 
   return (
     <div className="status-bar">
@@ -108,7 +108,7 @@ export default function StatusBar({
       <StatusChip
         ref={modelChipRef}
         icon={<Cpu size={14} />}
-        title="LLM usage + model (click for details)"
+        title="Usage and service connection details"
         tone={usage?.warn ? 'warn' : 'default'}
         onClick={toggleUsage}
         ariaHasPopup="dialog"

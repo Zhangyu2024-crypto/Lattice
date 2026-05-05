@@ -158,7 +158,7 @@ export async function sendLlmChat(
       error:
         `The selected model "${model.label}" on ${provider.name} is not configured for tool calls. ` +
         `Research/survey and other Agent workflows require tool/function support.${compatibilityHint} ` +
-        'Pick a tool-capable model in LLM Config -> Models.',
+        'Pick a tool-capable route in Connection Settings.',
       durationMs: 0,
       inputTokens: 0,
       outputTokens: 0,
@@ -166,7 +166,7 @@ export async function sendLlmChat(
   }
   const apiKey = provider.apiKey?.trim()
   if (!apiKey) {
-    const msg = `API key missing for ${provider.name}. Add it in LLM Config -> Providers.`
+    const msg = `API key missing for ${provider.name}. Add it in Connection Settings.`
     log.error(msg, {
       source: 'llm',
       type: 'config',
@@ -182,7 +182,7 @@ export async function sendLlmChat(
     }
   }
   if (apiKey === LATTICE_AUTH_API_KEY_REF && provider.id !== LATTICE_AUTH_PROVIDER_ID) {
-    const msg = 'Lattice secure credentials can only be used by the signed-in chaxiejun.xyz provider.'
+    const msg = 'The signed-in chaxiejun.xyz connection cannot be reused by another provider.'
     log.error(msg, {
       source: 'llm',
       type: 'config',
@@ -198,7 +198,7 @@ export async function sendLlmChat(
     }
   }
   if (!provider.enabled) {
-    const msg = `Provider ${provider.name} is disabled. Enable it in LLM Config -> Providers.`
+    const msg = `Provider ${provider.name} is disabled. Enable it in Connection Settings.`
     log.error(msg, {
       source: 'llm',
       type: 'config',
@@ -220,7 +220,7 @@ export async function sendLlmChat(
       success: false,
       content: '',
       error:
-        'LLM proxy not available. This feature requires the Electron desktop shell.',
+        'Connection proxy not available. This feature requires the Electron desktop shell.',
       durationMs: 0,
       inputTokens: 0,
       outputTokens: 0,

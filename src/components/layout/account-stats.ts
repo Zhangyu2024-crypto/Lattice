@@ -96,11 +96,11 @@ export function useAccountStats() {
   const providerStatus = !authenticated
     ? 'Signed out'
     : !latticeProvider
-      ? 'Provider missing'
+      ? 'Connection missing'
       : !latticeProvider.enabled
-        ? 'Provider disabled'
+        ? 'Connection disabled'
         : latticeProvider.models.length === 0
-          ? 'Models pending'
+          ? 'Setup pending'
           : 'Ready'
   const totalAllTimeTokens = allTime.inputTokens + allTime.outputTokens
   const accountName = authenticated
@@ -122,15 +122,15 @@ export function useAccountStats() {
     : 'Connect chaxiejun.xyz'
   const serviceDetail = authenticated
     ? latticeProvider?.enabled && latticeProvider.models.length > 0
-      ? 'Lattice will route requests through your account'
-      : 'Open Models to finish account setup'
+      ? 'Lattice will work through your account'
+      : 'Open Connections to finish account setup'
     : 'Connect once, then use Lattice directly'
   const providerLabel = providerStatus
   const providerDetail = !authenticated
-    ? 'Sign in to enable account models'
+    ? 'Sign in to enable the account connection'
     : latticeProvider?.enabled
-      ? `${latticeProvider.models.length} account models available`
-      : 'Open Models to finish setup'
+      ? `${latticeProvider.models.length} account route${latticeProvider.models.length === 1 ? '' : 's'} available`
+      : 'Open Connections to finish setup'
   const todayUsageLabel = `${formatTokens(totalTodayTokens)} tokens`
   const todayUsageDetail = `${today.calls} calls · ${formatUSD(today.costUSD)}`
   const allTimeUsageLabel = `${formatTokens(totalAllTimeTokens)} tokens`
