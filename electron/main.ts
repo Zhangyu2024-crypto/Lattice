@@ -182,9 +182,43 @@ function createWindow() {
 
   if (process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL)
-    mainWindow.webContents.openDevTools({ mode: 'right' })
+    if (process.env.LATTICE_OPEN_DEVTOOLS === '1') {
+      mainWindow.webContents.openDevTools({ mode: 'right' })
+    }
   } else {
     mainWindow.loadFile(RENDERER_INDEX_PATH)
+  }
+
+  const dumpRendererDom = (label: string) => {
+    mainWindow?.webContents
+      .executeJavaScript(
+        `(() => {
+          const root = document.getElementById('root')
+          const shell = document.querySelector('.app-shell, .startup-auth-root, .app-error-boundary')
+          const bodyStyle = window.getComputedStyle(document.body)
+          const rootStyle = root ? window.getComputedStyle(root) : null
+          return {
+            label: ${JSON.stringify(label)},
+            url: location.href,
+            readyState: document.readyState,
+            rootChildren: root ? root.childElementCount : -1,
+            rootText: root ? root.textContent.slice(0, 240) : '',
+            shellClass: shell ? shell.className : null,
+            shellRect: shell ? shell.getBoundingClientRect().toJSON() : null,
+            bodyBg: bodyStyle.backgroundColor,
+            bodyColor: bodyStyle.color,
+            bodyVisibility: bodyStyle.visibility,
+            rootDisplay: rootStyle ? rootStyle.display : null,
+            rootVisibility: rootStyle ? rootStyle.visibility : null,
+          }
+        })()`,
+      )
+      .then((diag) => {
+        console.log('[renderer:dom]', JSON.stringify(diag))
+      })
+      .catch((err) => {
+        console.warn('[renderer:dom] diagnostic failed:', err)
+      })
   }
 
   // `webContents.send` does NOT buffer messages — if the renderer isn't
@@ -193,6 +227,8 @@ function createWindow() {
   // be lost. Re-send the current backend state once the page finishes loading
   // so the renderer always gets the latest status.
   mainWindow.webContents.on('did-finish-load', () => {
+    dumpRendererDom('did-finish-load')
+    setTimeout(() => dumpRendererDom('did-finish-load+1000ms'), 1000)
     if (pythonManager.isReady) {
       mainWindow?.webContents.send('backend:status', {
         ready: true,
@@ -210,6 +246,9 @@ function createWindow() {
     mainWindow.webContents.on('console-message', (_e, level, msg, line, src) => {
       const tag = ['log', 'warn', 'error', 'debug'][level] ?? String(level)
       console.log(`[renderer:${tag}] ${msg}  (${src}:${line})`)
+    })
+    mainWindow.webContents.on('dom-ready', () => {
+      dumpRendererDom('dom-ready')
     })
     mainWindow.webContents.on('render-process-gone', (_e, details) => {
       console.error('[renderer] process gone:', details)
@@ -1222,24 +1261,36 @@ async function runAutoPush(): Promise<void> {
   }
 }
 
+const disabledChromiumFeatures = ['HappyEyeballsV3']
+if (process.env.LATTICE_DISABLE_GPU === '1') {
+  disabledChromiumFeatures.push('VizDisplayCompositor')
+}
+
 // Force Chromium to resolve `localhost` via IPv4 only. Under WSL, the OS
 // resolver can return `::1` (IPv6) first for `localhost`, but uvicorn binds
 // `0.0.0.0` (IPv4-only). The renderer's `new WebSocket('ws://localhost:PORT')`
 // then connects to `[::1]:PORT` which is refused → close code 1006 → the app
 // shows "Backend is not connected" even though the server is perfectly healthy
 // on 127.0.0.1. This one-liner eliminates the DNS race entirely.
-app.commandLine.appendSwitch('disable-features', 'HappyEyeballsV3')
+app.commandLine.appendSwitch('disable-features', disabledChromiumFeatures.join(','))
 
 // WSL2/WSLg fallback: when the GPU process fails to initialize, the
 // window opens but no rasterizer paints the React tree → the user sees
-// a blank dark-grey window. Setting `LATTICE_DISABLE_GPU=1` forces the
-// software path (SwiftShader). Keep it off by default so devs with a
-// real GPU don't pay the perf cost. Do NOT also set
-// `disable-software-rasterizer` — that kills the only remaining
-// rasterizer and the window goes blank again. See BUGFIX_BLANK_WINDOW.md.
+// a blank dark-grey window. `LATTICE_DISABLE_GPU=1` forces Chromium onto a
+// software path and avoids the separate WSL GPU process. Keep it off by
+// default so devs with a real GPU don't pay the perf cost. Do NOT set
+// `disable-software-rasterizer` — that kills the remaining rasterizer.
 if (process.env.LATTICE_DISABLE_GPU === '1') {
   app.disableHardwareAcceleration()
   app.commandLine.appendSwitch('disable-gpu')
+  app.commandLine.appendSwitch('disable-gpu-compositing')
+  app.commandLine.appendSwitch('disable-gpu-rasterization')
+  app.commandLine.appendSwitch('disable-gpu-sandbox')
+  app.commandLine.appendSwitch('disable-accelerated-2d-canvas')
+  app.commandLine.appendSwitch('disable-accelerated-video-decode')
+  app.commandLine.appendSwitch('disable-dev-shm-usage')
+  app.commandLine.appendSwitch('in-process-gpu')
+  app.commandLine.appendSwitch('use-gl', 'swiftshader')
 }
 
 // App lifecycle
