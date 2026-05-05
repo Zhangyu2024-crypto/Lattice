@@ -271,6 +271,8 @@ describe('llm-proxy OpenAI-compatible transport', () => {
     const [listUrl, listInit] = fetchCall(fetchMock, 1)
     expect(testUrl).toBe('https://compat.example/v1/models')
     expect(listUrl).toBe('https://compat.example/v1/models')
+    expect(testInit.method).toBe('GET')
+    expect(listInit.method).toBe('GET')
     expect(testInit.headers).toMatchObject({
       authorization: 'Bearer test-key',
       'X-Lattice-Trace-Id': 'trace-model-test',
